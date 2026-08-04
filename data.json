@@ -1,0 +1,30 @@
+{
+    "feuerwehr": {
+        "name": "FFW Musterstadt"
+    },
+
+    "geraete": [
+        {
+            "id": 1,
+            "name": "Tragkraftspritze",
+            "typ": "Pumpe",
+            "pruefintervall": "jährlich",
+            "letztePruefung": "2025-01-15"
+        }
+    ],
+
+    "fahrzeuge": [
+        {
+            "id": 1,
+            "name": "LF 10",
+            "kennzeichen": "FL-1234"
+        }
+    ],
+
+    "lager": [
+        {
+            "artikel": "Handschuhe",
+            "bestand": 50
+        }
+    ]
+}

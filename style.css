@@ -1,0 +1,381 @@
+/* ===========================================
+   Allgemein
+=========================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:Segoe UI, Arial, sans-serif;
+
+    background:#f4f4f4;
+
+}
+
+
+/* ===========================================
+   Header
+=========================================== */
+
+.header{
+
+    height:70px;
+
+    background:#B71C1C;
+
+    color:white;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:0 30px;
+
+    font-size:22px;
+
+    font-weight:bold;
+
+}
+
+.feuerwehr{
+
+    font-size:16px;
+
+}
+
+
+/* ===========================================
+   Layout
+=========================================== */
+
+.container{
+
+    display:flex;
+
+    height:calc(100vh - 70px);
+
+}
+
+
+/* ===========================================
+   Navigation
+=========================================== */
+
+.sidebar{
+
+    width:240px;
+
+    background:#2c2c2c;
+
+    color:white;
+
+}
+
+.sidebar ul{
+
+    list-style:none;
+
+}
+
+.sidebar li{
+
+    padding:18px;
+
+    cursor:pointer;
+
+    border-bottom:1px solid #444;
+
+    transition:.3s;
+
+}
+
+.sidebar li:hover{
+
+    background:#444;
+
+}
+
+
+/* ===========================================
+   Inhalt
+=========================================== */
+
+.content{
+
+    flex:1;
+
+    padding:40px;
+
+}
+
+.content h1{
+
+    margin-bottom:20px;
+
+}
+/* ===========================================
+   Begrüßung
+=========================================== */
+
+.welcome{
+
+    margin-bottom:30px;
+
+}
+
+.welcome p{
+
+    margin-top:8px;
+
+    color:#666;
+
+}
+
+
+/* ===========================================
+   Status
+=========================================== */
+
+.status{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+
+    gap:20px;
+
+    margin-bottom:40px;
+
+}
+
+.status-card{
+
+    padding:20px;
+
+    border-radius:10px;
+
+    color:white;
+
+}
+
+.red{
+    background:#E53935;
+}
+
+.orange{
+    background:#FB8C00;
+}
+
+.green{
+    background:#43A047;
+}
+
+.blue{
+    background:#1E88E5;
+}
+
+.status-card h3{
+
+    margin-bottom:12px;
+
+}
+/* ===========================================
+   Dashboard-Karten
+=========================================== */
+
+.cards{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+
+    gap:25px;
+
+    margin-top:30px;
+
+}
+
+.card{
+
+    background:white;
+
+    border-radius:12px;
+
+    padding:25px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+
+    transition:.25s;
+
+    cursor:pointer;
+
+}
+
+.card:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:0 8px 18px rgba(0,0,0,0.15);
+
+}
+
+.card h2{
+
+    margin-bottom:15px;
+
+    color:#B71C1C;
+
+}
+
+.card p{
+
+    color:#555;
+
+    font-size:18px;
+
+}
+/* ===========================================
+   Responsive
+=========================================== */
+
+@media(max-width:900px){
+
+.sidebar{
+
+    width:180px;
+
+}
+
+}
+
+@media(max-width:700px){
+
+.container{
+
+    flex-direction:column;
+
+}
+
+.sidebar{
+
+    width:100%;
+
+}
+
+}/* ===========================================
+   Geräteverwaltung
+=========================================== */
+
+.toolbar{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    gap:15px;
+
+    margin:25px 0;
+
+    flex-wrap:wrap;
+
+}
+
+.toolbar input{
+
+    flex:1;
+
+    min-width:250px;
+
+    padding:12px;
+
+    border:1px solid #ccc;
+
+    border-radius:8px;
+
+    font-size:16px;
+
+}
+
+.toolbar button{
+
+    background:#B71C1C;
+
+    color:white;
+
+    border:none;
+
+    padding:12px 20px;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+}
+
+.toolbar button:hover{
+
+    background:#921515;
+
+}
+
+.geraete-liste{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+
+    gap:20px;
+
+}
+
+.geraet{
+
+    background:white;
+
+    padding:20px;
+
+    border-radius:10px;
+
+    box-shadow:0 5px 12px rgba(0,0,0,.12);
+
+}
+
+.geraet h3{
+
+    color:#B71C1C;
+
+    margin-bottom:15px;
+
+}
+
+.geraet p{
+
+    margin:6px 0;
+
+}.geraete-details{
+
+    margin-top:30px;
+
+    padding:20px;
+
+    border:1px solid #ccc;
+
+    border-radius:10px;
+
+    background:#fafafa;
+
+}
+
+.geraete-details h2{
+
+    margin-top:0;
+
+}

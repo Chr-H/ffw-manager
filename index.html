@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFW Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#B71C1C">
+</head>
+
+<body>
+
+    <!-- Kopfbereich -->
+    <header class="header">
+        <div class="logo">🚒 FFW Manager</div>
+        <div class="feuerwehr">Freiwillige Feuerwehr Musterstadt</div>
+    </header>
+
+    <div class="container">
+
+        <!-- Navigation (Sidebar) -->
+        <aside class="sidebar">
+            <ul>
+                <li onclick="zeigeSeite('dashboard')">🏠 Dashboard</li>
+                <li onclick="zeigeSeite('geraete')">🔧 Geräte</li>
+                <li onclick="zeigeSeite('fahrzeuge')">🚒 Fahrzeuge</li>
+                <li onclick="zeigeSeite('psa')">🧯 PSA</li>
+                <li onclick="zeigeSeite('pruefungen')">📋 Prüfungen</li>
+                <li onclick="zeigeSeite('lager')">📦 Lager</li>
+                <li onclick="zeigeSeite('personal')">👥 Personal</li>
+                <li onclick="zeigeSeite('auswertungen')">📊 Auswertungen</li>
+                <li onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</li>
+            </ul>
+        </aside>
+
+        <!-- Hauptinhaltsbereich -->
+        <main class="content">
+
+            <!-- ========================================= -->
+            <!-- 1. DASHBOARD ANSEHEN                      -->
+            <!-- ========================================= -->
+            <section id="seite-dashboard" class="seite-ansicht">
+
+                <section class="welcome">
+                    <h1>👋 Willkommen im FFW Manager</h1>
+                    <p>Schön, dass du da bist.</p>
+                    <p id="heute"></p>
+                </section>
+
+                <section class="status">
+                    <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
+                        <h3>🔴 Prüfungen</h3>
+                        <p>0 überfällig</p>
+                    </div>
+                    <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;">
+                        <h3>🟡 Wartung & Fristen</h3>
+                        <p>0 fällig</p>
+                    </div>
+                    <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
+                        <h3>🟢 Einsatzbereit</h3>
+                        <p>0 Geräte einsatzbereit</p>
+                    </div>
+                    <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
+                        <h3>⚫ Außer Dienst / Defekt</h3>
+                        <p>0 inaktiv</p>
+                    </div>
+                </section>
+
+                <h2>Module</h2>
+                <div class="cards">
+                    <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
+                        <h2>🔧 Geräte</h2>
+                        <p class="card-geraete-count">0 Geräte</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;">
+                        <h2>🚒 Fahrzeuge</h2>
+                        <p>0 Fahrzeuge</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;">
+                        <h2>🧯 PSA</h2>
+                        <p>0 Personen</p>
+                    </div>
+                    <div class="card" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
+                        <h2>📋 Prüfungen</h2>
+                        <p>0 fällig</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
+                        <h2>📦 Lager</h2>
+                        <p>0 Artikel</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
+                        <h2>👥 Personal</h2>
+                        <p>0 Mitglieder</p>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- ========================================= -->
+            <!-- 2. GERÄTEVERWALTUNG                       -->
+            <!-- ========================================= -->
+            <section id="seite-geraete" class="seite-ansicht" style="display: none;">
+
+                <h2>🔧 Geräteverwaltung</h2>
+
+                <!-- Formular -->
+                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h3>➕ Gerät anlegen / bearbeiten</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                        <input id="inventar" type="text" placeholder="Inventarnummer">
+                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
+                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
+                        <input id="hersteller" type="text" placeholder="Hersteller">
+                        <input id="standort" type="text" placeholder="Standort">
+                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
+                        <select id="pruefintervall" title="Prüfintervall">
+                            <option value="12">12 Monate (Jährlich)</option>
+                            <option value="24">24 Monate (2 Jahre)</option>
+                            <option value="6">6 Monate (Halbjährlich)</option>
+                            <option value="1">1 Monat (Monatlich)</option>
+                        </select>
+                        <select id="status">
+                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                            <option value="Wartung">🟡 Wartung</option>
+                            <option value="Defekt">🔴 Defekt</option>
+                            <option value="Außer Dienst">⚫ Außer Dienst</option>
+                        </select>
+                        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
+                    </div>
+                </div>
+
+                <hr style="margin:20px 0;">
+
+                <!-- Filter -->
+                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
+                    <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
+                    <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
+                    <select id="filterStatus" onchange="filterGeraete()">
+                        <option value="">Alle Status</option>
+                        <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                        <option value="Wartung">🟡 Wartung</option>
+                        <option value="Defekt">🔴 Defekt</option>
+                        <option value="Außer Dienst">⚫ Außer Dienst</option>
+                    </select>
+                </div>
+
+                <!-- Split-Layout: Links Liste, Rechts Akte -->
+                <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
+                    
+                    <!-- Linke Spalte: Tabelle -->
+                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                        <table class="geraete-tabelle" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>Inventar</th>
+                                    <th>Bezeichnung</th>
+                                    <th>Kategorie</th>
+                                    <th>Hersteller</th>
+                                    <th>Status</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="geraeteListe"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Rechte Spalte: Geräteakte -->
+                    <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
+                        <h2>📋 Geräteakte</h2>
+                        <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- Platzhalter verbleibende Module -->
+            <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;"><h2>🚒 Fahrzeuge</h2><p>In Entwicklung...</p></section>
+            <section id="seite-psa" class="seite-ansicht" style="display: none;"><h2>🧯 PSA</h2><p>In Entwicklung...</p></section>
+            <section id="seite-lager" class="seite-ansicht" style="display: none;"><h2>📦 Lager</h2><p>In Entwicklung...</p></section>
+            <section id="seite-personal" class="seite-ansicht" style="display: none;"><h2>👥 Personal</h2><p>In Entwicklung...</p></section>
+            <section id="seite-auswertungen" class="seite-ansicht" style="display: none;"><h2>📊 Auswertungen</h2><p>In Entwicklung...</p></section>
+            <section id="seite-einstellungen" class="seite-ansicht" style="display: none;"><h2>⚙️ Einstellungen</h2><p>In Entwicklung...</p></section>
+
+        </main>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/kategorien.js"></script>
+    <script src="js/geraete.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(reg => console.log('Service Worker erfolgreich registriert!', reg))
+        .catch(err => console.error('Service Worker Fehler:', err));
+    });
+  }
+</script>
+
+</body>
+</html>
