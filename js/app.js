@@ -91,39 +91,28 @@ function zeigeSeite(seitenId) {
         console.warn('Seite nicht gefunden: ' + seitenId);
     }
 
-    // Bei Wechsel zum Dashboard Daten aktualisieren
+    // Spezifische Logik je nach aufgerufener Seite ausführen
     if (seitenId === 'dashboard') {
         aktualisiereDashboard();
-    }
-}
-// ==========================================
-// SPA Seitenumschaltung & Filter-Verknüpfung
-// ==========================================
-function zeigeSeite(seitenId) {
-    const seiten = document.querySelectorAll('.seite-ansicht');
-    seiten.forEach(s => s.style.display = 'none');
-
-    const zielSeite = document.getElementById('seite-' + seitenId);
-    if (zielSeite) {
-        zielSeite.style.display = 'block';
-    }
-
-    if (seitenId === 'dashboard') {
-        aktualisiereDashboard();
+    } else if (seitenId === 'fahrzeuge') {
+        if (typeof renderFahrzeugeView === 'function') {
+            renderFahrzeugeView();
+        }
     }
 }
 
+// ==========================================
+// Filter-Verknüpfungen (Dashboard -> Geräte)
+// ==========================================
 function filtereGeraeteNachDashboard(modus) {
-    // 1. Zur Geräte-Seite wechseln
     zeigeSeite('geraete');
 
     const filterStatus = document.getElementById('filterStatus');
     const suchInput = document.getElementById('sucheGeraet');
 
-    if (suchInput) suchInput.value = ""; // Suchfeld leeren
+    if (suchInput) suchInput.value = ""; 
 
     if (modus === 'ueberfaellig') {
-        // Filter auf überfällige Fristen setzen
         if (filterStatus) filterStatus.value = "";
         
         const jetzt = new Date();
@@ -135,7 +124,6 @@ function filtereGeraeteNachDashboard(modus) {
             zeigeGefilterteGeraete(gefiltert);
         }
     } else if (modus === 'inaktiv') {
-        // Filtert Defekt & Außer Dienst
         if (filterStatus) filterStatus.value = "";
         
         const gefiltert = (ladeDaten('geraete') || []).filter(g => {
@@ -147,7 +135,6 @@ function filtereGeraeteNachDashboard(modus) {
             zeigeGefilterteGeraete(gefiltert);
         }
     } else {
-        // Exakter Status-Filter (Einsatzbereit / Wartung)
         if (filterStatus) filterStatus.value = modus;
         if (typeof filterGeraete === 'function') {
             filterGeraete();

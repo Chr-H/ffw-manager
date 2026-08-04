@@ -1,5 +1,8 @@
 function renderFahrzeugeView() {
-  const container = document.getElementById('main-content');
+  // Greife auf das neue Div in der index.html zu:
+  const container = document.getElementById('fahrzeuge-container');
+  if (!container) return;
+
   const vehicles = getVehicles();
 
   let html = `
