@@ -20,12 +20,50 @@ function speichereGeraete() {
 
 // Hilfsfunktion: Wird automatisch aufgerufen, wenn neue Cloud-Daten eintreffen
 function zeigeGeraete() {
+    // 1. Frische Daten aus dem Speicher / der Cloud laden
     geraete = ladeDaten("geraete") || [];
-    
-    // Ruft deine bestehende Filter-/Render-Funktion auf
+
+    // 2. Versuchen, die normale Filter-/Anzeige-Funktion auszuführen
     if (typeof filterGeraete === "function") {
         filterGeraete();
+    } 
+
+    // 3. Sicherheits-Fallback: Falls der Container danach noch leer ist, rendern wir direkt
+    const container = document.getElementById("geraeteListe") || document.getElementById("geraeteContainer");
+    if (container && (!container.innerHTML.trim() || container.innerHTML.includes("Keine Geräte"))) {
+        renderGeraeteFallback(geraete);
     }
+}
+
+// Direkte Darstellung der Geräte als Fallback
+function renderGeraeteFallback(liste) {
+    const container = document.getElementById("geraeteListe") || document.getElementById("geraeteContainer");
+    if (!container) return;
+
+    if (!liste || liste.length === 0) {
+        container.innerHTML = `<div class="p-3 text-muted text-center">Keine Geräte vorhanden.</div>`;
+        return;
+    }
+
+    container.innerHTML = liste.map(g => `
+        <div class="card mb-2 p-3 shadow-sm" style="border-radius: 10px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1">${g.bezeichnung || 'Unbenanntes Gerät'}</h5>
+                    <small class="text-muted">
+                        Inv-Nr: <strong>${g.inventarnummer || '-'}</strong> | 
+                        Kategorie: <strong>${g.kategorie || '-'}</strong> | 
+                        Standort: <strong>${g.standort || '-'}</strong>
+                    </small>
+                </div>
+                <div>
+                    <span class="badge ${g.status === 'Einsatzbereit' ? 'bg-success' : 'bg-warning'} p-2">
+                        ${g.status || 'Einsatzbereit'}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join("");
 }
 // ==========================================
 // 2. Hilfsfunktion: Nächste Prüfung berechnen
