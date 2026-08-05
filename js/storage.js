@@ -81,3 +81,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, 1000);
 });
+// Testdaten für Fahrzeuge beim Start erzeugen, falls keine vorhanden sind
+document.addEventListener("DOMContentLoaded", () => {
+  const vorhandeneFahrzeuge = ladeDaten("fahrzeuge");
+  if (!vorhandeneFahrzeuge || vorhandeneFahrzeuge.length === 0) {
+    speichereDaten('fahrzeuge', [
+      {
+        id: "VEH-1",
+        name: "LF 20/16",
+        callSign: "Florian Musterstadt 40/1",
+        licensePlate: "M-FF 112",
+        status: "Einsatzbereit",
+        nextHU: "2026-10",
+        nextSP: "2027-04",
+        description: "Löschgruppenfahrzeug mit 2000l Tank"
+      }
+    ]);
+  }
+});
