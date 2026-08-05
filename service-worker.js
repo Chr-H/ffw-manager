@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ffw-manager-v1..0';
+const CACHE_NAME = 'ffw-manager-v2.0.1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
