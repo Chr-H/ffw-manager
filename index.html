@@ -202,9 +202,21 @@
     <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(reg => console.log('Service Worker erfolgreich registriert!', reg))
-        .catch(err => console.error('Service Worker Fehler:', err));
+      navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+        // Prüft bei jedem App-Start aktiv auf Updates
+        reg.update();
+      }).catch((err) => {
+        console.error('Service Worker Fehler:', err);
+      });
+    });
+
+    // Lädt die Seite automatisch neu, sobald der neue Service Worker aktiv wird
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
     });
   }
 </script>
