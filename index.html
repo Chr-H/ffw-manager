@@ -192,13 +192,32 @@
         </main>
 
     </div>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Scripts -->
-    <script src="js/storage.js"></script>
-    <script src="js/kategorien.js"></script>
-    <script src="js/geraete.js"></script>
-    <script src="js/fahrzeuge.js"></script> <!-- Neu hinzugefügt -->
-    <script src="js/app.js"></script>
+<script>
+  // Füge hier deinen Code aus der Firebase Konsole ein:
+  const firebaseConfig = {
+    apiKey: "DEIN_API_KEY",
+    authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
+    projectId: "DEIN_PROJECT_ID",
+    storageBucket: "DEIN_PROJECT_ID.appspot.com",
+    messagingSenderId: "DEINE_SENDER_ID",
+    appId: "DEINE_APP_ID"
+  };
+
+  // Firebase initialisieren
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+<!-- Deine bisherigen Skripte -->
+<script src="js/storage.js"></script>
+<script src="js/kategorien.js"></script>
+<script src="js/geraete.js"></script>
+<script src="js/fahrzeuge.js"></script>
+<script src="js/app.js"></script>
     <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

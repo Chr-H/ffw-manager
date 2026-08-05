@@ -1,55 +1,51 @@
-// ==========================================
-// FFW Manager - Zentrale Datenspeicherung
-// ==========================================
-
-
-function speichereDaten(name, daten){
-
-    localStorage.setItem(
-        name,
-        JSON.stringify(daten)
-    );
-
+// Daten aus Firebase laden
+function ladeDaten(schluessel) {
+  // Wenn Daten lokal bereits gecacht/vorgehalten werden:
+  const lokal = localStorage.getItem('ffw_' + schluessel);
+  return lokal ? JSON.parse(lokal) : [];
 }
 
+// Daten in Firebase & Lokal speichern
+function speichereDaten(schluessel, daten) {
+  // 1. Lokal sichern
+  localStorage.setItem('ffw_' + schluessel, JSON.stringify(daten));
 
-
-function ladeDaten(name){
-
-    const daten = localStorage.getItem(name);
-
-
-    if(daten){
-
-        return JSON.parse(daten);
-
-    }
-
-
-    return [];
-
-}
-// Initiales Fahrzeug-Array
-const INITIAL_VEHICLES = [
-  {
-    id: 'veh-1',
-    callSign: 'Florian Musterstadt 40/1',
-    name: 'HLF 20',
-    licensePlate: 'M-FF 112',
-    status: 'Einsatzbereit',
-    nextHU: '2027-05',
-    nextSP: '2026-11',
-    description: 'Hilfeleistungslöschgruppenfahrzeug mit 2000l Wasser'
+  // 2. In Firebase Firestore Cloud speichern
+  if (typeof db !== 'undefined') {
+    db.collection('ffw_data').doc(schluessel).set({
+      eintraege: daten,
+      aktualisiertAm: new Date().toISOString()
+    }).catch(err => console.error("Fehler beim Cloud-Speichern:", err));
   }
-];
-
-// Laden der Fahrzeuge aus dem LocalStorage
-function getVehicles() {
-  const data = localStorage.getItem('ffw_vehicles');
-  return data ? JSON.parse(data) : INITIAL_VEHICLES;
 }
 
-// Speichern der Fahrzeuge
-function saveVehicles(vehicles) {
-  localStorage.setItem('ffw_vehicles', JSON.stringify(vehicles));
+// Live-Synchronisation von Firebase aktivieren
+function starteCloudSync() {
+  if (typeof db === 'undefined') return;
+
+  const sammlungen = ['geraete', 'fahrzeuge', 'kategorien'];
+
+  sammlungen.forEach(schluessel => {
+    db.collection('ffw_data').doc(schluessel)
+      .onSnapshot((doc) => {
+        if (doc.exists && doc.data().eintraege) {
+          const cloudDaten = doc.data().eintraege;
+          localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
+          
+          // Ansichten aktualisieren, wenn neue Daten aus der Cloud eintreffen
+          if (schluessel === 'geraete' && typeof filterGeraete === 'function') {
+            filterGeraete();
+          }
+          if (schluessel === 'fahrzeuge' && typeof renderFahrzeugeView === 'function') {
+            renderFahrzeugeView();
+          }
+          if (typeof aktualisiereDashboard === 'function') {
+            aktualisiereDashboard();
+          }
+        }
+      }, err => console.error("Cloud-Sync Fehler:", err));
+  });
 }
+
+// Starte Sync, sobald die Seite geladen ist
+document.addEventListener('DOMContentLoaded', starteCloudSync);
