@@ -1,13 +1,10 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.5.1)
+// FFW Manager - Geräteverwaltung (v0.5.2)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
 let bearbeitungsId = null;
 
-// ==========================================
-// 1. Laden & Speichern
-// ==========================================
 function ladeGeraete() {
     geraete = ladeDaten("geraete") || [];
     return geraete;
@@ -18,46 +15,45 @@ function speichereGeraete() {
     document.dispatchEvent(new Event("geraeteGeaendert"));
 }
 
-// Wird automatisch von Firebase aufgerufen, sobald neue Cloud-Daten eintreffen
 function zeigeGeraete() {
     geraete = ladeDaten("geraete") || [];
-    filterGeraete(); // Rendert die HTML-Tabelle neu
+    filterGeraete();
 }
 
-// ==========================================
-// 2. Hilfsfunktion: Nächste Prüfung berechnen
-// ==========================================
 function berechneNaechstePruefung(datumStr, intervallMonate) {
     if (!datumStr || !intervallMonate || intervallMonate <= 0) return null;
     const d = new Date(datumStr);
     if (isNaN(d.getTime())) return null;
-    
     d.setMonth(d.getMonth() + parseInt(intervallMonate));
-    return d.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    return d.toISOString().split('T')[0];
 }
 
-// ==========================================
-// 3. Neues Gerät speichern / bearbeiten
-// ==========================================
 function neuesGeraet() {
-    const inventar = document.getElementById("inventar")?.value.trim() || "";
-    const bezeichnung = document.getElementById("bezeichnung")?.value.trim() || "";
-    const kategorie = document.getElementById("kategorie")?.value || "";
-    const hersteller = document.getElementById("hersteller")?.value.trim() || "";
-    const status = document.getElementById("status")?.value || "Einsatzbereit";
-    const standort = document.getElementById("standort")?.value.trim() || "";
-    const letztePruefung = document.getElementById("letztePruefung")?.value || "";
-    const pruefintervall = document.getElementById("pruefintervall")?.value || "12";
+    const elInv = document.getElementById("inventar");
+    const elBez = document.getElementById("bezeichnung");
+    const elKat = document.getElementById("kategorie");
+    const elHer = document.getElementById("hersteller");
+    const elStat = document.getElementById("status");
+    const elSta = document.getElementById("standort");
+    const elLpz = document.getElementById("letztePruefung");
+    const elInt = document.getElementById("pruefintervall");
+
+    const inventar = elInv ? elInv.value.trim() : "";
+    const bezeichnung = elBez ? elBez.value.trim() : "";
+    const kategorie = elKat ? elKat.value : "";
+    const hersteller = elHer ? elHer.value.trim() : "";
+    const status = elStat ? elStat.value : "Einsatzbereit";
+    const standort = elSta ? elSta.value.trim() : "";
+    const letztePruefung = elLpz ? elLpz.value : "";
+    const pruefintervall = elInt ? elInt.value : "12";
 
     if (!inventar || !bezeichnung || !kategorie) {
         alert("Bitte mindestens Inventarnummer, Bezeichnung und Kategorie ausfüllen.");
         return;
     }
 
-    // Aktuellste Daten aus dem Speicher laden
     geraete = ladeDaten("geraete") || [];
 
-    // Duplikatsprüfung
     const vorhanden = geraete.find(g => 
         (g.inventarnummer || "").trim().toLowerCase() === inventar.toLowerCase() && 
         g.id !== bearbeitungsId
@@ -71,7 +67,6 @@ function neuesGeraet() {
     const naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
 
     if (bearbeitungsId !== null) {
-        // Bearbeiten
         const index = geraete.findIndex(g => g.id === bearbeitungsId);
         if (index !== -1) {
             geraete[index] = {
@@ -88,7 +83,6 @@ function neuesGeraet() {
             };
         }
     } else {
-        // Neues Gerät anlegen
         const neuesG = {
             id: "GER-" + Date.now(),
             inventarnummer: inventar,
@@ -125,15 +119,16 @@ function resetFormular() {
     if (btn) btn.innerHTML = "➕ Gerät speichern";
 }
 
-// ==========================================
-// 4. Anzeige & Filter
-// ==========================================
 function filterGeraete() {
     geraete = ladeDaten("geraete") || [];
 
-    const suchbegriff = (document.getElementById("sucheGeraet")?.value || "").toLowerCase();
-    const kategorie = document.getElementById("filterKategorie")?.value || "";
-    const status = document.getElementById("filterStatus")?.value || "";
+    const elSuche = document.getElementById("sucheGeraet");
+    const elKat = document.getElementById("filterKategorie");
+    const elStat = document.getElementById("filterStatus");
+
+    const suchbegriff = elSuche ? elSuche.value.toLowerCase() : "";
+    const kategorie = elKat ? elKat.value : "";
+    const status = elStat ? elStat.value : "";
 
     const gefiltert = geraete.filter(g => {
         const bez = (g.bezeichnung || "").toLowerCase();
@@ -185,9 +180,6 @@ function zeigeGefilterteGeraete(liste) {
     });
 }
 
-// ==========================================
-// 5. Details & Bearbeiten
-// ==========================================
 function zeigeGeraeteDetails(id) {
     const g = geraete.find(item => item.id === id);
     const detailsContainer = document.getElementById("geraeteDetails");

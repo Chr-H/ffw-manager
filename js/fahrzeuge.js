@@ -12,7 +12,7 @@ function renderFahrzeugeView() {
   let html = `
     <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
       <h2>🚒 Fuhrpark</h2>
-      <button class="btn btn-primary" onclick="alert('Funktion in Kürze verfügbar')">+ Neues Fahrzeug</button>
+      <button class="btn btn-primary" onclick="openAddVehicleModal()">+ Neues Fahrzeug</button>
     </div>
   `;
 
