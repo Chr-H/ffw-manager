@@ -13,7 +13,7 @@ function ladeGeraete() {
 }
 
 function speichereGeraete() {
-    speichereDaten("geraete", geraete);
+    speichereDaten('geraete', geraeteListe); // <-- Das sendet die Daten an Firebase!
     document.dispatchEvent(new Event("geraeteGeaendert"));
 }
 
