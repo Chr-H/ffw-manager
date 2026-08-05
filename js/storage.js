@@ -1,25 +1,31 @@
-// Daten aus Firebase laden
+// Daten aus dem Speicher laden
 function ladeDaten(schluessel) {
-  // Wenn Daten lokal bereits gecacht/vorgehalten werden:
   const lokal = localStorage.getItem('ffw_' + schluessel);
-  return lokal ? JSON.parse(lokal) : [];
+  try {
+    const parsed = JSON.parse(lokal);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 // Daten in Firebase & Lokal speichern
 function speichereDaten(schluessel, daten) {
+  const bereinigteDaten = Array.isArray(daten) ? daten : [];
+  
   // 1. Lokal sichern
-  localStorage.setItem('ffw_' + schluessel, JSON.stringify(daten));
+  localStorage.setItem('ffw_' + schluessel, JSON.stringify(bereinigteDaten));
 
-  // 2. In Firebase Firestore Cloud speichern
+  // 2. In Firebase Cloud speichern
   if (typeof db !== 'undefined') {
     db.collection('ffw_data').doc(schluessel).set({
-      eintraege: daten,
+      eintraege: bereinigteDaten,
       aktualisiertAm: new Date().toISOString()
     }).catch(err => console.error("Fehler beim Cloud-Speichern:", err));
   }
 }
 
-// Live-Synchronisation von Firebase aktivieren
+// Live-Synchronisation mit Firebase
 function starteCloudSync() {
   if (typeof db === 'undefined') return;
 
@@ -32,9 +38,12 @@ function starteCloudSync() {
           const cloudDaten = doc.data().eintraege;
           localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
           
-          // Ansichten aktualisieren, wenn neue Daten aus der Cloud eintreffen
-          if (schluessel === 'geraete' && typeof filterGeraete === 'function') {
-            filterGeraete();
+          // Ansichten und Events auslösen
+          document.dispatchEvent(new CustomEvent('geraeteGeaendert'));
+          
+          if (schluessel === 'geraete') {
+            if (typeof zeigeGeraete === 'function') zeigeGeraete();
+            if (typeof filterGeraete === 'function') filterGeraete();
           }
           if (schluessel === 'fahrzeuge' && typeof renderFahrzeugeView === 'function') {
             renderFahrzeugeView();
@@ -47,5 +56,4 @@ function starteCloudSync() {
   });
 }
 
-// Starte Sync, sobald die Seite geladen ist
 document.addEventListener('DOMContentLoaded', starteCloudSync);

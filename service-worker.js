@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ffw-manager-v0.5.3'; // <-- Bei künftigen Updates hier einfach v0.5.3 etc. eintragen
+const CACHE_NAME = 'ffw-manager-v0.5.5'; // <-- Bei künftigen Updates hier einfach v0.5.3 etc. eintragen
 
 const ASSETS_TO_CACHE = [
   './',

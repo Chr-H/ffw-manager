@@ -47,7 +47,15 @@ function neuesGeraet() {
         return;
     }
 
-    const vorhanden = geraete.find(g => g.inventarnummer === inventar && g.id !== bearbeitungsId);
+    // ACHTUNG: Vor der Prüfung immer die aktuellsten Daten laden!
+    let geraete = ladeDaten("geraete") || [];
+
+    // Duplikatsprüfung auf Groß-/Kleinschreibung und Leerzeichen korrigiert
+    const vorhanden = geraete.find(g => 
+        (g.inventarnummer || "").trim().toLowerCase() === inventar.toLowerCase() && 
+        g.id !== bearbeitungsId
+    );
+
     if (vorhanden) {
         alert("Diese Inventarnummer existiert bereits!");
         return;
@@ -56,13 +64,42 @@ function neuesGeraet() {
     let geraet;
 
     if (bearbeitungsId !== null) {
+        // Bearbeiten
         geraet = geraete.find(g => g.id === bearbeitungsId);
+        if (geraet) {
+            geraet.inventarnummer = inventar;
+            geraet.bezeichnung = bezeichnung;
+            geraet.kategorie = kategorie;
+            geraet.hersteller = hersteller;
+            geraet.status = status;
+            geraet.standort = standort;
+            geraet.letztePruefung = letztePruefung;
+            geraet.pruefintervall = pruefintervall;
+        }
     } else {
+        // Neues Gerät anlegen
         geraet = {
             id: "GER-" + Date.now(),
+            inventarnummer: inventar,
+            bezeichnung: bezeichnung,
+            kategorie: kategorie,
+            hersteller: hersteller,
+            status: status,
+            standort: standort,
+            letztePruefung: letztePruefung,
+            pruefintervall: pruefintervall,
             erstellt: new Date().toLocaleDateString("de-DE")
         };
+        geraete.push(geraet);
     }
+
+    // WICHTIG: Hier wird das Gerät in die Cloud (Firebase) & Lokal gespeichert!
+    speichereDaten("geraete", geraete);
+
+    // Formular zurücksetzen / Ansicht aktualisieren
+    if (typeof schliesseGeraetModal === "function") schliesseGeraetModal();
+    if (typeof zeigeGeraete === "function") zeigeGeraete();
+}
 
     geraet.inventarnummer = inventar;
     geraet.bezeichnung = bezeichnung;
