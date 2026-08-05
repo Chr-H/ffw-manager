@@ -213,6 +213,7 @@
     firebase.initializeApp(firebaseConfig);
   }
   window.db = firebase.firestore();
+  window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
 </script>
 
 <!-- 3. Anwendungsskripte in korrekter Reihenfolge -->

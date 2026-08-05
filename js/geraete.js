@@ -20,9 +20,8 @@ function speichereGeraete() {
 
 // Wird automatisch von Firebase aufgerufen, sobald neue Cloud-Daten eintreffen
 function zeigeGeraete() {
-    function zeigeGeraete() {
     geraete = ladeDaten("geraete") || [];
-    filterGeraete(); // <-- Rendert die HTML-Tabelle neu
+    filterGeraete(); // Rendert die HTML-Tabelle neu
 }
 
 // ==========================================
