@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.5.0)
+// FFW Manager - Geräteverwaltung (v0.5.1)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -14,57 +14,16 @@ function ladeGeraete() {
 }
 
 function speichereGeraete() {
-    speichereDaten('geraete', geraete); // Korrigiert: 'geraete' statt 'geraeteListe'
+    speichereDaten('geraete', geraete);
     document.dispatchEvent(new Event("geraeteGeaendert"));
 }
 
-// Hilfsfunktion: Wird automatisch aufgerufen, wenn neue Cloud-Daten eintreffen
+// Wird automatisch von Firebase aufgerufen, sobald neue Cloud-Daten eintreffen
 function zeigeGeraete() {
-    // 1. Frische Daten aus dem Speicher / der Cloud laden
     geraete = ladeDaten("geraete") || [];
-
-    // 2. Versuchen, die normale Filter-/Anzeige-Funktion auszuführen
-    if (typeof filterGeraete === "function") {
-        filterGeraete();
-    } 
-
-    // 3. Sicherheits-Fallback: Falls der Container danach noch leer ist, rendern wir direkt
-    const container = document.getElementById("geraeteListe") || document.getElementById("geraeteContainer");
-    if (container && (!container.innerHTML.trim() || container.innerHTML.includes("Keine Geräte"))) {
-        renderGeraeteFallback(geraete);
-    }
+    filterGeraete();
 }
 
-// Direkte Darstellung der Geräte als Fallback
-function renderGeraeteFallback(liste) {
-    const container = document.getElementById("geraeteListe") || document.getElementById("geraeteContainer");
-    if (!container) return;
-
-    if (!liste || liste.length === 0) {
-        container.innerHTML = `<div class="p-3 text-muted text-center">Keine Geräte vorhanden.</div>`;
-        return;
-    }
-
-    container.innerHTML = liste.map(g => `
-        <div class="card mb-2 p-3 shadow-sm" style="border-radius: 10px;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-1">${g.bezeichnung || 'Unbenanntes Gerät'}</h5>
-                    <small class="text-muted">
-                        Inv-Nr: <strong>${g.inventarnummer || '-'}</strong> | 
-                        Kategorie: <strong>${g.kategorie || '-'}</strong> | 
-                        Standort: <strong>${g.standort || '-'}</strong>
-                    </small>
-                </div>
-                <div>
-                    <span class="badge ${g.status === 'Einsatzbereit' ? 'bg-success' : 'bg-warning'} p-2">
-                        ${g.status || 'Einsatzbereit'}
-                    </span>
-                </div>
-            </div>
-        </div>
-    `).join("");
-}
 // ==========================================
 // 2. Hilfsfunktion: Nächste Prüfung berechnen
 // ==========================================
@@ -95,10 +54,10 @@ function neuesGeraet() {
         return;
     }
 
-    // ACHTUNG: Vor der Prüfung immer die aktuellsten Daten laden!
-    let geraete = ladeDaten("geraete") || [];
+    // Aktuellste Daten aus dem Speicher laden
+    geraete = ladeDaten("geraete") || [];
 
-    // Duplikatsprüfung auf Groß-/Kleinschreibung und Leerzeichen korrigiert
+    // Duplikatsprüfung
     const vorhanden = geraete.find(g => 
         (g.inventarnummer || "").trim().toLowerCase() === inventar.toLowerCase() && 
         g.id !== bearbeitungsId
@@ -109,24 +68,28 @@ function neuesGeraet() {
         return;
     }
 
-    let geraet;
+    const naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
 
     if (bearbeitungsId !== null) {
         // Bearbeiten
-        geraet = geraete.find(g => g.id === bearbeitungsId);
-        if (geraet) {
-            geraet.inventarnummer = inventar;
-            geraet.bezeichnung = bezeichnung;
-            geraet.kategorie = kategorie;
-            geraet.hersteller = hersteller;
-            geraet.status = status;
-            geraet.standort = standort;
-            geraet.letztePruefung = letztePruefung;
-            geraet.pruefintervall = pruefintervall;
+        const index = geraete.findIndex(g => g.id === bearbeitungsId);
+        if (index !== -1) {
+            geraete[index] = {
+                ...geraete[index],
+                inventarnummer: inventar,
+                bezeichnung: bezeichnung,
+                kategorie: kategorie,
+                hersteller: hersteller,
+                status: status,
+                standort: standort,
+                letztePruefung: letztePruefung,
+                pruefintervall: parseInt(pruefintervall),
+                naechstePruefung: naechstePruefung
+            };
         }
     } else {
         // Neues Gerät anlegen
-        geraet = {
+        const neuesG = {
             id: "GER-" + Date.now(),
             inventarnummer: inventar,
             bezeichnung: bezeichnung,
@@ -135,32 +98,11 @@ function neuesGeraet() {
             status: status,
             standort: standort,
             letztePruefung: letztePruefung,
-            pruefintervall: pruefintervall,
+            pruefintervall: parseInt(pruefintervall),
+            naechstePruefung: naechstePruefung,
             erstellt: new Date().toLocaleDateString("de-DE")
         };
-        geraete.push(geraet);
-    }
-
-    // WICHTIG: Hier wird das Gerät in die Cloud (Firebase) & Lokal gespeichert!
-    speichereDaten("geraete", geraete);
-
-    // Formular zurücksetzen / Ansicht aktualisieren
-    if (typeof schliesseGeraetModal === "function") schliesseGeraetModal();
-    if (typeof zeigeGeraete === "function") zeigeGeraete();
-}
-
-    geraet.inventarnummer = inventar;
-    geraet.bezeichnung = bezeichnung;
-    geraet.kategorie = kategorie;
-    geraet.hersteller = hersteller;
-    geraet.status = status;
-    geraet.standort = standort;
-    geraet.letztePruefung = letztePruefung;
-    geraet.pruefintervall = parseInt(pruefintervall);
-    geraet.naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
-
-    if (bearbeitungsId === null) {
-        geraete.push(geraet);
+        geraete.push(neuesG);
     }
 
     speichereGeraete();
@@ -187,13 +129,17 @@ function resetFormular() {
 // 4. Anzeige & Filter
 // ==========================================
 function filterGeraete() {
+    geraete = ladeDaten("geraete") || [];
+
     const suchbegriff = (document.getElementById("sucheGeraet")?.value || "").toLowerCase();
     const kategorie = document.getElementById("filterKategorie")?.value || "";
     const status = document.getElementById("filterStatus")?.value || "";
 
     const gefiltert = geraete.filter(g => {
-        const sucheOK = g.bezeichnung.toLowerCase().includes(suchbegriff) || 
-                        g.inventarnummer.toLowerCase().includes(suchbegriff);
+        const bez = (g.bezeichnung || "").toLowerCase();
+        const inv = (g.inventarnummer || "").toLowerCase();
+
+        const sucheOK = bez.includes(suchbegriff) || inv.includes(suchbegriff);
         const kategorieOK = kategorie === "" || g.kategorie === kategorie;
         const statusOK = status === "" || g.status === status;
 
@@ -209,8 +155,8 @@ function zeigeGefilterteGeraete(liste) {
 
     ausgabe.innerHTML = "";
 
-    if (liste.length === 0) {
-        ausgabe.innerHTML = `<tr><td colspan="6" style="text-align:center;">Keine Geräte gefunden</td></tr>`;
+    if (!liste || liste.length === 0) {
+        ausgabe.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Keine Geräte vorhanden</td></tr>`;
         return;
     }
 
@@ -225,11 +171,11 @@ function zeigeGefilterteGeraete(liste) {
 
         ausgabe.innerHTML += `
         <tr>
-            <td><strong>${g.inventarnummer}</strong></td>
-            <td>${g.bezeichnung}</td>
-            <td>${g.kategorie}</td>
+            <td><strong>${g.inventarnummer || '-'}</strong></td>
+            <td>${g.bezeichnung || '-'}</td>
+            <td>${g.kategorie || '-'}</td>
             <td>${g.hersteller || "-"}</td>
-            <td class="${statusClass}">${g.status}</td>
+            <td class="${statusClass}">${g.status || 'Einsatzbereit'}</td>
             <td>
                 <button class="btn btn-details" title="Details" onclick="zeigeGeraeteDetails('${g.id}')">👁️</button>
                 <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="bearbeiteGeraet('${g.id}')">✏️</button>
@@ -277,11 +223,11 @@ function bearbeiteGeraet(id) {
 
     bearbeitungsId = id;
 
-    if (document.getElementById("inventar")) document.getElementById("inventar").value = g.inventarnummer;
-    if (document.getElementById("bezeichnung")) document.getElementById("bezeichnung").value = g.bezeichnung;
-    if (document.getElementById("kategorie")) document.getElementById("kategorie").value = g.kategorie;
+    if (document.getElementById("inventar")) document.getElementById("inventar").value = g.inventarnummer || "";
+    if (document.getElementById("bezeichnung")) document.getElementById("bezeichnung").value = g.bezeichnung || "";
+    if (document.getElementById("kategorie")) document.getElementById("kategorie").value = g.kategorie || "";
     if (document.getElementById("hersteller")) document.getElementById("hersteller").value = g.hersteller || "";
-    if (document.getElementById("status")) document.getElementById("status").value = g.status;
+    if (document.getElementById("status")) document.getElementById("status").value = g.status || "Einsatzbereit";
     if (document.getElementById("standort")) document.getElementById("standort").value = g.standort || "";
     if (document.getElementById("letztePruefung")) document.getElementById("letztePruefung").value = g.letztePruefung || "";
     if (document.getElementById("pruefintervall")) document.getElementById("pruefintervall").value = g.pruefintervall || "12";
