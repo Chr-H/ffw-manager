@@ -2,7 +2,7 @@
 // FFW Manager - Geräteverwaltung (v0.5.0)
 // ==========================================
 
-let geraete = [];
+let geraete = ladeDaten("geraete") || [];
 let bearbeitungsId = null;
 
 // ==========================================
@@ -10,13 +10,23 @@ let bearbeitungsId = null;
 // ==========================================
 function ladeGeraete() {
     geraete = ladeDaten("geraete") || [];
+    return geraete;
 }
 
 function speichereGeraete() {
-    speichereDaten('geraete', geraeteListe); // <-- Das sendet die Daten an Firebase!
+    speichereDaten('geraete', geraete); // Korrigiert: 'geraete' statt 'geraeteListe'
     document.dispatchEvent(new Event("geraeteGeaendert"));
 }
 
+// Hilfsfunktion: Wird automatisch aufgerufen, wenn neue Cloud-Daten eintreffen
+function zeigeGeraete() {
+    geraete = ladeDaten("geraete") || [];
+    
+    // Ruft deine bestehende Filter-/Render-Funktion auf
+    if (typeof filterGeraete === "function") {
+        filterGeraete();
+    }
+}
 // ==========================================
 // 2. Hilfsfunktion: Nächste Prüfung berechnen
 // ==========================================

@@ -31,6 +31,7 @@ function speichereDaten(schluessel, daten) {
 }
 
 // 3. Live-Synchronisation mit Firebase
+// Live-Synchronisation mit Firebase
 function starteCloudSync() {
   if (typeof db === 'undefined' || db === null) return;
 
@@ -42,20 +43,17 @@ function starteCloudSync() {
         if (doc.exists && doc.data().eintraege) {
           const cloudDaten = doc.data().eintraege;
           
-          // 1. Lokalen Speicher aktualisieren
+          // 1. Im lokalen Speicher ablegen
           localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
           
-          // 2. Globale Variablen in den Skripten aktualisieren (WICHTIG für Smartphone!)
+          // 2. Ansichten aktualisieren
           if (schluessel === 'geraete') {
             if (typeof window.geraete !== 'undefined') window.geraete = cloudDaten;
-            if (typeof geraete !== 'undefined') geraete = cloudDaten;
             if (typeof zeigeGeraete === 'function') zeigeGeraete();
-            if (typeof filterGeraete === 'function') filterGeraete();
           }
           
           if (schluessel === 'fahrzeuge') {
             if (typeof window.fahrzeuge !== 'undefined') window.fahrzeuge = cloudDaten;
-            if (typeof fahrzeuge !== 'undefined') fahrzeuge = cloudDaten;
             if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
           }
 
