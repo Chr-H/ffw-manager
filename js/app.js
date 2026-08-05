@@ -140,4 +140,11 @@ function filtereGeraeteNachDashboard(modus) {
             filterGeraete();
         }
     }
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof ladeGeraete === "function") ladeGeraete();
+  if (typeof filterGeraete === "function") filterGeraete();
+  if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
+});
+
 }
