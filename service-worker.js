@@ -37,11 +37,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event: Dateiaufrufe bedienen
+// Fetch Event: Immer zuerst Netzwerk versuchen, bei offline auf Cache zurückgreifen
 self.addEventListener('fetch', (event) => {
+  // Firebase-Anfragen und Cloud-Sync nicht vom Service Worker abfangen lassen
+  if (event.request.url.includes('firestore.googleapis.com') || 
+      event.request.url.includes('firebase')) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Erfolgreiche Antwort im Cache aktualisieren
+        if (response && response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        // Falls offline: Aus dem Cache laden
+        return caches.match(event.request);
+      })
   );
 });
