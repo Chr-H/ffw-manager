@@ -192,44 +192,48 @@
         </main>
 
     </div>
-<!-- Firebase SDKs -->
+<!-- 1. Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+<!-- 2. Firebase Konfiguration & Initialisierung -->
 <script>
-  // Füge hier deinen Code aus der Firebase Konsole ein:
+  // WICHTIG: Ersetze die Platzhalter unten mit deinen echten Firebase-Schlüsseln!
   const firebaseConfig = {
-    apiKey: "DEIN_API_KEY",
-    authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
-    projectId: "DEIN_PROJECT_ID",
-    storageBucket: "DEIN_PROJECT_ID.appspot.com",
-    messagingSenderId: "DEINE_SENDER_ID",
-    appId: "DEINE_APP_ID"
+    apiKey: "AIzaSy...",                   // Hier deinen echten apiKey einfügen
+    authDomain: "ffw-albertsried...",      // Hier deine authDomain einfügen
+    projectId: "ffw-albertsried...",       // Hier deine projectId einfügen
+    storageBucket: "ffw-albertsried...",   // Hier deinen storageBucket einfügen
+    messagingSenderId: "123456789...",     // Hier deine messagingSenderId einfügen
+    appId: "1:123456789:web:..."          // Hier deine appId einfügen
   };
 
-  // Firebase initialisieren
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  // Firebase global verfügbar machen
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  window.db = firebase.firestore();
 </script>
 
-<!-- Deine bisherigen Skripte -->
+<!-- 3. Anwendungsskripte in korrekter Reihenfolge -->
 <script src="js/storage.js"></script>
 <script src="js/kategorien.js"></script>
 <script src="js/geraete.js"></script>
 <script src="js/fahrzeuge.js"></script>
 <script src="js/app.js"></script>
-    <script>
+
+<!-- 4. Service Worker & Initialisierung -->
+<script>
+  // Service Worker für PWA-Updates
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js').then((reg) => {
-        // Prüft bei jedem App-Start aktiv auf Updates
         reg.update();
       }).catch((err) => {
         console.error('Service Worker Fehler:', err);
       });
     });
 
-    // Lädt die Seite automatisch neu, sobald der neue Service Worker aktiv wird
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!refreshing) {
@@ -238,14 +242,11 @@
       }
     });
   }
-</script>
-<script>
-  // Cloud-Sync sofort nach dem Laden starten
+
+  // Cloud-Sync starten, sobald das Dokument bereit ist
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof starteCloudSync === "function") {
       starteCloudSync();
     }
   });
 </script>
-</body>
-</html>
