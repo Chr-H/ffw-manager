@@ -49,12 +49,14 @@ function starteCloudSync() {
           // 2. Ansichten aktualisieren
           if (schluessel === 'geraete') {
             if (typeof window.geraete !== 'undefined') window.geraete = cloudDaten;
-            if (typeof zeigeGeraete === 'function') zeigeGeraete();
-          }
-          
-          if (schluessel === 'fahrzeuge') {
-            if (typeof window.fahrzeuge !== 'undefined') window.fahrzeuge = cloudDaten;
-            if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
+            if (typeof geraete !== 'undefined') geraete = cloudDaten;
+            
+            // Ruft direkt die Filter- & Ausgabe-Funktion der Geräteliste auf:
+            if (typeof filterGeraete === 'function') {
+              filterGeraete();
+            } else if (typeof zeigeGeraete === 'function') {
+              zeigeGeraete();
+            }
           }
 
           if (typeof aktualisiereDashboard === 'function') {
