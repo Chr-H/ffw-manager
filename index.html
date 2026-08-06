@@ -106,31 +106,32 @@
 
                 <h2>🔧 Geräteverwaltung</h2>
 
-                <!-- Formular -->
-                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <h3>➕ Gerät anlegen / bearbeiten</h3>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                        <input id="inventar" type="text" placeholder="Inventarnummer">
-                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
-                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
-                        <input id="hersteller" type="text" placeholder="Hersteller">
-                        <input id="standort" type="text" placeholder="Standort">
-                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
-                        <select id="pruefintervall" title="Prüfintervall">
-                            <option value="12">12 Monate (Jährlich)</option>
-                            <option value="24">24 Monate (2 Jahre)</option>
-                            <option value="6">6 Monate (Halbjährlich)</option>
-                            <option value="1">1 Monat (Monatlich)</option>
-                        </select>
-                        <select id="status">
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                            <option value="Wartung">🟡 Wartung</option>
-                            <option value="Defekt">🔴 Defekt</option>
-                            <option value="Außer Dienst">⚫ Außer Dienst</option>
-                        </select>
-                        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
-                    </div>
-                </div>
+<!-- Formular -->
+<div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+    <h3>➕ Gerät anlegen / bearbeiten</h3>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <input id="inventar" type="text" placeholder="Inventarnummer">
+        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
+        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
+        <input id="hersteller" type="text" placeholder="Hersteller">
+        <input id="standort" type="text" placeholder="Standort">
+        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
+        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
+        <select id="pruefintervall" title="Prüfintervall">
+            <option value="12">12 Monate (Jährlich)</option>
+            <option value="24">24 Monate (2 Jahre)</option>
+            <option value="6">6 Monate (Halbjährlich)</option>
+            <option value="1">1 Monat (Monatlich)</option>
+        </select>
+        <select id="status">
+            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+            <option value="Wartung">🟡 Wartung</option>
+            <option value="Defekt">🔴 Defekt</option>
+            <option value="Außer Dienst">⚫ Außer Dienst</option>
+        </select>
+        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
+    </div>
+</div>
 
                 <hr style="margin:20px 0;">
 
@@ -155,12 +156,12 @@
                         <table class="geraete-tabelle" style="width:100%;">
                             <thead>
                                 <tr>
-                                    <th>Inventar</th>
+                                    <th>Aktionen</th>
+                                    <th>Inv.-Nr.</th>
                                     <th>Bezeichnung</th>
                                     <th>Kategorie</th>
                                     <th>Hersteller</th>
                                     <th>Status</th>
-                                    <th>Aktionen</th>
                                 </tr>
                             </thead>
                             <tbody id="geraeteListe"></tbody>

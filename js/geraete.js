@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.5.2)
+// FFW Manager - Geräteverwaltung (v0.6.0)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -13,11 +13,6 @@ function ladeGeraete() {
 function speichereGeraete() {
     speichereDaten('geraete', geraete);
     document.dispatchEvent(new Event("geraeteGeaendert"));
-}
-
-function zeigeGeraete() {
-    geraete = ladeDaten("geraete") || [];
-    filterGeraete();
 }
 
 function berechneNaechstePruefung(datumStr, intervallMonate) {
@@ -35,6 +30,7 @@ function neuesGeraet() {
     const elHer = document.getElementById("hersteller");
     const elStat = document.getElementById("status");
     const elSta = document.getElementById("standort");
+    const elErst = document.getElementById("erstinbetriebnahme");
     const elLpz = document.getElementById("letztePruefung");
     const elInt = document.getElementById("pruefintervall");
 
@@ -44,6 +40,7 @@ function neuesGeraet() {
     const hersteller = elHer ? elHer.value.trim() : "";
     const status = elStat ? elStat.value : "Einsatzbereit";
     const standort = elSta ? elSta.value.trim() : "";
+    const erstinbetriebnahme = elErst ? elErst.value : "";
     const letztePruefung = elLpz ? elLpz.value : "";
     const pruefintervall = elInt ? elInt.value : "12";
 
@@ -77,6 +74,7 @@ function neuesGeraet() {
                 hersteller: hersteller,
                 status: status,
                 standort: standort,
+                erstinbetriebnahme: erstinbetriebnahme,
                 letztePruefung: letztePruefung,
                 pruefintervall: parseInt(pruefintervall),
                 naechstePruefung: naechstePruefung
@@ -91,9 +89,11 @@ function neuesGeraet() {
             hersteller: hersteller,
             status: status,
             standort: standort,
+            erstinbetriebnahme: erstinbetriebnahme,
             letztePruefung: letztePruefung,
             pruefintervall: parseInt(pruefintervall),
             naechstePruefung: naechstePruefung,
+            historie: letztePruefung ? [{ datum: letztePruefung, ergebnis: "Initialprüfung", pruefer: "System" }] : [],
             erstellt: new Date().toLocaleDateString("de-DE")
         };
         geraete.push(neuesG);
@@ -106,7 +106,7 @@ function neuesGeraet() {
 
 function resetFormular() {
     bearbeitungsId = null;
-    const felder = ["inventar", "bezeichnung", "hersteller", "kategorie", "standort", "letztePruefung"];
+    const felder = ["inventar", "bezeichnung", "hersteller", "kategorie", "standort", "erstinbetriebnahme", "letztePruefung"];
     felder.forEach(f => {
         const el = document.getElementById(f);
         if (el) el.value = "";
@@ -164,23 +164,25 @@ function zeigeGefilterteGeraete(liste) {
             case "Außer Dienst": statusClass = "status-grau"; break;
         }
 
+        // Buttons stehen JETZT in der ersten Spalte (links)
         ausgabe.innerHTML += `
         <tr>
+            <td style="white-space: nowrap;">
+                <button class="btn btn-details" title="Details / Akte" onclick="zeigeGeraeteDetails('${g.id}')">👁️</button>
+                <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="bearbeiteGeraet('${g.id}')">✏️</button>
+                <button class="btn btn-loeschen" title="Löschen" onclick="loescheGeraet('${g.id}')">🗑️</button>
+            </td>
             <td><strong>${g.inventarnummer || '-'}</strong></td>
             <td>${g.bezeichnung || '-'}</td>
             <td>${g.kategorie || '-'}</td>
             <td>${g.hersteller || "-"}</td>
             <td class="${statusClass}">${g.status || 'Einsatzbereit'}</td>
-            <td>
-                <button class="btn btn-details" title="Details" onclick="zeigeGeraeteDetails('${g.id}')">👁️</button>
-                <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="bearbeiteGeraet('${g.id}')">✏️</button>
-                <button class="btn btn-loeschen" title="Löschen" onclick="loescheGeraet('${g.id}')">🗑️</button>
-            </td>
         </tr>`;
     });
 }
 
 function zeigeGeraeteDetails(id) {
+    geraete = ladeDaten("geraete") || [];
     const g = geraete.find(item => item.id === id);
     const detailsContainer = document.getElementById("geraeteDetails");
 
@@ -194,6 +196,28 @@ function zeigeGeraeteDetails(id) {
         ? new Date(g.letztePruefung).toLocaleDateString("de-DE") 
         : "Keine Angabe";
 
+    const inbetriebnahmeFormatted = g.erstinbetriebnahme 
+        ? new Date(g.erstinbetriebnahme).toLocaleDateString("de-DE") 
+        : "Nicht erfasst";
+
+    // Prüfhistorie auflisten
+    const historie = g.historie || [];
+    let historieHtml = "";
+
+    if (historie.length === 0) {
+        historieHtml = `<li><small style="color:#777;">Bisher keine Prüfungen protokolliert.</small></li>`;
+    } else {
+        historie.slice().reverse().forEach(h => {
+            const hDatum = h.datum ? new Date(h.datum).toLocaleDateString("de-DE") : "-";
+            historieHtml += `
+                <li style="margin-bottom: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 4px;">
+                    <strong>📅 ${hDatum}</strong> - <span style="color:#2e7d32;">${h.ergebnis || 'Geprüft'}</span>
+                    <br><small>Prüfer: ${h.pruefer || 'Unbekannt'} ${h.bemerkung ? '| Note: ' + h.bemerkung : ''}</small>
+                </li>
+            `;
+        });
+    }
+
     detailsContainer.innerHTML = `
         <h2>📋 Geräteakte</h2>
         <h3 style="color:#B71C1C; margin-top:5px;">${g.bezeichnung}</h3>
@@ -202,11 +226,57 @@ function zeigeGeraeteDetails(id) {
         <p><strong>Kategorie:</strong> ${g.kategorie}</p>
         <p><strong>Hersteller:</strong> ${g.hersteller || "-"}</p>
         <p><strong>Standort:</strong> ${g.standort || "-"}</p>
+        <p><strong>Erstinbetriebnahme:</strong> ${inbetriebnahmeFormatted}</p>
         <p><strong>Status:</strong> ${g.status}</p>
-        <p><strong>Letzte Prüfung:</strong> ${letztePruefFormatted}</p>
         <p><strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span></p>
-        <p><strong>Erstellt am:</strong> ${g.erstellt || "-"}</p>
+        
+        <hr style="margin:15px 0;">
+        <h4>📜 Prüfhistorie</h4>
+        <ul style="list-style:none; padding-left:0; margin:10px 0; max-height: 180px; overflow-y: auto;">
+            ${historieHtml}
+        </ul>
+
+        <div style="background:#f5f5f5; padding:10px; border-radius:6px; margin-top:10px;">
+            <strong style="font-size:0.9rem;">+ Neue Prüfung eintragen</strong>
+            <input type="date" id="neuesPruefDatum" value="${new Date().toISOString().split('T')[0]}" style="width:100%; margin:4px 0; padding:4px;">
+            <input type="text" id="prueferName" placeholder="Prüfer Name" style="width:100%; margin:4px 0; padding:4px;">
+            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${g.id}')">Prüfung protokollieren</button>
+        </div>
     `;
+}
+
+function fuegePruefungHinzu(id) {
+    const elDatum = document.getElementById("neuesPruefDatum");
+    const elPruefer = document.getElementById("prueferName");
+
+    const datum = elDatum ? elDatum.value : "";
+    const pruefer = elPruefer ? elPruefer.value.trim() : "Unbekannt";
+
+    if (!datum) {
+        alert("Bitte ein Prüfdatum angeben.");
+        return;
+    }
+
+    geraete = ladeDaten("geraete") || [];
+    const index = geraete.findIndex(g => g.id === id);
+
+    if (index !== -1) {
+        const g = geraete[index];
+        if (!g.historie) g.historie = [];
+
+        g.historie.push({
+            datum: datum,
+            ergebnis: "Erfolgreich geprüft",
+            pruefer: pruefer
+        });
+
+        g.letztePruefung = datum;
+        g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
+
+        speichereGeraete();
+        filterGeraete();
+        zeigeGeraeteDetails(id);
+    }
 }
 
 function bearbeiteGeraet(id) {
@@ -221,6 +291,7 @@ function bearbeiteGeraet(id) {
     if (document.getElementById("hersteller")) document.getElementById("hersteller").value = g.hersteller || "";
     if (document.getElementById("status")) document.getElementById("status").value = g.status || "Einsatzbereit";
     if (document.getElementById("standort")) document.getElementById("standort").value = g.standort || "";
+    if (document.getElementById("erstinbetriebnahme")) document.getElementById("erstinbetriebnahme").value = g.erstinbetriebnahme || "";
     if (document.getElementById("letztePruefung")) document.getElementById("letztePruefung").value = g.letztePruefung || "";
     if (document.getElementById("pruefintervall")) document.getElementById("pruefintervall").value = g.pruefintervall || "12";
 
@@ -237,7 +308,7 @@ function loescheGeraet(id) {
     speichereGeraete();
     filterGeraete();
 
-    const detailsContainer = document.getElementById("geraeteDetails") || document.getElementById("geraeteDetailsInhalt");
+    const detailsContainer = document.getElementById("geraeteDetails");
     if (detailsContainer) {
         detailsContainer.innerHTML = `<p>Bitte links ein Gerät auswählen.</p>`;
     }
