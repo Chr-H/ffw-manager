@@ -1,19 +1,19 @@
-const CACHE_NAME = 'ffw-manager-v3.0.8';
+const CACHE_NAME = 'ffw-manager-v3.0.9';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './manifest.json',
   './css/style.css',
   './js/storage.js',
   './js/kategorien.js',
   './js/geraete.js',
   './js/fahrzeuge.js',
-  './js/app.js',
-  './manifest.json'
+  './js/app.js'
 ];
 
-// Install Event: Neuen Cache anlegen
+// Installation & Caching
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Erzwingt das sofortige Aktivieren des neuen Service Workers
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
@@ -21,45 +21,29 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event: Alte Caches automatisch löschen
+// Alten Cache aufräumen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
-            console.log('Lösche alten Cache:', cache);
             return caches.delete(cache);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Übernimmt sofort die Kontrolle
+    }).then(() => self.clients.claim())
   );
 });
 
-// Fetch Event: Immer zuerst Netzwerk versuchen, bei offline auf Cache zurückgreifen
+// Fetch-Event (Offline-Unterstützung für lokale Dateien)
 self.addEventListener('fetch', (event) => {
-  // Firebase-Anfragen und Cloud-Sync nicht vom Service Worker abfangen lassen
-  if (event.request.url.includes('firestore.googleapis.com') || 
-      event.request.url.includes('firebase')) {
+  if (event.request.url.includes('firestore.googleapis.com')) {
     return;
   }
-
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Erfolgreiche Antwort im Cache aktualisieren
-        if (response && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Falls offline: Aus dem Cache laden
-        return caches.match(event.request);
-      })
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    })
   );
 });
