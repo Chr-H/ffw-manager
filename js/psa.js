@@ -85,7 +85,18 @@ function openPSAModal(id = null) {
                     </div>
                     <div>
                         <label><strong>Ausrüstungsteil *</strong></label>
-                        <input type="text" id="psa-bezeichnung" value="${item.bezeichnung || ''}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Überjacke, Helm, Atemschutzmaske">
+                        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${item.bezeichnung || ''}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
+                        <datalist id="psa-ausruestung-liste">
+                            <option value="Feuerwehrüberjacke">
+                            <option value="Feuerwehrüberhose">
+                            <option value="Feuerwehrhelm">
+                            <option value="Feuerwehrstiefel">
+                            <option value="Feuerwehrschutzhandschuhe">
+                            <option value="Atemschutzmaske">
+                            <option value="Feuerwehrhaltegurt">
+                            <option value="Warnweste">
+                            <option value="Dienstkleidung / Latzhose">
+                        </datalist>
                     </div>
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
