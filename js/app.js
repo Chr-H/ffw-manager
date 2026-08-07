@@ -80,24 +80,22 @@ document.addEventListener('geraeteGeaendert', aktualisiereDashboard);
 // ==========================================
 function zeigeSeite(seitenId) {
     // Alle Seiten ausblenden
-    const seiten = document.querySelectorAll('.seite-ansicht');
-    seiten.forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.seite-ansicht').forEach(seite => {
+        seite.style.display = 'none';
+    });
 
     // Gewählte Seite anzeigen
-    const zielSeite = document.getElementById('seite-' + seitenId);
+    const zielSeite = document.getElementById(seitenId);
     if (zielSeite) {
         zielSeite.style.display = 'block';
-    } else {
-        console.warn('Seite nicht gefunden: ' + seitenId);
     }
 
-    // Spezifische Logik je nach aufgerufener Seite ausführen
-    if (seitenId === 'dashboard') {
-        aktualisiereDashboard();
-    } else if (seitenId === 'fahrzeuge') {
-        if (typeof renderFahrzeugeView === 'function') {
-            renderFahrzeugeView();
-        }
+    // Ansichten bei Seitenwechsel aktualisieren
+    if (seitenId === 'psa-ansicht' && typeof renderPSAView === 'function') {
+        renderPSAView();
+    }
+    if (seitenId === 'fahrzeuge-ansicht' && typeof renderFahrzeugeView === 'function') {
+        renderFahrzeugeView();
     }
 }
 
