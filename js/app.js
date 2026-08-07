@@ -32,4 +32,7 @@ function zeigeSeite(seitenName) {
     if ((seitenName === 'geraete' || seitenName === 'seite-geraete') && typeof filterGeraete === 'function') {
         filterGeraete();
     }
+    if ((seitenName === 'lager' || seitenName === 'seite-lager') && typeof renderLagerView === 'function') {
+        renderLagerView();
+    }
 }
