@@ -13,11 +13,28 @@ function zeigeSeite(seitenName) {
     }
 
     // 2. Alle Seitenbereiche ausblenden
-    // Sucht sowohl nach .seite-ansicht als auch nach Elementen mit IDs, die mit 'seite-' beginnen
     const alleSeiten = document.querySelectorAll('.seite-ansicht, [id^="seite-"]');
     alleSeiten.forEach(seite => {
         seite.style.display = 'none';
     });
+
+    // 3. Gewählte Seite einblenden
+    zielSeite.style.display = 'block';
+
+    // 4. Daten-Render-Funktionen beim Seitenwechsel auslösen
+    if ((seitenName === 'psa' || seitenName === 'seite-psa') && typeof renderPSAView === 'function') {
+        renderPSAView();
+    }
+    if ((seitenName === 'lager' || seitenName === 'seite-lager') && typeof renderLagerView === 'function') {
+        renderLagerView();
+    }
+    if ((seitenName === 'geraete' || seitenName === 'seite-geraete') && typeof renderGeraeteView === 'function') {
+        renderGeraeteView();
+    }
+    if ((seitenName === 'fahrzeuge' || seitenName === 'seite-fahrzeuge') && typeof renderFahrzeugeView === 'function') {
+        renderFahrzeugeView();
+    }
+}
 
     // 3. Gewählte Seite einblenden
     zielSeite.style.display = 'block';

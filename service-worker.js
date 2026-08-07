@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ffw-manager-v3.3.0';
+const CACHE_NAME = 'ffw-manager-v3.4.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -8,20 +8,22 @@ const ASSETS_TO_CACHE = [
   './js/kategorien.js',
   './js/geraete.js',
   './js/fahrzeuge.js',
+  './js/psa.js',
+  './js/lager.js',
   './js/app.js'
 ];
 
-// Installation & Caching
+// 1. Install-Event: Neue Dateien cachen
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
-// Alten Cache aufräumen
+// 2. Activate-Event: Alte Cache-Versionen aufräumen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -32,15 +34,13 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
   );
+  self.clients.claim();
 });
 
-// Fetch-Event (Offline-Unterstützung für lokale Dateien)
+// 3. Fetch-Event: Aus dem Cache laden (Offline-Support)
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('firestore.googleapis.com')) {
-    return;
-  }
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
