@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung & PSA-Akte (v2.0.0)
+// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.0)
 // ==========================================
 
 function getPSA() {
@@ -11,72 +11,118 @@ function speicherePSA(psaListe) {
     document.dispatchEvent(new Event("psaGeaendert"));
 }
 
-// 1. Tabellenansicht rendern
+// 1. Tabellenansicht mit Filterleiste rendern
 function renderPSAView() {
     const container = document.getElementById('psa-container');
     if (!container) return;
 
-    const psaListe = getPSA();
-
     let html = `
-        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>🧑‍🚒 PSA-Verwaltung</h2>
             <button class="btn btn-primary" onclick="openPSAModal()">+ PSA ausgeben / anlegen</button>
         </div>
+
+        <!-- Filter- & Suchleiste -->
+        <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <div style="flex:2; min-width:200px;">
+                <input type="text" id="psa-filter-suche" oninput="filterPSA()" placeholder="🔍 Suche nach Name, Spind, Ausrüstung..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            <div style="flex:1; min-width:150px;">
+                <select id="psa-filter-status" onchange="filterPSA()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <option value="">Alle Status anzeigen</option>
+                    <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                    <option value="In Reinigung">🧺 In Reinigung</option>
+                    <option value="Defekt">🔴 Defekt</option>
+                    <option value="Ausgemustert">⚪ Ausgemustert</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabelle -->
+        <div style="overflow-x:auto;">
+            <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                <thead>
+                    <tr style="background:#f4f6f8; text-align:left; border-bottom:2px solid #e0e0e0;">
+                        <th style="padding:10px;">Aktionen</th>
+                        <th style="padding:10px;">Spind</th>
+                        <th style="padding:10px;">Träger</th>
+                        <th style="padding:10px;">Ausrüstung</th>
+                        <th style="padding:10px;">Größe</th>
+                        <th style="padding:10px;">Status</th>
+                        <th style="padding:10px;">Nächste Prüfung</th>
+                    </tr>
+                </thead>
+                <tbody id="psa-tabelle-body">
+                </tbody>
+            </table>
+        </div>
     `;
 
-    if (!psaListe || psaListe.length === 0) {
-        html += `<p style="text-align:center; color:#666; padding:20px;">Keine Schutzausrüstung erfasst.</p>`;
-    } else {
-        html += `
-            <div style="overflow-x:auto;">
-                <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <thead>
-                        <tr style="background:#f4f6f8; text-align:left; border-bottom:2px solid #e0e0e0;">
-                            <th style="padding:10px;">Aktionen</th>
-                            <th style="padding:10px;">Spind</th>
-                            <th style="padding:10px;">Träger</th>
-                            <th style="padding:10px;">Ausrüstung</th>
-                            <th style="padding:10px;">Größe</th>
-                            <th style="padding:10px;">Status</th>
-                            <th style="padding:10px;">Nächste Prüfung</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+    container.innerHTML = html;
+    filterPSA(); // Initiales Befüllen der Tabelle
+}
 
-        psaListe.forEach(item => {
-            const status = item.status || 'Einsatzbereit';
-            let statusBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🟢 Einsatzbereit</span>`;
-            if (status === 'In Reinigung') {
-                statusBadge = `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🧺 In Reinigung</span>`;
-            } else if (status === 'Defekt') {
-                statusBadge = `<span style="background:#ffebee; color:#c62828; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🔴 Defekt</span>`;
-            } else if (status === 'Ausgemustert') {
-                statusBadge = `<span style="background:#eee; color:#616161; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">⚪ Ausgemustert</span>`;
-            }
+// Live-Filterfunktion
+function filterPSA() {
+    const tbody = document.getElementById('psa-tabelle-body');
+    if (!tbody) return;
 
-            html += `
-                <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${item.id}')">
-                    <td style="padding:8px 10px;" onclick="event.stopPropagation();">
-                        <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${item.id}')">📂 Akte</button>
-                        <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${item.id}')">✏️</button>
-                        <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${item.id}')">🗑️</button>
-                    </td>
-                    <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + item.spind : '-'}</strong></td>
-                    <td style="padding:10px; font-weight:bold;">${item.traeger || 'Unbekannt'}</td>
-                    <td style="padding:10px;">${item.bezeichnung || '-'}</td>
-                    <td style="padding:10px;">${item.groesse || '-'}</td>
-                    <td style="padding:10px;">${statusBadge}</td>
-                    <td style="padding:10px;">${item.naechstePruefung ? new Date(item.naechstePruefung).toLocaleDateString("de-DE") : '-'}</td>
-                </tr>
-            `;
-        });
+    const psaListe = getPSA();
+    const SuchText = (document.getElementById('psa-filter-suche')?.value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('psa-filter-status')?.value || '';
 
-        html += `</tbody></table></div>`;
+    const gefiltert = psaListe.filter(item => {
+        const traeger = (item.traeger || '').toLowerCase();
+        const spind = (item.spind || '').toLowerCase();
+        const bezeichnung = (item.bezeichnung || '').toLowerCase();
+        const seriennummer = (item.seriennummer || '').toLowerCase();
+        const status = item.status || 'Einsatzbereit';
+
+        const passtText = traeger.includes(SuchText) || 
+                          spind.includes(SuchText) || 
+                          bezeichnung.includes(SuchText) || 
+                          seriennummer.includes(SuchText);
+
+        const passtStatus = statusFilter === '' || status === statusFilter;
+
+        return passtText && passtStatus;
+    });
+
+    if (gefiltert.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#666;">Keine passenden PSA-Einträge gefunden.</td></tr>`;
+        return;
     }
 
-    container.innerHTML = html;
+    let rowsHtml = '';
+    gefiltert.forEach(item => {
+        const status = item.status || 'Einsatzbereit';
+        let statusBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🟢 Einsatzbereit</span>`;
+        if (status === 'In Reinigung') {
+            statusBadge = `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🧺 In Reinigung</span>`;
+        } else if (status === 'Defekt') {
+            statusBadge = `<span style="background:#ffebee; color:#c62828; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🔴 Defekt</span>`;
+        } else if (status === 'Ausgemustert') {
+            statusBadge = `<span style="background:#eee; color:#616161; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">⚪ Ausgemustert</span>`;
+        }
+
+        rowsHtml += `
+            <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${item.id}')">
+                <td style="padding:8px 10px;" onclick="event.stopPropagation();">
+                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${item.id}')">📂 Akte</button>
+                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${item.id}')">✏️</button>
+                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${item.id}')">🗑️</button>
+                </td>
+                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + item.spind : '-'}</strong></td>
+                <td style="padding:10px; font-weight:bold;">${item.traeger || 'Unbekannt'}</td>
+                <td style="padding:10px;">${item.bezeichnung || '-'}</td>
+                <td style="padding:10px;">${item.groesse || '-'}</td>
+                <td style="padding:10px;">${statusBadge}</td>
+                <td style="padding:10px;">${item.naechstePruefung ? new Date(item.naechstePruefung).toLocaleDateString("de-DE") : '-'}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rowsHtml;
 }
 
 // 2. PSA-Akte (Detailansicht mit Status-Wechsel & Historie)
@@ -197,7 +243,7 @@ function speicherePSAStatus(id) {
         });
 
         speicherePSA(psaListe);
-        renderPSAView();
+        filterPSA();
         openPSAAkteModal(id);
     }
 }
@@ -218,7 +264,7 @@ function addPSAHistorieEintrag(event, id) {
     });
 
     speicherePSA(psaListe);
-    renderPSAView();
+    filterPSA();
     openPSAAkteModal(id);
 }
 
@@ -327,7 +373,7 @@ function savePSAFromModal(event, existingId) {
 
     speicherePSA(psaListe);
     closePSAModal();
-    renderPSAView();
+    filterPSA();
 }
 
 function loeschePSA(id) {
@@ -335,7 +381,7 @@ function loeschePSA(id) {
 
     const psaListe = getPSA().filter(p => p.id !== id);
     speicherePSA(psaListe);
-    renderPSAView();
+    filterPSA();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
