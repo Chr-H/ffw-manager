@@ -1,148 +1,35 @@
 // ==========================================
-// FFW Manager - Hauptlogik & Dashboard (v0.5.1 Fix)
+// FFW Manager - Hauptanwendung & Navigation
 // ==========================================
 
-const heute = new Date();
-const datumStr = heute.toLocaleDateString("de-DE", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-});
+function zeigeSeite(seitenName) {
+    // 1. Suche zuerst nach der ID mit Präfix "seite-" (z.B. "seite-geraete" oder "seite-psa")
+    let zielSeite = document.getElementById('seite-' + seitenName) || document.getElementById(seitenName);
 
-const feld = document.getElementById("heute");
-if (feld) feld.innerHTML = "Heute ist " + datumStr;
-
-function aktualisiereDashboard() {
-    if (typeof ladeDaten !== 'function') return;
-
-    const geraete = ladeDaten('geraete') || [];
-
-    // 1. Modul-Kacheln Counters
-    const cardGeraete = document.querySelector('.cards .card:nth-child(1) p');
-    if (cardGeraete) cardGeraete.textContent = `${geraete.length} Geräte`;
-
-    let defektCount = 0;
-    let wartungCount = 0;
-    let einsatzbereitCount = 0;
-    let ausserDienstCount = 0;
-    let ueberfaelligCount = 0;
-    let demnaechstFaelligCount = 0;
-
-    const jetzt = new Date();
-    const in30Tagen = new Date();
-    in30Tagen.setDate(jetzt.getDate() + 30);
-
-    geraete.forEach(g => {
-        const s = (g.status || '').toLowerCase();
-        if (s.includes('einsatz')) einsatzbereitCount++;
-        else if (s.includes('wart')) wartungCount++;
-        else if (s.includes('defekt')) defektCount++;
-        else if (s.includes('au')) ausserDienstCount++;
-
-        // Prüffristen ermitteln
-        if (g.naechstePruefung) {
-            const pDatum = new Date(g.naechstePruefung);
-            if (pDatum < jetzt) {
-                ueberfaelligCount++;
-            } else if (pDatum <= in30Tagen) {
-                demnaechstFaelligCount++;
-            }
-        }
-    });
-
-    // 2. Status-Karten oben korrigieren
-    const statusCards = document.querySelectorAll('.status-card');
-    if (statusCards.length >= 4) {
-        // Karte 1: Prüfungen (überfällig)
-        statusCards[0].querySelector('h3').textContent = "🔴 Prüfungen";
-        statusCards[0].querySelector('p').textContent = `${ueberfaelligCount} überfällig`;
-
-        // Karte 2: Demnächst fällig
-        statusCards[1].querySelector('h3').textContent = "🟡 Demnächst fällig";
-        statusCards[1].querySelector('p').textContent = `${demnaechstFaelligCount} Prüfungen`;
-
-        // Karte 3: Geräte / Fahrzeuge Status
-        statusCards[2].querySelector('h3').textContent = "🟢 Einsatzbereit";
-        statusCards[2].querySelector('p').textContent = `${einsatzbereitCount} Geräte einsatzbereit`;
-
-        // Karte 4: Außer Dienst / Defekt
-        statusCards[3].querySelector('h3').textContent = "⚫ Nicht einsatzbereit";
-        statusCards[3].querySelector('p').textContent = `${defektCount + ausserDienstCount} (Defekt/Außer Dienst)`;
+    // Sicherheitsprüfung: Falls Seite nicht existiert, in Konsole warnen
+    if (!zielSeite) {
+        console.error("Seite '" + seitenName + "' wurde im HTML nicht gefunden!");
+        return;
     }
-}
 
-document.addEventListener('DOMContentLoaded', aktualisiereDashboard);
-document.addEventListener('geraeteGeaendert', aktualisiereDashboard);
-
-// ==========================================
-// SPA Seitenumschaltung (Navigation)
-// ==========================================
-function zeigeSeite(seitenId) {
-    // Alle Seiten ausblenden
-    document.querySelectorAll('.seite-ansicht').forEach(seite => {
+    // 2. Alle Seitenbereiche ausblenden
+    // Sucht sowohl nach .seite-ansicht als auch nach Elementen mit IDs, die mit 'seite-' beginnen
+    const alleSeiten = document.querySelectorAll('.seite-ansicht, [id^="seite-"]');
+    alleSeiten.forEach(seite => {
         seite.style.display = 'none';
     });
 
-    // Gewählte Seite anzeigen
-    const zielSeite = document.getElementById(seitenId);
-    if (zielSeite) {
-        zielSeite.style.display = 'block';
-    }
+    // 3. Gewählte Seite einblenden
+    zielSeite.style.display = 'block';
 
-    // Ansichten bei Seitenwechsel aktualisieren
-    if (seitenId === 'psa-ansicht' && typeof renderPSAView === 'function') {
+    // 4. Ansichten beim Umschalten aktualisieren
+    if ((seitenName === 'psa' || seitenName === 'seite-psa') && typeof renderPSAView === 'function') {
         renderPSAView();
     }
-    if (seitenId === 'fahrzeuge-ansicht' && typeof renderFahrzeugeView === 'function') {
+    if ((seitenName === 'fahrzeuge' || seitenName === 'seite-fahrzeuge') && typeof renderFahrzeugeView === 'function') {
         renderFahrzeugeView();
     }
-}
-
-// ==========================================
-// Filter-Verknüpfungen (Dashboard -> Geräte)
-// ==========================================
-function filtereGeraeteNachDashboard(modus) {
-    zeigeSeite('geraete');
-
-    const filterStatus = document.getElementById('filterStatus');
-    const suchInput = document.getElementById('sucheGeraet');
-
-    if (suchInput) suchInput.value = ""; 
-
-    if (modus === 'ueberfaellig') {
-        if (filterStatus) filterStatus.value = "";
-        
-        const jetzt = new Date();
-        const gefiltert = (ladeDaten('geraete') || []).filter(g => {
-            return g.naechstePruefung && new Date(g.naechstePruefung) < jetzt;
-        });
-        
-        if (typeof zeigeGefilterteGeraete === 'function') {
-            zeigeGefilterteGeraete(gefiltert);
-        }
-    } else if (modus === 'inaktiv') {
-        if (filterStatus) filterStatus.value = "";
-        
-        const gefiltert = (ladeDaten('geraete') || []).filter(g => {
-            const s = (g.status || '').toLowerCase();
-            return s.includes('defekt') || s.includes('au');
-        });
-        
-        if (typeof zeigeGefilterteGeraete === 'function') {
-            zeigeGefilterteGeraete(gefiltert);
-        }
-    } else {
-        if (filterStatus) filterStatus.value = modus;
-        if (typeof filterGeraete === 'function') {
-            filterGeraete();
-        }
+    if ((seitenName === 'geraete' || seitenName === 'seite-geraete') && typeof filterGeraete === 'function') {
+        filterGeraete();
     }
-
-document.addEventListener("DOMContentLoaded", () => {
-  if (typeof ladeGeraete === "function") ladeGeraete();
-  if (typeof filterGeraete === "function") filterGeraete();
-  if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
-});
-
 }
