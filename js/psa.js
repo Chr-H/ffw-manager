@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung (v1.1.0)
+// FFW Manager - PSA-Verwaltung & PSA-Akte (v2.0.0)
 // ==========================================
 
 function getPSA() {
@@ -11,6 +11,7 @@ function speicherePSA(psaListe) {
     document.dispatchEvent(new Event("psaGeaendert"));
 }
 
+// 1. Tabellenansicht rendern
 function renderPSAView() {
     const container = document.getElementById('psa-container');
     if (!container) return;
@@ -18,50 +19,212 @@ function renderPSAView() {
     const psaListe = getPSA();
 
     let html = `
-        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
             <h2>🧑‍🚒 PSA-Verwaltung</h2>
             <button class="btn btn-primary" onclick="openPSAModal()">+ PSA ausgeben / anlegen</button>
         </div>
     `;
 
     if (!psaListe || psaListe.length === 0) {
-        html += `<p style="text-align:center; color:#666; padding: 20px;">Keine Schutzausrüstung erfasst. Klicke oben auf "+ PSA ausgeben / anlegen".</p>`;
+        html += `<p style="text-align:center; color:#666; padding:20px;">Keine Schutzausrüstung erfasst.</p>`;
     } else {
-        html += `<div class="card-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">`;
+        html += `
+            <div style="overflow-x:auto;">
+                <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <thead>
+                        <tr style="background:#f4f6f8; text-align:left; border-bottom:2px solid #e0e0e0;">
+                            <th style="padding:10px;">Aktionen</th>
+                            <th style="padding:10px;">Spind</th>
+                            <th style="padding:10px;">Träger</th>
+                            <th style="padding:10px;">Ausrüstung</th>
+                            <th style="padding:10px;">Größe</th>
+                            <th style="padding:10px;">Status</th>
+                            <th style="padding:10px;">Nächste Prüfung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
 
         psaListe.forEach(item => {
+            const status = item.status || 'Einsatzbereit';
+            let statusBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🟢 Einsatzbereit</span>`;
+            if (status === 'In Reinigung') {
+                statusBadge = `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🧺 In Reinigung</span>`;
+            } else if (status === 'Defekt') {
+                statusBadge = `<span style="background:#ffebee; color:#c62828; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🔴 Defekt</span>`;
+            } else if (status === 'Ausgemustert') {
+                statusBadge = `<span style="background:#eee; color:#616161; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">⚪ Ausgemustert</span>`;
+            }
+
             html += `
-                <div class="card" style="border-left: 5px solid #1976D2; background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div>
-                            <h3 style="margin:0 0 5px 0;">${item.traeger || 'Unbekannter Träger'}</h3>
-                            ${item.spind ? `<span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:bold;">🚪 Spind: ${item.spind}</span>` : ''}
-                        </div>
-                        <div>
-                            <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${item.id}')">✏️</button>
-                            <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${item.id}')">🗑️</button>
-                        </div>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <p style="margin:4px 0;"><strong>Ausrüstung:</strong> ${item.bezeichnung || '-'}</p>
-                        <p style="margin:4px 0;"><strong>Größe / Typ:</strong> ${item.groesse || '-'}</p>
-                        <p style="margin:4px 0;"><strong>Serien-/Barcodenr.:</strong> ${item.seriennummer || '-'}</p>
-                    </div>
-                    <hr style="margin: 0.8rem 0; border: 0; border-top: 1px solid #eee;">
-                    <p style="margin:4px 0;"><small>📅 <strong>Ausgegeben am:</strong> ${item.ausgabeDatum ? new Date(item.ausgabeDatum).toLocaleDateString("de-DE") : 'Unbekannt'}</small></p>
-                    ${item.naechstePruefung ? `<p style="margin:4px 0;"><small>⚠️ <strong>Nächste Prüfung:</strong> ${new Date(item.naechstePruefung).toLocaleDateString("de-DE")}</small></p>` : ''}
-                </div>
+                <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${item.id}')">
+                    <td style="padding:8px 10px;" onclick="event.stopPropagation();">
+                        <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${item.id}')">📂 Akte</button>
+                        <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${item.id}')">✏️</button>
+                        <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${item.id}')">🗑️</button>
+                    </td>
+                    <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + item.spind : '-'}</strong></td>
+                    <td style="padding:10px; font-weight:bold;">${item.traeger || 'Unbekannt'}</td>
+                    <td style="padding:10px;">${item.bezeichnung || '-'}</td>
+                    <td style="padding:10px;">${item.groesse || '-'}</td>
+                    <td style="padding:10px;">${statusBadge}</td>
+                    <td style="padding:10px;">${item.naechstePruefung ? new Date(item.naechstePruefung).toLocaleDateString("de-DE") : '-'}</td>
+                </tr>
             `;
         });
 
-        html += `</div>`;
+        html += `</tbody></table></div>`;
     }
 
     container.innerHTML = html;
 }
 
+// 2. PSA-Akte (Detailansicht mit Status-Wechsel & Historie)
+function openPSAAkteModal(id) {
+    const item = getPSA().find(p => p.id === id);
+    if (!item) return;
+
+    item.historie = item.historie || [];
+    item.status = item.status || 'Einsatzbereit';
+
+    let historieHtml = '';
+    if (item.historie.length === 0) {
+        historieHtml = '<p style="color:#777; font-style:italic;">Bisher keine Einträge in der Akte vorhanden.</p>';
+    } else {
+        historieHtml = '<ul style="list-style:none; padding:0; margin:0;">';
+        item.historie.slice().reverse().forEach(h => {
+            historieHtml += `
+                <li style="border-left:3px solid #1976D2; padding-left:10px; margin-bottom:10px; background:#f9f9f9; padding:8px; border-radius:0 4px 4px 0;">
+                    <div style="font-size:0.85rem; color:#666;">📅 ${new Date(h.datum).toLocaleDateString("de-DE")} - <strong>${h.typ}</strong> ${h.pruefer ? '(' + h.pruefer + ')' : ''}</div>
+                    <div style="margin-top:2px;">${h.bemerkung}</div>
+                </li>
+            `;
+        });
+        historieHtml += '</ul>';
+    }
+
+    const modalHtml = `
+        <div id="psa-akte-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
+            <div style="background:#fff; padding:20px; border-radius:8px; width:92%; max-width:650px; max-height:90vh; overflow-y:auto;">
+                
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:10px;">
+                    <div>
+                        <h2 style="margin:0;">📂 PSA-Akte: ${item.bezeichnung}</h2>
+                        <p style="margin:5px 0 0 0; color:#555;">Träger: <strong>${item.traeger}</strong> | Spind: <strong>${item.spind || 'Keiner'}</strong></p>
+                    </div>
+                    <button onclick="closePSAAkteModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">✖</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0; background:#f8f9fa; padding:12px; border-radius:6px;">
+                    <div><strong>Größe:</strong> ${item.groesse || '-'}</div>
+                    <div><strong>Serien- / Inv.-Nr.:</strong> ${item.seriennummer || '-'}</div>
+                    <div><strong>Ausgabedatum:</strong> ${item.ausgabeDatum ? new Date(item.ausgabeDatum).toLocaleDateString("de-DE") : '-'}</div>
+                    <div><strong>Nächste Prüfung:</strong> ${item.naechstePruefung ? new Date(item.naechstePruefung).toLocaleDateString("de-DE") : '-'}</div>
+                </div>
+
+                <!-- Status Ändern -->
+                <div style="margin-bottom:20px; background:#eef2f5; padding:12px; border-radius:6px;">
+                    <label><strong>Aktueller Status:</strong></label>
+                    <div style="display:flex; gap:10px; margin-top:5px;">
+                        <select id="psa-status-select" style="flex:1; padding:8px;">
+                            <option value="Einsatzbereit" ${item.status === 'Einsatzbereit' ? 'selected' : ''}>🟢 Einsatzbereit</option>
+                            <option value="In Reinigung" ${item.status === 'In Reinigung' ? 'selected' : ''}>🧺 In Reinigung</option>
+                            <option value="Defekt" ${item.status === 'Defekt' ? 'selected' : ''}>🔴 Defekt</option>
+                            <option value="Ausgemustert" ${item.status === 'Ausgemustert' ? 'selected' : ''}>⚪ Ausgemustert</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="speicherePSAStatus('${item.id}')">Status aktualisieren</button>
+                    </div>
+                </div>
+
+                <!-- Neue Historie / Ereignis eintragen -->
+                <details style="margin-bottom:20px; background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px;">
+                    <summary style="font-weight:bold; cursor:pointer;">➕ Neuer Eintrag (Reinigung, Prüfung, Defekt, etc.)</summary>
+                    <form onsubmit="addPSAHistorieEintrag(event, '${item.id}')" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                        <div style="display:flex; gap:10px;">
+                            <select id="hist-typ" style="flex:1; padding:6px;" required>
+                                <option value="Reinigung / Wäsche">🧺 Reinigung / Wäsche</option>
+                                <option value="Sichtprüfung">🔍 Sichtprüfung</option>
+                                <option value="Reparatur">🛠️ Reparatur</option>
+                                <option value="Mangel / Defekt">⚠️ Mangel / Defekt</option>
+                                <option value="Sonstiges">📝 Sonstiges</option>
+                            </select>
+                            <input type="text" id="hist-pruefer" placeholder="Bearbeiter / Prüfer" style="flex:1; padding:6px;">
+                        </div>
+                        <textarea id="hist-bemerkung" placeholder="Bemerkung / Details zum Vorgang..." style="width:100%; padding:6px;" rows="2" required></textarea>
+                        <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Eintrag speichern</button>
+                    </form>
+                </details>
+
+                <!-- Historie Liste -->
+                <h3>📜 Verlaufs- & Pflegehistorie</h3>
+                <div style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:6px;">
+                    ${historieHtml}
+                </div>
+
+                <div style="text-align:right; margin-top:15px;">
+                    <button class="btn" onclick="closePSAAkteModal()" style="background:#ccc;">Schließen</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    closePSAAkteModal();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closePSAAkteModal() {
+    const existing = document.getElementById('psa-akte-modal');
+    if (existing) existing.remove();
+}
+
+// Status direkt aus der Akte aktualisieren
+function speicherePSAStatus(id) {
+    const psaListe = getPSA();
+    const item = psaListe.find(p => p.id === id);
+    if (!item) return;
+
+    const neuerStatus = document.getElementById('psa-status-select').value;
+    const alterStatus = item.status || 'Einsatzbereit';
+
+    if (neuerStatus !== alterStatus) {
+        item.status = neuerStatus;
+        item.historie = item.historie || [];
+        item.historie.push({
+            datum: new Date().toISOString(),
+            typ: 'Statusänderung',
+            bemerkung: `Status geändert von "${alterStatus}" auf "${neuerStatus}".`,
+            pruefer: 'System'
+        });
+
+        speicherePSA(psaListe);
+        renderPSAView();
+        openPSAAkteModal(id);
+    }
+}
+
+// Eintrag zur Historie hinzufügen
+function addPSAHistorieEintrag(event, id) {
+    event.preventDefault();
+    const psaListe = getPSA();
+    const item = psaListe.find(p => p.id === id);
+    if (!item) return;
+
+    item.historie = item.historie || [];
+    item.historie.push({
+        datum: new Date().toISOString(),
+        typ: document.getElementById('hist-typ').value,
+        pruefer: document.getElementById('hist-pruefer').value.trim(),
+        bemerkung: document.getElementById('hist-bemerkung').value.trim()
+    });
+
+    speicherePSA(psaListe);
+    renderPSAView();
+    openPSAAkteModal(id);
+}
+
+// 3. Modal zum Anlegen/Bearbeiten der Grunddaten
 function openPSAModal(id = null) {
-    let item = { id: '', traeger: '', spind: '', bezeichnung: '', groesse: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '' };
+    let item = { id: '', traeger: '', spind: '', bezeichnung: '', groesse: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
 
     if (id) {
         const found = getPSA().find(p => p.id === id);
@@ -140,6 +303,7 @@ function savePSAFromModal(event, existingId) {
     event.preventDefault();
 
     const psaListe = getPSA();
+    const existingItem = psaListe.find(p => p.id === existingId) || {};
 
     const newItem = {
         id: existingId || "PSA-" + Date.now(),
@@ -149,7 +313,9 @@ function savePSAFromModal(event, existingId) {
         groesse: document.getElementById('psa-groesse').value.trim(),
         seriennummer: document.getElementById('psa-seriennummer').value.trim(),
         ausgabeDatum: document.getElementById('psa-ausgabeDatum').value,
-        naechstePruefung: document.getElementById('psa-naechstePruefung').value
+        naechstePruefung: document.getElementById('psa-naechstePruefung').value,
+        status: existingItem.status || 'Einsatzbereit',
+        historie: existingItem.historie || []
     };
 
     if (existingId) {
