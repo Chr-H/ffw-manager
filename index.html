@@ -204,10 +204,65 @@
 </section>
 
 
-            <!-- Modul Fahrzeuge -->
-            <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
-                <div id="fahrzeuge-container"></div>
-            </section>
+          <!-- ========================================= -->
+<!-- 3. FAHRZEUGVERWALTUNG & AKTE             -->
+<!-- ========================================= -->
+<section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🚒 Fahrzeugverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
+            <button class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+        </div>
+    </div>
+
+    <!-- Formular: Fahrzeug anlegen -->
+    <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>➕ Neues Fahrzeug anlegen</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <input id="fz-funkruf" type="text" placeholder="Funkrufname (z.B. Florian 1/40/1)">
+            <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
+            <input id="fz-typ" type="text" placeholder="Fahrzeugtyp (z.B. HLF 20)">
+            <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
+            <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
+            <input id="fz-sp" type="date" title="Nächste Sicherheitsprüfung (SP)">
+            <select id="fz-status">
+                <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                <option value="Wartung">🟡 In Werkstatt / Wartung</option>
+                <option value="Defekt">🔴 Außer Dienst / Defekt</option>
+            </select>
+            <button onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button>
+        </div>
+    </div>
+
+    <!-- Split-Layout: Links Fahrzeuge, Rechts Fahrzeugakte -->
+    <div style="display:grid; grid-template-columns: 1fr 450px; gap:20px; align-items:start;">
+        
+        <!-- Linke Spalte: Fahrzeugtabelle -->
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th class="no-print">Aktionen</th>
+                        <th>Funkrufname</th>
+                        <th>Typ</th>
+                        <th>Kennzeichen</th>
+                        <th>TÜV/HU</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="fahrzeugeListe"></tbody>
+            </table>
+        </div>
+
+        <!-- Rechte Spalte: Interaktive Fahrzeugakte -->
+        <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
+            <h2>📋 Fahrzeugakte</h2>
+            <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+        </div>
+
+    </div>
+</section>
 
             <!-- PSA BEREICH -->
             <section id="seite-psa" class="seite-ansicht" style="display: none;">

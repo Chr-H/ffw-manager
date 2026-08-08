@@ -1,200 +1,268 @@
-// ==========================================
-// FFW Manager - Fuhrparkverwaltung (v1.0.1)
-// ==========================================
+// Globale Variable für das aktuell ausgewählte Fahrzeug
+let aktuellesFahrzeugId = null;
 
-function getVehicles() {
-  return ladeDaten("fahrzeuge") || [];
-}
-
-function speichereFahrzeuge(fahrzeuge) {
-  speichereDaten('fahrzeuge', fahrzeuge);
-  document.dispatchEvent(new Event("fahrzeugeGeaendert"));
-}
-
-// Hilfsfunktion: Escape von HTML-Sonderzeichen gegen XSS
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Hilfsfunktion: Formatierung & Prüfung von YYYY-MM Daten (HU/SP)
-function formatierePruefMonat(yyyyMM) {
-  if (!yyyyMM) return '<span style="color:#888;">Keine</span>';
-  
-  const teile = yyyyMM.split('-');
-  if (teile.length !== 2) return escapeHtml(yyyyMM);
-
-  const jahr = parseInt(teile[0], 10);
-  const monat = parseInt(teile[1], 10);
-  
-  const jetzt = new Date();
-  const aktuellesJahr = jetzt.getFullYear();
-  const aktuellerMonat = jetzt.getMonth() + 1;
-
-  const abgelaufen = (jahr < aktuellesJahr) || (jahr === aktuellesJahr && monat < aktuellerMonat);
-  const formatted = `${String(monat).padStart(2, '0')}/${jahr}`;
-
-  if (abgelaufen) {
-    return `<strong style="color:#c62828;" title="Prüfung abgelaufen!">⚠️ ${formatted}</strong>`;
-  }
-  return formatted;
-}
-
+// Initiales Rendern der Übersicht
 function renderFahrzeugeView() {
-  const container = document.getElementById('fahrzeuge-container');
-  if (!container) return;
+    ladeFahrzeugTabelle();
+}
 
-  const vehicles = getVehicles();
+// Fahrzeugliste laden & anzeigen
+function ladeFahrzeugTabelle() {
+    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
+    const tbody = document.getElementById("fahrzeugeListe");
+    if (!tbody) return;
 
-  let html = `
-    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-      <h2>🚒 Fuhrparkverwaltung</h2>
-      <button class="btn btn-primary" onclick="openVehicleModal()">+ Neues Fahrzeug</button>
-    </div>
-  `;
+    tbody.innerHTML = "";
 
-  if (!vehicles || vehicles.length === 0) {
-    html += `<p style="text-align:center; color:#666; padding: 20px;">Keine Fahrzeuge vorhanden. Klicke oben auf "+ Neues Fahrzeug".</p>`;
-  } else {
-    html += `<div class="card-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">`;
+    if (fahrzeuge.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Keine Fahrzeuge vorhanden.</td></tr>`;
+        return;
+    }
 
-    vehicles.forEach(veh => {
-      const isEinsatzbereit = veh.status === 'Einsatzbereit';
-      const statusColor = isEinsatzbereit ? '#2e7d32' : (veh.status === 'Wartung' ? '#f57c00' : '#c62828');
+    fahrzeuge.forEach(fz => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="no-print">
+                <button title="Akte öffnen" onclick="oeffneFahrzeugAkte('${fz.id}')">👁️</button>
+                <button title="Löschen" onclick="loescheFahrzeug('${fz.id}')">🗑️</button>
+            </td>
+            <td><strong>${fz.funkrufname || '-'}</strong></td>
+            <td>${fz.typ || '-'}</td>
+            <td>${fz.kennzeichen || '-'}</td>
+            <td>${fz.tuev || '-'}</td>
+            <td>${fz.status || 'Einsatzbereit'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
-      html += `
-        <div class="card" style="border-left: 5px solid ${statusColor}; background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <h3 style="margin:0 0 5px 0;">${escapeHtml(veh.name || 'Unbekanntes Fahrzeug')}</h3>
-            <div>
-              <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openVehicleModal('${veh.id}')">✏️</button>
-              <button class="btn btn-loeschen" title="Löschen" onclick="loescheFahrzeug('${veh.id}')">🗑️</button>
-            </div>
-          </div>
-          <p style="margin:4px 0;"><strong>Funkrufname:</strong> ${escapeHtml(veh.callSign || '-')}</p>
-          <p style="margin:4px 0;"><strong>Kennzeichen:</strong> ${escapeHtml(veh.licensePlate || '-')}</p>
-          <p style="margin:4px 0;"><strong>Status:</strong> <span class="badge" style="background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.85rem;">${escapeHtml(veh.status || 'Einsatzbereit')}</span></p>
-          <hr style="margin: 0.8rem 0; border: 0; border-top: 1px solid #eee;">
-          <p style="margin:4px 0;"><small>📅 <strong>HU:</strong> ${formatierePruefMonat(veh.nextHU)} | <strong>SP:</strong> ${formatierePruefMonat(veh.nextSP)}</small></p>
-          ${veh.description ? `<p style="margin-top: 0.5rem; color: #555; font-size:0.9rem;"><small>${escapeHtml(veh.description)}</small></p>` : ''}
+// Neues Fahrzeug im Speicher ablegen
+function neuesFahrzeugSpeichern() {
+    const funkruf = document.getElementById("fz-funkruf").value.trim();
+    const kennzeichen = document.getElementById("fz-kennzeichen").value.trim();
+    const typ = document.getElementById("fz-typ").value.trim();
+    const baujahr = document.getElementById("fz-baujahr").value;
+    const tuev = document.getElementById("fz-tuev").value;
+    const sp = document.getElementById("fz-sp").value;
+    const status = document.getElementById("fz-status").value;
+
+    if (!funkruf) {
+        alert("Bitte mindestens den Funkrufnamen angeben.");
+        return;
+    }
+
+    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
+    
+    const neuesFZ = {
+        id: 'fz_' + Date.now(),
+        funkrufname: funkruf,
+        kennzeichen: kennzeichen,
+        typ: typ,
+        baujahr: baujahr,
+        tuev: tuev,
+        sp: sp,
+        status: status,
+        beladung: [],      // Array für Zuweisungen (z. B. { fach: "G1", geraet: "Stromerzeuger" })
+        wartungen: [],     // Array für Historie/Reparaturen
+        pruefplan: []      // Array für Beladungsprüfungen
+    };
+
+    fahrzeuge.push(neuesFZ);
+    if (typeof speichereDaten === "function") speichereDaten("fahrzeuge", fahrzeuge);
+
+    // Formular zurücksetzen & Liste neu laden
+    document.getElementById("fz-funkruf").value = "";
+    document.getElementById("fz-kennzeichen").value = "";
+    document.getElementById("fz-typ").value = "";
+    document.getElementById("fz-baujahr").value = "";
+    document.getElementById("fz-tuev").value = "";
+    document.getElementById("fz-sp").value = "";
+
+    ladeFahrzeugTabelle();
+    oeffneFahrzeugAkte(neuesFZ.id);
+}
+
+// Öffnet die Detail-Akte mit Reiter-Navigation
+function oeffneFahrzeugAkte(fzId) {
+    aktuellesFahrzeugId = fzId;
+    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
+    const fz = fahrzeuge.find(item => item.id === fzId);
+
+    const container = document.getElementById("fahrzeugAkteContainer");
+    if (!container || !fz) return;
+
+    container.innerHTML = `
+        <div style="border-bottom: 2px solid #ddd; padding-bottom:10px; margin-bottom:15px;">
+            <h2 style="margin:0;">🚒 ${fz.funkrufname}</h2>
+            <small style="color:#666;">${fz.typ || 'Fahrzeug'} | ${fz.kennzeichen || 'Kein Kennzeichen'}</small>
         </div>
-      `;
+
+        <!-- Reiter / Tabs Navigation -->
+        <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:1px solid #ccc;" class="no-print">
+            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('stammdaten')">📋 Stammdaten</button>
+            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('beladung')">📦 Beladung / Raum</button>
+            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('pruefplan')">📊 Prüfplan</button>
+            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('wartung')">🛠️ Wartung & Mängel</button>
+        </div>
+
+        <!-- Tab Inhaltsbereiche -->
+        <div id="tab-fz-content"></div>
+    `;
+
+    wechselFahrzeugTab('stammdaten');
+}
+
+// Umschalten der Tabs in der Akte
+function wechselFahrzeugTab(tabName) {
+    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
+    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
+    const content = document.getElementById("tab-fz-content");
+    if (!content || !fz) return;
+
+    if (tabName === 'stammdaten') {
+        content.innerHTML = `
+            <h3>Stammdaten & Termine</h3>
+            <p><strong>Baujahr:</strong> ${fz.baujahr || 'Nicht angegeben'}</p>
+            <p><strong>Nächster TÜV / HU:</strong> ${fz.tuev || 'Kein Datum'}</p>
+            <p><strong>Nächste SP:</strong> ${fz.sp || 'Kein Datum'}</p>
+            <p><strong>Status:</strong> ${fz.status}</p>
+        `;
+    } 
+    else if (tabName === 'beladung') {
+        let beladungHTML = (fz.beladung || []).map((b, idx) => `
+            <tr>
+                <td><strong>${b.raum}</strong></td>
+                <td>${b.gegenstand}</td>
+                <td class="no-print"><button onclick="entferneBeladung(${idx})">🗑️</button></td>
+            </tr>
+        `).join("");
+
+        content.innerHTML = `
+            <h3>Lageplan & Geräte-Zuordnung</h3>
+            <div style="display:flex; gap:5px; margin-bottom:15px;" class="no-print">
+                <select id="fz-raum-select">
+                    <option value="Kabine">Mannschaftskabine</option>
+                    <option value="G1">Geräteraum G1 (Links Vorne)</option>
+                    <option value="G2">Geräteraum G2 (Rechts Vorne)</option>
+                    <option value="G3">Geräteraum G3 (Links Mitte)</option>
+                    <option value="G4">Geräteraum G4 (Rechts Mitte)</option>
+                    <option value="G5">Geräteraum G5 (Links Hinten)</option>
+                    <option value="G6">Geräteraum G6 (Rechts Hinten)</option>
+                    <option value="GR">Geräteraum GR (Heck)</option>
+                    <option value="Dach">Dachbeladung</option>
+                </select>
+                <input id="fz-geraet-input" type="text" placeholder="Gerät / Gegenstand">
+                <button onclick="fuegeBeladungHinzu()">➕ Zuordnen</button>
+            </div>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f2f2f2;"><th>Lagerort</th><th>Gegenstand</th><th class="no-print"></th></tr>
+                </thead>
+                <tbody>${beladungHTML || '<tr><td colspan="3">Noch keine Beladung eingetragen.</td></tr>'}</tbody>
+            </table>
+        `;
+    }
+    else if (tabName === 'pruefplan') {
+        content.innerHTML = `
+            <h3>Prüfplan der Beladung</h3>
+            <p><small>Wiederkehrende Funktionskontrollen (z. B. Stromerzeuger Probelauf, Kettensäge).</small></p>
+            <button onclick="alert('Funktion in Kürze verfügbar')">➕ Prüfpunkt hinzufügen</button>
+        `;
+    }
+    else if (tabName === 'wartung') {
+        let wartungHTML = (fz.wartungen || []).map(w => `
+            <div style="border-left:3px solid #007bff; padding-left:8px; margin-bottom:10px;">
+                <small>${w.datum}</small> - <strong>${w.titel}</strong>
+                <br><span style="font-size:0.9em; color:#555;">${w.beschreibung}</span>
+            </div>
+        `).join("");
+
+        content.innerHTML = `
+            <h3>Wartung & Reparaturhistorie</h3>
+            <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:15px;" class="no-print">
+                <input id="fz-w-titel" type="text" placeholder="Titel (z. B. Ölwechsel, Kundendienst)">
+                <textarea id="fz-w-beschr" placeholder="Beschreibung / Werkstatt / Mangelbehebung"></textarea>
+                <button onclick="fuegeWartungHinzu()">➕ Eintrag speichern</button>
+            </div>
+            <div>${wartungHTML || '<p style="color:#777;">Keine Wartungseinträge vorhanden.</p>'}</div>
+        `;
+    }
+}
+
+// Beladung hinzufügen
+function fuegeBeladungHinzu() {
+    const raum = document.getElementById("fz-raum-select").value;
+    const gegenstand = document.getElementById("fz-geraet-input").value.trim();
+    if (!gegenstand) return;
+
+    const fahrzeuge = ladeDaten("fahrzeuge") || [];
+    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
+    if (!fz) return;
+
+    if (!fz.beladung) fz.beladung = [];
+    fz.beladung.push({ raum, gegenstand });
+
+    speichereDaten("fahrzeuge", fahrzeuge);
+    wechselFahrzeugTab('beladung');
+}
+
+// Beladung entfernen
+function entferneBeladung(index) {
+    const fahrzeuge = ladeDaten("fahrzeuge") || [];
+    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
+    if (!fz || !fz.beladung) return;
+
+    fz.beladung.splice(index, 1);
+    speichereDaten("fahrzeuge", fahrzeuge);
+    wechselFahrzeugTab('beladung');
+}
+
+// Wartungseintrag hinzufügen
+function fuegeWartungHinzu() {
+    const titel = document.getElementById("fz-w-titel").value.trim();
+    const beschreibung = document.getElementById("fz-w-beschr").value.trim();
+    if (!titel) return;
+
+    const fahrzeuge = ladeDaten("fahrzeuge") || [];
+    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
+    if (!fz) return;
+
+    if (!fz.wartungen) fz.wartungen = [];
+    fz.wartungen.unshift({
+        datum: new Date().toLocaleDateString('de-DE'),
+        titel,
+        beschreibung
     });
 
-    html += `</div>`;
-  }
-
-  container.innerHTML = html;
+    speichereDaten("fahrzeuge", fahrzeuge);
+    wechselFahrzeugTab('wartung');
 }
 
-// Modal-Fenster zum Anlegen / Bearbeiten
-function openVehicleModal(id = null) {
-  let veh = { id: '', name: '', callSign: '', licensePlate: '', status: 'Einsatzbereit', nextHU: '', nextSP: '', description: '' };
-  
-  if (id) {
-    const list = getVehicles();
-    const found = list.find(v => v.id === id);
-    if (found) veh = found;
-  }
-
-  const modalHtml = `
-    <div id="vehicle-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
-      <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
-        <h3>${veh.id ? '✏️ Fahrzeug bearbeiten' : '➕ Neues Fahrzeug anlegen'}</h3>
-        <form id="vehicle-form" onsubmit="saveVehicleFromModal(event, '${veh.id}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-          <div>
-            <label><strong>Fahrzeugbezeichnung *</strong></label>
-            <input type="text" id="veh-name" value="${escapeHtml(veh.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. LF 20/16">
-          </div>
-          <div>
-            <label><strong>Funkrufname</strong></label>
-            <input type="text" id="veh-callSign" value="${escapeHtml(veh.callSign)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Florian Musterstadt 40/1">
-          </div>
-          <div>
-            <label><strong>Amtliches Kennzeichen</strong></label>
-            <input type="text" id="veh-licensePlate" value="${escapeHtml(veh.licensePlate)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. M-FF 112">
-          </div>
-          <div>
-            <label><strong>Status</strong></label>
-            <select id="veh-status" style="width:100%; padding:8px; margin-top:4px;">
-              <option value="Einsatzbereit" ${veh.status === 'Einsatzbereit' ? 'selected' : ''}>Einsatzbereit</option>
-              <option value="Wartung" ${veh.status === 'Wartung' ? 'selected' : ''}>In Wartung / Werkstatt</option>
-              <option value="Außer Dienst" ${veh.status === 'Außer Dienst' ? 'selected' : ''}>Außer Dienst</option>
-            </select>
-          </div>
-          <div style="display:flex; gap:10px;">
-            <div style="flex:1;">
-              <label><strong>Nächste HU</strong></label>
-              <input type="month" id="veh-nextHU" value="${veh.nextHU || ''}" style="width:100%; padding:8px; margin-top:4px;">
-            </div>
-            <div style="flex:1;">
-              <label><strong>Nächste SP</strong></label>
-              <input type="month" id="veh-nextSP" value="${veh.nextSP || ''}" style="width:100%; padding:8px; margin-top:4px;">
-            </div>
-          </div>
-          <div>
-            <label><strong>Bemerkungen / Ausstattung</strong></label>
-            <textarea id="veh-description" style="width:100%; padding:8px; margin-top:4px;" rows="3">${escapeHtml(veh.description)}</textarea>
-          </div>
-          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-            <button type="button" class="btn" onclick="closeVehicleModal()" style="background:#ccc;">Abbrechen</button>
-            <button type="submit" class="btn btn-primary">💾 Speichern</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-
-  closeVehicleModal();
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+// Fahrzeug löschen
+function loescheFahrzeug(fzId) {
+    if (!confirm("Fahrzeug wirklich löschen?")) return;
+    let fahrzeuge = ladeDaten("fahrzeuge") || [];
+    fahrzeuge = fahrzeuge.filter(item => item.id !== fzId);
+    speichereDaten("fahrzeuge", fahrzeuge);
+    
+    document.getElementById("fahrzeugAkteContainer").innerHTML = `
+        <h2>📋 Fahrzeugakte</h2>
+        <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+    `;
+    ladeFahrzeugTabelle();
 }
 
-function closeVehicleModal() {
-  const existingModal = document.getElementById('vehicle-modal');
-  if (existingModal) existingModal.remove();
+// CSV Export
+function exportFahrzeugeCSV() {
+    const daten = ladeDaten("fahrzeuge") || [];
+    if (daten.length === 0) {
+        alert("Keine Fahrzeugdaten vorhanden.");
+        return;
+    }
+    const headers = ["Funkrufname", "Typ", "Kennzeichen", "Baujahr", "TÜV", "SP", "Status"];
+    const rows = daten.map(f => [f.funkrufname, f.typ, f.kennzeichen, f.baujahr, f.tuev, f.sp, f.status]);
+    
+    if (typeof downloadCSV === "function") {
+        downloadCSV(`Fahrzeugliste_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    }
 }
-
-function saveVehicleFromModal(event, existingId) {
-  event.preventDefault();
-
-  const fahrzeuge = getVehicles();
-
-  const newVeh = {
-    id: existingId || "VEH-" + Date.now(),
-    name: document.getElementById('veh-name').value.trim(),
-    callSign: document.getElementById('veh-callSign').value.trim(),
-    licensePlate: document.getElementById('veh-licensePlate').value.trim(),
-    status: document.getElementById('veh-status').value,
-    nextHU: document.getElementById('veh-nextHU').value,
-    nextSP: document.getElementById('veh-nextSP').value,
-    description: document.getElementById('veh-description').value.trim()
-  };
-
-  if (existingId) {
-    const idx = fahrzeuge.findIndex(v => v.id === existingId);
-    if (idx !== -1) fahrzeuge[idx] = newVeh;
-  } else {
-    fahrzeuge.push(newVeh);
-  }
-
-  speichereFahrzeuge(fahrzeuge);
-  closeVehicleModal();
-  renderFahrzeugeView();
-}
-
-function loescheFahrzeug(id) {
-  if (!confirm("Möchtest du dieses Fahrzeug wirklich aus dem Fuhrpark löschen?")) return;
-
-  const fahrzeuge = getVehicles().filter(v => v.id !== id);
-  speichereFahrzeuge(fahrzeuge);
-  renderFahrzeugeView();
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  renderFahrzeugeView();
-});
