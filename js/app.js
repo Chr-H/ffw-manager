@@ -2,25 +2,26 @@
 // FFW Manager - Hauptanwendung & Navigation
 // ==========================================
 
+// Navigationsfunktion zum Umschalten der Seiten
 function zeigeSeite(seiteId) {
-    // Alle Seiten ausblenden
-    document.querySelectorAll('.seite-ansicht').forEach(s => s.style.display = 'none');
-    
-    // Zielseite einblenden
-    const ziel = document.getElementById('seite-' + seiteId);
-    if (ziel) ziel.style.display = 'block';
+    // 1. Parameter bereinigen (falls 'seite-dashboard' statt 'dashboard' übergeben wurde)
+    const modul = seiteId.replace('seite-', '');
 
-    // Funktionen beim Seitenwechsel ausführen
-    if (seiteId === 'fahrzeuge' && typeof renderFahrzeugeView === 'function') {
-        renderFahrzeugeView();
-    }
-    if (seiteId === 'geraete' && typeof filterGeraete === 'function') {
-        filterGeraete();
-    }
-}
-    // 3. Beim Seitenwechsel das jeweilige Modul neu rendern / aktualisieren
-    const modul = seitenId.replace('seite-', '');
+    // 2. Alle Seiten ausblenden
+    document.querySelectorAll('.seite-ansicht').forEach(s => {
+        s.style.display = 'none';
+    });
 
+    // 3. Zielseite einblenden
+    const ziel = document.getElementById('seite-' + modul);
+    if (ziel) {
+        ziel.style.display = 'block';
+    } else {
+        console.warn(`Seite mit ID 'seite-${modul}' wurde nicht gefunden.`);
+        return;
+    }
+
+    // 4. Modul-spezifisches Rendern / Aktualisieren ausführen
     switch (modul) {
         case 'dashboard':
             if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
@@ -56,6 +57,9 @@ function zeigeSeite(seiteId) {
             break;
     }
 }
+
+// Explizit global verfügbar machen für HTML inline onclicks
+window.zeigeSeite = zeigeSeite;
 
 // ==========================================
 // Universelle Export- & Hilfsfunktionen (CSV / Excel)
