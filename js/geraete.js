@@ -1,9 +1,17 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.0)
+// FFW Manager - Geräteverwaltung (v0.6.1)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
 let bearbeitungsId = null;
+
+// Hilfsfunktion: Datums-String (YYYY-MM-DD) ohne Zeitzonen-Versatz formatieren
+function formatiereDatum(datumStr) {
+    if (!datumStr) return "Keine Angabe";
+    const teile = datumStr.split('-');
+    if (teile.length !== 3) return datumStr;
+    return `${teile[2]}.${teile[1]}.${teile[0]}`;
+}
 
 function ladeGeraete() {
     geraete = ladeDaten("geraete") || [];
@@ -17,10 +25,19 @@ function speichereGeraete() {
 
 function berechneNaechstePruefung(datumStr, intervallMonate) {
     if (!datumStr || !intervallMonate || intervallMonate <= 0) return null;
-    const d = new Date(datumStr);
+    const teile = datumStr.split('-');
+    if (teile.length !== 3) return null;
+
+    const d = new Date(parseInt(teile[0]), parseInt(teile[1]) - 1, parseInt(teile[2]));
     if (isNaN(d.getTime())) return null;
+
     d.setMonth(d.getMonth() + parseInt(intervallMonate));
-    return d.toISOString().split('T')[0];
+    
+    const jahr = d.getFullYear();
+    const monat = String(d.getMonth() + 1).padStart(2, '0');
+    const tag = String(d.getDate()).padStart(2, '0');
+    
+    return `${jahr}-${monat}-${tag}`;
 }
 
 function neuesGeraet() {
@@ -130,13 +147,21 @@ function filterGeraete() {
     const kategorie = elKat ? elKat.value : "";
     const status = elStat ? elStat.value : "";
 
+    const heute = new Date().toISOString().split('T')[0];
+
     const gefiltert = geraete.filter(g => {
         const bez = (g.bezeichnung || "").toLowerCase();
         const inv = (g.inventarnummer || "").toLowerCase();
 
         const sucheOK = bez.includes(suchbegriff) || inv.includes(suchbegriff);
         const kategorieOK = kategorie === "" || g.kategorie === kategorie;
-        const statusOK = status === "" || g.status === status;
+        
+        let statusOK = true;
+        if (status === "FAELLIG") {
+            statusOK = g.naechstePruefung && g.naechstePruefung <= heute;
+        } else if (status !== "") {
+            statusOK = g.status === status;
+        }
 
         return sucheOK && kategorieOK && statusOK;
     });
@@ -164,7 +189,6 @@ function zeigeGefilterteGeraete(liste) {
             case "Außer Dienst": statusClass = "status-grau"; break;
         }
 
-        // Buttons stehen JETZT in der ersten Spalte (links)
         ausgabe.innerHTML += `
         <tr>
             <td style="white-space: nowrap;">
@@ -188,19 +212,10 @@ function zeigeGeraeteDetails(id) {
 
     if (!g || !detailsContainer) return;
 
-    const naechstePruefFormatted = g.naechstePruefung 
-        ? new Date(g.naechstePruefung).toLocaleDateString("de-DE") 
-        : "Keine Angabe";
+    const naechstePruefFormatted = formatiereDatum(g.naechstePruefung);
+    const letztePruefFormatted = formatiereDatum(g.letztePruefung);
+    const inbetriebnahmeFormatted = formatiereDatum(g.erstinbetriebnahme);
 
-    const letztePruefFormatted = g.letztePruefung 
-        ? new Date(g.letztePruefung).toLocaleDateString("de-DE") 
-        : "Keine Angabe";
-
-    const inbetriebnahmeFormatted = g.erstinbetriebnahme 
-        ? new Date(g.erstinbetriebnahme).toLocaleDateString("de-DE") 
-        : "Nicht erfasst";
-
-    // Prüfhistorie auflisten
     const historie = g.historie || [];
     let historieHtml = "";
 
@@ -208,7 +223,7 @@ function zeigeGeraeteDetails(id) {
         historieHtml = `<li><small style="color:#777;">Bisher keine Prüfungen protokolliert.</small></li>`;
     } else {
         historie.slice().reverse().forEach(h => {
-            const hDatum = h.datum ? new Date(h.datum).toLocaleDateString("de-DE") : "-";
+            const hDatum = formatiereDatum(h.datum);
             historieHtml += `
                 <li style="margin-bottom: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 4px;">
                     <strong>📅 ${hDatum}</strong> - <span style="color:#2e7d32;">${h.ergebnis || 'Geprüft'}</span>
@@ -217,6 +232,8 @@ function zeigeGeraeteDetails(id) {
             `;
         });
     }
+
+    const heuteISO = new Date().toISOString().split('T')[0];
 
     detailsContainer.innerHTML = `
         <h2>📋 Geräteakte</h2>
@@ -238,7 +255,7 @@ function zeigeGeraeteDetails(id) {
 
         <div style="background:#f5f5f5; padding:10px; border-radius:6px; margin-top:10px;">
             <strong style="font-size:0.9rem;">+ Neue Prüfung eintragen</strong>
-            <input type="date" id="neuesPruefDatum" value="${new Date().toISOString().split('T')[0]}" style="width:100%; margin:4px 0; padding:4px;">
+            <input type="date" id="neuesPruefDatum" value="${heuteISO}" style="width:100%; margin:4px 0; padding:4px;">
             <input type="text" id="prueferName" placeholder="Prüfer Name" style="width:100%; margin:4px 0; padding:4px;">
             <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${g.id}')">Prüfung protokollieren</button>
         </div>
@@ -318,16 +335,15 @@ document.addEventListener("DOMContentLoaded", () => {
     ladeGeraete();
     filterGeraete();
 });
+
 // ==========================================
 // Schnittstellen für Navigation & Dashboard
 // ==========================================
 
-// Alias-Funktion für den Aufruf aus app.js (zeigeSeite)
 function renderGeraeteView() {
     filterGeraete();
 }
 
-// Ermöglicht das Filtern der Geräte direkt beim Klick auf Dashboard-Kacheln
 function filtereGeraeteNachDashboard(filterTyp) {
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('geraete');
@@ -335,7 +351,9 @@ function filtereGeraeteNachDashboard(filterTyp) {
     
     const elStat = document.getElementById("filterStatus");
     if (elStat) {
-        if (filterTyp === 'faellig' || filterTyp === 'wartung') {
+        if (filterTyp === 'faellig') {
+            elStat.value = 'FAELLIG';
+        } else if (filterTyp === 'wartung') {
             elStat.value = 'Wartung';
         } else if (filterTyp === 'defekt') {
             elStat.value = 'Defekt';

@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Lagerverwaltung (v1.0.0)
+// FFW Manager - Lagerverwaltung (v1.1.0)
 // ==========================================
 
 function getLager() {
@@ -11,9 +11,28 @@ function speichereLager(lagerListe) {
     document.dispatchEvent(new Event("lagerGeaendert"));
 }
 
+// Hilfsfunktion: Escape von HTML-Sonderzeichen gegen XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Hilfsfunktion: Datum formatierten
+function formatiereDatum(datumStr) {
+    if (!datumStr) return '-';
+    const d = new Date(datumStr);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString("de-DE");
+}
+
 // 1. Tabellenansicht mit Such- & Filterleiste
 function renderLagerView() {
-    const container = document.getElementById('lager-container');
+    const container = document.getElementById('lager-container') || document.getElementById('lagerContainer') || document.getElementById('lagerListe');
     if (!container) return;
 
     let html = `
@@ -73,10 +92,12 @@ function filterLager() {
         const bezeichnung = (item.bezeichnung || '').toLowerCase();
         const kategorie = (item.kategorie || '').toLowerCase();
         const lagerort = (item.lagerort || '').toLowerCase();
+        const artikelnr = (item.artikelnr || '').toLowerCase();
 
         const passtText = bezeichnung.includes(SuchText) || 
                           kategorie.includes(SuchText) || 
-                          lagerort.includes(SuchText);
+                          lagerort.includes(SuchText) ||
+                          artikelnr.includes(SuchText);
 
         const istKritisch = Number(item.bestand || 0) <= Number(item.mindestbestand || 0);
         const passtBestand = bestandFilter === '' || 
@@ -95,12 +116,14 @@ function filterLager() {
     gefiltert.forEach(item => {
         const bestand = Number(item.bestand || 0);
         const mindestbestand = Number(item.mindestbestand || 0);
-        const einheit = item.einheit || 'Stk.';
+        const einheit = escapeHtml(item.einheit || 'Stk.');
 
         const istKritisch = bestand <= mindestbestand;
         const statusBadge = istKritisch 
             ? `<span style="background:#ffebee; color:#c62828; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">⚠️ Nachbestellen</span>`
             : `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🟢 Ausreichend</span>`;
+
+        const bestandStyle = istKritisch ? 'color:#c62828; font-weight:bold;' : 'font-weight:bold;';
 
         rowsHtml += `
             <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openLagerAkteModal('${item.id}')">
@@ -109,10 +132,10 @@ function filterLager() {
                     <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openLagerModal('${item.id}')">✏️</button>
                     <button class="btn btn-loeschen" title="Löschen" onclick="loescheLagerItem('${item.id}')">🗑️</button>
                 </td>
-                <td style="padding:10px; font-weight:bold;">${item.bezeichnung || 'Unbekannt'}</td>
-                <td style="padding:10px;">${item.kategorie || '-'}</td>
-                <td style="padding:10px;">📍 ${item.lagerort || '-'}</td>
-                <td style="padding:10px; font-weight:bold; font-size:1.05rem;">${bestand} ${einheit}</td>
+                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.bezeichnung || 'Unbekannt')}</td>
+                <td style="padding:10px;">${escapeHtml(item.kategorie || '-')}</td>
+                <td style="padding:10px;">📍 ${escapeHtml(item.lagerort || '-')}</td>
+                <td style="padding:10px; font-size:1.05rem; ${bestandStyle}">${bestand} ${einheit}</td>
                 <td style="padding:10px; color:#666;">${mindestbestand} ${einheit}</td>
                 <td style="padding:10px;">${statusBadge}</td>
             </tr>
@@ -128,7 +151,7 @@ function openLagerAkteModal(id) {
     if (!item) return;
 
     item.historie = item.historie || [];
-    const einheit = item.einheit || 'Stk.';
+    const einheit = escapeHtml(item.einheit || 'Stk.');
 
     let historieHtml = '';
     if (item.historie.length === 0) {
@@ -141,10 +164,10 @@ function openLagerAkteModal(id) {
             historieHtml += `
                 <li style="border-left:3px solid ${artColor}; padding-left:10px; margin-bottom:10px; background:#f9f9f9; padding:8px; border-radius:0 4px 4px 0;">
                     <div style="display:flex; justify-content:space-between;">
-                        <span style="font-size:0.85rem; color:#666;">📅 ${new Date(h.datum).toLocaleDateString("de-DE")} - <strong>${h.bearbeiter || 'Unbekannt'}</strong></span>
+                        <span style="font-size:0.85rem; color:#666;">📅 ${formatiereDatum(h.datum)} - <strong>${escapeHtml(h.bearbeiter || 'Unbekannt')}</strong></span>
                         <strong style="color:${artColor};">${artSign}${h.menge} ${einheit}</strong>
                     </div>
-                    <div style="margin-top:2px;">${h.bemerkung || 'Keine Bemerkung'}</div>
+                    <div style="margin-top:2px;">${escapeHtml(h.bemerkung || 'Keine Bemerkung')}</div>
                 </li>
             `;
         });
@@ -157,8 +180,8 @@ function openLagerAkteModal(id) {
                 
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:10px;">
                     <div>
-                        <h2 style="margin:0;">📦 Lagerakte: ${item.bezeichnung}</h2>
-                        <p style="margin:5px 0 0 0; color:#555;">Kategorie: <strong>${item.kategorie || 'Keine'}</strong> | Lagerort: <strong>${item.lagerort || 'Nicht angegeben'}</strong></p>
+                        <h2 style="margin:0;">📦 Lagerakte: ${escapeHtml(item.bezeichnung)}</h2>
+                        <p style="margin:5px 0 0 0; color:#555;">Kategorie: <strong>${escapeHtml(item.kategorie || 'Keine')}</strong> | Lagerort: <strong>${escapeHtml(item.lagerort || 'Nicht angegeben')}</strong></p>
                     </div>
                     <button onclick="closeLagerAkteModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">✖</button>
                 </div>
@@ -166,8 +189,8 @@ function openLagerAkteModal(id) {
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0; background:#f8f9fa; padding:12px; border-radius:6px;">
                     <div><strong>Aktueller Bestand:</strong> <span style="font-size:1.1rem; font-weight:bold;">${item.bestand || 0} ${einheit}</span></div>
                     <div><strong>Mindestbestand:</strong> ${item.mindestbestand || 0} ${einheit}</div>
-                    <div><strong>Lieferant / Quelle:</strong> ${item.lieferant || '-'}</div>
-                    <div><strong>Artikel- / EAN-Nr.:</strong> ${item.artikelnr || '-'}</div>
+                    <div><strong>Lieferant / Quelle:</strong> ${escapeHtml(item.lieferant || '-')}</div>
+                    <div><strong>Artikel- / EAN-Nr.:</strong> ${escapeHtml(item.artikelnr || '-')}</div>
                 </div>
 
                 <!-- Schnellbuchung (Zugang / Abgang) -->
@@ -179,7 +202,7 @@ function openLagerAkteModal(id) {
                                 <option value="abgang">➖ Entnahme</option>
                                 <option value="zugang">➕ Zugang</option>
                             </select>
-                            <input type="number" id="buchung-menge" placeholder="Menge" min="1" step="any" required style="width:100px; padding:6px;">
+                            <input type="number" id="buchung-menge" placeholder="Menge" min="0.01" step="any" required style="width:100px; padding:6px;">
                             <input type="text" id="buchung-bearbeiter" placeholder="Name / Handzeichen" style="flex:1; padding:6px;">
                         </div>
                         <input type="text" id="buchung-bemerkung" placeholder="Grund / Verwendungszweck (z. B. Übung, Einsatz 12)" style="width:100%; padding:6px;">
@@ -256,12 +279,12 @@ function openLagerModal(id = null) {
                 <form onsubmit="saveLagerFromModal(event, '${item.id}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
                     <div>
                         <label><strong>Artikelbezeichnung *</strong></label>
-                        <input type="text" id="lager-bezeichnung" value="${item.bezeichnung || ''}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Ölbindemittel, O2-Flasche, Schaummittel">
+                        <input type="text" id="lager-bezeichnung" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Ölbindemittel, O2-Flasche, Schaummittel">
                     </div>
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Kategorie</strong></label>
-                            <input type="text" id="lager-kategorie" list="lager-kategorie-liste" value="${item.kategorie || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
+                            <input type="text" id="lager-kategorie" list="lager-kategorie-liste" value="${escapeHtml(item.kategorie)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
                             <datalist id="lager-kategorie-liste">
                                 <option value="Verbrauchsmaterial">
                                 <option value="Atemschutz">
@@ -273,7 +296,7 @@ function openLagerModal(id = null) {
                         </div>
                         <div style="flex:1;">
                             <label><strong>Lagerort</strong></label>
-                            <input type="text" id="lager-lagerort" value="${item.lagerort || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Regal A3, Fach 2">
+                            <input type="text" id="lager-lagerort" value="${escapeHtml(item.lagerort)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Regal A3, Fach 2">
                         </div>
                     </div>
                     <div style="display:flex; gap:10px;">
@@ -300,11 +323,11 @@ function openLagerModal(id = null) {
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Lieferant / Bezugsquelle</strong></label>
-                            <input type="text" id="lager-lieferant" value="${item.lieferant || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Feuerwehrbedarf Mustermann">
+                            <input type="text" id="lager-lieferant" value="${escapeHtml(item.lieferant)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Feuerwehrbedarf Mustermann">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Artikel- / Inv.-Nr.</strong></label>
-                            <input type="text" id="lager-artikelnr" value="${item.artikelnr || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. MAT-501">
+                            <input type="text" id="lager-artikelnr" value="${escapeHtml(item.artikelnr)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. MAT-501">
                         </div>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
@@ -362,6 +385,13 @@ function loescheLagerItem(id) {
     const lagerListe = getLager().filter(l => l.id !== id);
     speichereLager(lagerListe);
     filterLager();
+}
+
+// ==========================================
+// ALIASE & KOMPATIBILITÄT
+// ==========================================
+function ladeLager() {
+    renderLagerView();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.0)
+// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.1)
 // ==========================================
 
 function getPSA() {
@@ -11,9 +11,36 @@ function speicherePSA(psaListe) {
     document.dispatchEvent(new Event("psaGeaendert"));
 }
 
+// Hilfsfunktion: Escape von HTML-Sonderzeichen gegen XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Hilfsfunktion: Datum formatieren & Überfälligkeit prüfen
+function formatiereDatum(datumStr) {
+    if (!datumStr) return '-';
+    const d = new Date(datumStr);
+    if (isNaN(d.getTime())) return '-';
+
+    const heute = new Date();
+    heute.setHours(0,0,0,0);
+    const formatted = d.toLocaleDateString("de-DE");
+
+    if (d < heute) {
+        return `<strong style="color:#c62828;" title="Prüfung überfällig!">⚠️ ${formatted}</strong>`;
+    }
+    return formatted;
+}
+
 // 1. Tabellenansicht mit Filterleiste rendern
 function renderPSAView() {
-    const container = document.getElementById('psa-container');
+    const container = document.getElementById('psa-container') || document.getElementById('psaContainer') || document.getElementById('psaListe');
     if (!container) return;
 
     let html = `
@@ -112,12 +139,12 @@ function filterPSA() {
                     <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${item.id}')">✏️</button>
                     <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${item.id}')">🗑️</button>
                 </td>
-                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + item.spind : '-'}</strong></td>
-                <td style="padding:10px; font-weight:bold;">${item.traeger || 'Unbekannt'}</td>
-                <td style="padding:10px;">${item.bezeichnung || '-'}</td>
-                <td style="padding:10px;">${item.groesse || '-'}</td>
+                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + escapeHtml(item.spind) : '-'}</strong></td>
+                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || 'Unbekannt')}</td>
+                <td style="padding:10px;">${escapeHtml(item.bezeichnung || '-')}</td>
+                <td style="padding:10px;">${escapeHtml(item.groesse || '-')}</td>
                 <td style="padding:10px;">${statusBadge}</td>
-                <td style="padding:10px;">${item.naechstePruefung ? new Date(item.naechstePruefung).toLocaleDateString("de-DE") : '-'}</td>
+                <td style="padding:10px;">${formatiereDatum(item.naechstePruefung)}</td>
             </tr>
         `;
     });
@@ -139,10 +166,11 @@ function openPSAAkteModal(id) {
     } else {
         historieHtml = '<ul style="list-style:none; padding:0; margin:0;">';
         item.historie.slice().reverse().forEach(h => {
+            const histDatum = h.datum ? new Date(h.datum).toLocaleDateString("de-DE") : '-';
             historieHtml += `
                 <li style="border-left:3px solid #1976D2; padding-left:10px; margin-bottom:10px; background:#f9f9f9; padding:8px; border-radius:0 4px 4px 0;">
-                    <div style="font-size:0.85rem; color:#666;">📅 ${new Date(h.datum).toLocaleDateString("de-DE")} - <strong>${h.typ}</strong> ${h.pruefer ? '(' + h.pruefer + ')' : ''}</div>
-                    <div style="margin-top:2px;">${h.bemerkung}</div>
+                    <div style="font-size:0.85rem; color:#666;">📅 ${histDatum} - <strong>${escapeHtml(h.typ)}</strong> ${h.pruefer ? '(' + escapeHtml(h.pruefer) + ')' : ''}</div>
+                    <div style="margin-top:2px;">${escapeHtml(h.bemerkung)}</div>
                 </li>
             `;
         });
@@ -155,17 +183,17 @@ function openPSAAkteModal(id) {
                 
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:10px;">
                     <div>
-                        <h2 style="margin:0;">📂 PSA-Akte: ${item.bezeichnung}</h2>
-                        <p style="margin:5px 0 0 0; color:#555;">Träger: <strong>${item.traeger}</strong> | Spind: <strong>${item.spind || 'Keiner'}</strong></p>
+                        <h2 style="margin:0;">📂 PSA-Akte: ${escapeHtml(item.bezeichnung)}</h2>
+                        <p style="margin:5px 0 0 0; color:#555;">Träger: <strong>${escapeHtml(item.traeger)}</strong> | Spind: <strong>${escapeHtml(item.spind || 'Keiner')}</strong></p>
                     </div>
                     <button onclick="closePSAAkteModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">✖</button>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0; background:#f8f9fa; padding:12px; border-radius:6px;">
-                    <div><strong>Größe:</strong> ${item.groesse || '-'}</div>
-                    <div><strong>Serien- / Inv.-Nr.:</strong> ${item.seriennummer || '-'}</div>
-                    <div><strong>Ausgabedatum:</strong> ${item.ausgabeDatum ? new Date(item.ausgabeDatum).toLocaleDateString("de-DE") : '-'}</div>
-                    <div><strong>Nächste Prüfung:</strong> ${item.naechstePruefung ? new Date(item.naechstePruefung).toLocaleDateString("de-DE") : '-'}</div>
+                    <div><strong>Größe:</strong> ${escapeHtml(item.groesse || '-')}</div>
+                    <div><strong>Serien- / Inv.-Nr.:</strong> ${escapeHtml(item.seriennummer || '-')}</div>
+                    <div><strong>Ausgabedatum:</strong> ${formatiereDatum(item.ausgabeDatum)}</div>
+                    <div><strong>Nächste Prüfung:</strong> ${formatiereDatum(item.naechstePruefung)}</div>
                 </div>
 
                 <!-- Status Ändern -->
@@ -285,16 +313,16 @@ function openPSAModal(id = null) {
                     <div style="display:flex; gap:10px;">
                         <div style="flex:2;">
                             <label><strong>Name des Trägers *</strong></label>
-                            <input type="text" id="psa-traeger" value="${item.traeger || ''}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
+                            <input type="text" id="psa-traeger" value="${escapeHtml(item.traeger)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Spind-Nr.</strong></label>
-                            <input type="text" id="psa-spind" value="${item.spind || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
+                            <input type="text" id="psa-spind" value="${escapeHtml(item.spind)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
                         </div>
                     </div>
                     <div>
                         <label><strong>Ausrüstungsteil *</strong></label>
-                        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${item.bezeichnung || ''}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
+                        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
                         <datalist id="psa-ausruestung-liste">
                             <option value="Feuerwehrüberjacke">
                             <option value="Feuerwehrüberhose">
@@ -310,11 +338,11 @@ function openPSAModal(id = null) {
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Größe / Konfektion</strong></label>
-                            <input type="text" id="psa-groesse" value="${item.groesse || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
+                            <input type="text" id="psa-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Serien- / Inventarnr.</strong></label>
-                            <input type="text" id="psa-seriennummer" value="${item.seriennummer || ''}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102">
+                            <input type="text" id="psa-seriennummer" value="${escapeHtml(item.seriennummer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102">
                         </div>
                     </div>
                     <div style="display:flex; gap:10px;">
@@ -384,15 +412,15 @@ function loeschePSA(id) {
     filterPSA();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+// ==========================================
+// ALIASE & KOMPATIBILITÄT (Verhindert Fehler)
+// ==========================================
+function oeffnePSAModal(id = null) {
+    openPSAModal(id);
+}
+
+function ladePSA() {
     renderPSAView();
-});
-function renderPSAView() {
-    if (typeof ladePSA === 'function') {
-        ladePSA();
-    } else if (typeof filterPSA === 'function') {
-        filterPSA();
-    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {

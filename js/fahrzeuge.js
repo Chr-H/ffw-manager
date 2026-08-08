@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Fuhrparkverwaltung (v1.0.0)
+// FFW Manager - Fuhrparkverwaltung (v1.0.1)
 // ==========================================
 
 function getVehicles() {
@@ -9,6 +9,40 @@ function getVehicles() {
 function speichereFahrzeuge(fahrzeuge) {
   speichereDaten('fahrzeuge', fahrzeuge);
   document.dispatchEvent(new Event("fahrzeugeGeaendert"));
+}
+
+// Hilfsfunktion: Escape von HTML-Sonderzeichen gegen XSS
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Hilfsfunktion: Formatierung & Prüfung von YYYY-MM Daten (HU/SP)
+function formatierePruefMonat(yyyyMM) {
+  if (!yyyyMM) return '<span style="color:#888;">Keine</span>';
+  
+  const teile = yyyyMM.split('-');
+  if (teile.length !== 2) return escapeHtml(yyyyMM);
+
+  const jahr = parseInt(teile[0], 10);
+  const monat = parseInt(teile[1], 10);
+  
+  const jetzt = new Date();
+  const aktuellesJahr = jetzt.getFullYear();
+  const aktuellerMonat = jetzt.getMonth() + 1;
+
+  const abgelaufen = (jahr < aktuellesJahr) || (jahr === aktuellesJahr && monat < aktuellerMonat);
+  const formatted = `${String(monat).padStart(2, '0')}/${jahr}`;
+
+  if (abgelaufen) {
+    return `<strong style="color:#c62828;" title="Prüfung abgelaufen!">⚠️ ${formatted}</strong>`;
+  }
+  return formatted;
 }
 
 function renderFahrzeugeView() {
@@ -36,18 +70,18 @@ function renderFahrzeugeView() {
       html += `
         <div class="card" style="border-left: 5px solid ${statusColor}; background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <h3 style="margin:0 0 5px 0;">${veh.name || 'Unbekanntes Fahrzeug'}</h3>
+            <h3 style="margin:0 0 5px 0;">${escapeHtml(veh.name || 'Unbekanntes Fahrzeug')}</h3>
             <div>
               <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openVehicleModal('${veh.id}')">✏️</button>
               <button class="btn btn-loeschen" title="Löschen" onclick="loescheFahrzeug('${veh.id}')">🗑️</button>
             </div>
           </div>
-          <p style="margin:4px 0;"><strong>Funkrufname:</strong> ${veh.callSign || '-'}</p>
-          <p style="margin:4px 0;"><strong>Kennzeichen:</strong> ${veh.licensePlate || '-'}</p>
-          <p style="margin:4px 0;"><strong>Status:</strong> <span class="badge" style="background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.85rem;">${veh.status || 'Einsatzbereit'}</span></p>
+          <p style="margin:4px 0;"><strong>Funkrufname:</strong> ${escapeHtml(veh.callSign || '-')}</p>
+          <p style="margin:4px 0;"><strong>Kennzeichen:</strong> ${escapeHtml(veh.licensePlate || '-')}</p>
+          <p style="margin:4px 0;"><strong>Status:</strong> <span class="badge" style="background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.85rem;">${escapeHtml(veh.status || 'Einsatzbereit')}</span></p>
           <hr style="margin: 0.8rem 0; border: 0; border-top: 1px solid #eee;">
-          <p style="margin:4px 0;"><small>📅 <strong>HU:</strong> ${veh.nextHU || 'Keine'} | <strong>SP:</strong> ${veh.nextSP || 'Keine'}</small></p>
-          ${veh.description ? `<p style="margin-top: 0.5rem; color: #555; font-size:0.9rem;"><small>${veh.description}</small></p>` : ''}
+          <p style="margin:4px 0;"><small>📅 <strong>HU:</strong> ${formatierePruefMonat(veh.nextHU)} | <strong>SP:</strong> ${formatierePruefMonat(veh.nextSP)}</small></p>
+          ${veh.description ? `<p style="margin-top: 0.5rem; color: #555; font-size:0.9rem;"><small>${escapeHtml(veh.description)}</small></p>` : ''}
         </div>
       `;
     });
@@ -75,15 +109,15 @@ function openVehicleModal(id = null) {
         <form id="vehicle-form" onsubmit="saveVehicleFromModal(event, '${veh.id}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
           <div>
             <label><strong>Fahrzeugbezeichnung *</strong></label>
-            <input type="text" id="veh-name" value="${veh.name}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. LF 20/16">
+            <input type="text" id="veh-name" value="${escapeHtml(veh.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. LF 20/16">
           </div>
           <div>
             <label><strong>Funkrufname</strong></label>
-            <input type="text" id="veh-callSign" value="${veh.callSign}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Florian Albertsried 40/1">
+            <input type="text" id="veh-callSign" value="${escapeHtml(veh.callSign)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Florian Musterstadt 40/1">
           </div>
           <div>
             <label><strong>Amtliches Kennzeichen</strong></label>
-            <input type="text" id="veh-licensePlate" value="${veh.licensePlate}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. REG-FF 112">
+            <input type="text" id="veh-licensePlate" value="${escapeHtml(veh.licensePlate)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. M-FF 112">
           </div>
           <div>
             <label><strong>Status</strong></label>
@@ -96,16 +130,16 @@ function openVehicleModal(id = null) {
           <div style="display:flex; gap:10px;">
             <div style="flex:1;">
               <label><strong>Nächste HU</strong></label>
-              <input type="month" id="veh-nextHU" value="${veh.nextHU}" style="width:100%; padding:8px; margin-top:4px;">
+              <input type="month" id="veh-nextHU" value="${veh.nextHU || ''}" style="width:100%; padding:8px; margin-top:4px;">
             </div>
             <div style="flex:1;">
               <label><strong>Nächste SP</strong></label>
-              <input type="month" id="veh-nextSP" value="${veh.nextSP}" style="width:100%; padding:8px; margin-top:4px;">
+              <input type="month" id="veh-nextSP" value="${veh.nextSP || ''}" style="width:100%; padding:8px; margin-top:4px;">
             </div>
           </div>
           <div>
             <label><strong>Bemerkungen / Ausstattung</strong></label>
-            <textarea id="veh-description" style="width:100%; padding:8px; margin-top:4px;" rows="3">${veh.description}</textarea>
+            <textarea id="veh-description" style="width:100%; padding:8px; margin-top:4px;" rows="3">${escapeHtml(veh.description)}</textarea>
           </div>
           <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
             <button type="button" class="btn" onclick="closeVehicleModal()" style="background:#ccc;">Abbrechen</button>

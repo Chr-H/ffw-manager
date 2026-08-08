@@ -205,7 +205,7 @@
             <!-- Hier rendert js/pruefungen.js die Daten rein -->
             </div>
             </section>
-            
+
             <!-- Verbleibende Module (Platzhalter) -->
             <section id="seite-personal" class="seite-ansicht" style="display: none;"><h2>👥 Personal</h2><p>In Entwicklung...</p></section>
             <section id="seite-auswertungen" class="seite-ansicht" style="display: none;"><h2>📊 Auswertungen</h2><p>In Entwicklung...</p></section>
@@ -271,25 +271,21 @@
 
   // Cloud-Sync starten & ALLE Ansichten beim Start initialisieren
   document.addEventListener("DOMContentLoaded", () => {
-    if (typeof starteCloudSync === "function") {
-      starteCloudSync();
-    }
-    if (typeof filterGeraete === "function") {
-      filterGeraete();
-    }
-    if (typeof renderFahrzeugeView === "function") {
-      renderFahrzeugeView();
-    }
-    // FIX: PSA-Ansicht beim Laden initialisieren
-    if (typeof renderPSAView === "function") {
-      renderPSAView();
-    } else if (typeof ladePSA === "function") {
-      ladePSA();
-    }
-    // FIX: Prüfungs-Ansicht beim Laden initialisieren
-    if (typeof ladePruefungen === "function") {
-      ladePruefungen();
-    }
+    if (typeof starteCloudSync === "function") starteCloudSync();
+    if (typeof filterGeraete === "function") filterGeraete();
+    if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
+    
+    // PSA
+    if (typeof renderPSAView === "function") renderPSAView();
+    else if (typeof ladePSA === "function") ladePSA();
+
+    // Lager (Ergänzt)
+    if (typeof renderLagerView === "function") renderLagerView();
+    else if (typeof ladeLager === "function") ladeLager();
+
+    // Prüfungen
+    if (typeof renderPruefungenView === "function") renderPruefungenView();
+    else if (typeof ladePruefungen === "function") ladePruefungen();
   });
 </script>
 </body>
