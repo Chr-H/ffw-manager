@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#B71C1C">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑‍🚒</text></svg>">
 </head>
 
 <body>
@@ -39,7 +40,7 @@
         <main class="content">
 
             <!-- ========================================= -->
-            <!-- 1. DASHBOARD ANSEHEN                      -->
+            <!-- 1. DASHBOARD ANSEHEN                     -->
             <!-- ========================================= -->
             <section id="seite-dashboard" class="seite-ansicht">
 
@@ -85,7 +86,7 @@
                     <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
                         <h2>📋 Prüfungen</h2>
                         <p>0 fällig</p>
-                        </div>
+                    </div>
                     <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
                         <h2>📦 Lager</h2>
                         <p>0 Artikel</p>
@@ -100,38 +101,38 @@
 
 
             <!-- ========================================= -->
-            <!-- 2. GERÄTEVERWALTUNG                       -->
+            <!-- 2. GERÄTEVERWALTUNG                      -->
             <!-- ========================================= -->
             <section id="seite-geraete" class="seite-ansicht" style="display: none;">
 
                 <h2>🔧 Geräteverwaltung</h2>
 
-<!-- Formular -->
-<div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-    <h3>➕ Gerät anlegen / bearbeiten</h3>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <input id="inventar" type="text" placeholder="Inventarnummer">
-        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
-        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
-        <input id="hersteller" type="text" placeholder="Hersteller">
-        <input id="standort" type="text" placeholder="Standort">
-        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
-        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
-        <select id="pruefintervall" title="Prüfintervall">
-            <option value="12">12 Monate (Jährlich)</option>
-            <option value="24">24 Monate (2 Jahre)</option>
-            <option value="6">6 Monate (Halbjährlich)</option>
-            <option value="1">1 Monat (Monatlich)</option>
-        </select>
-        <select id="status">
-            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-            <option value="Wartung">🟡 Wartung</option>
-            <option value="Defekt">🔴 Defekt</option>
-            <option value="Außer Dienst">⚫ Außer Dienst</option>
-        </select>
-        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
-    </div>
-</div>
+                <!-- Formular -->
+                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h3>➕ Gerät anlegen / bearbeiten</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                        <input id="inventar" type="text" placeholder="Inventarnummer">
+                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
+                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
+                        <input id="hersteller" type="text" placeholder="Hersteller">
+                        <input id="standort" type="text" placeholder="Standort">
+                        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
+                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
+                        <select id="pruefintervall" title="Prüfintervall">
+                            <option value="12">12 Monate (Jährlich)</option>
+                            <option value="24">24 Monate (2 Jahre)</option>
+                            <option value="6">6 Monate (Halbjährlich)</option>
+                            <option value="1">1 Monat (Monatlich)</option>
+                        </select>
+                        <select id="status">
+                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                            <option value="Wartung">🟡 Wartung</option>
+                            <option value="Defekt">🔴 Defekt</option>
+                            <option value="Außer Dienst">⚫ Außer Dienst</option>
+                        </select>
+                        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
+                    </div>
+                </div>
 
                 <hr style="margin:20px 0;">
 
@@ -179,7 +180,7 @@
             </section>
 
 
-           <!-- Modul Fahrzeuge -->
+            <!-- Modul Fahrzeuge -->
             <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
                 <div id="fahrzeuge-container"></div>
             </section>
@@ -187,23 +188,23 @@
             <!-- PSA BEREICH -->
             <section id="seite-psa" class="seite-ansicht" style="display: none;">
                 <h2>🧯 PSA (Persönliche Schutzausrüstung)</h2>
-            <button onclick="oeffnePSAModal()" class="btn-primary">+ Neue PSA / Person</button>
-            <div id="psa-liste" class="liste-container">
-            <!-- Hier rendert js/psa.js die Daten rein -->
-            </div>
+                <button onclick="oeffnePSAModal()" class="btn-primary">+ Neue PSA / Person</button>
+                <div id="psa-liste" class="liste-container">
+                    <!-- Hier rendert js/psa.js die Daten rein -->
+                </div>
             </section>
 
             <!-- Modul Lager -->
             <section id="seite-lager" class="seite-ansicht" style="display: none;">
-            <div id="lager-container"></div>
+                <div id="lager-container"></div>
             </section>
 
-           <!-- PRÜFUNGEN BEREICH -->
+            <!-- PRÜFUNGEN BEREICH -->
             <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
-            <h2>📋 Anstehende Prüfungen</h2>
-            <div id="pruefungen-container" class="liste-container">
-            <!-- Hier rendert js/pruefungen.js die Daten rein -->
-            </div>
+                <h2>📋 Anstehende Prüfungen</h2>
+                <div id="pruefungen-container" class="liste-container">
+                    <!-- Hier rendert js/pruefungen.js die Daten rein -->
+                </div>
             </section>
 
             <!-- Verbleibende Module (Platzhalter) -->
@@ -214,79 +215,76 @@
         </main>
 
     </div>
-<!-- 1. Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-<!-- 2. Firebase Konfiguration & Initialisierung -->
-<script>
-  // WICHTIG: Ersetze die Platzhalter unten mit deinen echten Firebase-Schlüsseln!
-  const firebaseConfig = {
-    apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
-    authDomain: "ffw-manager-19fbd.firebaseapp.com",
-    projectId: "ffw-manager-19fbd",
-    storageBucket: "ffw-manager-19fbd.firebasestorage.app",
-    messagingSenderId: "45591494617",
-    appId: "1:45591494617:web:46ddf894c840871212e3c8"
-  };
+    <!-- 1. Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  // Firebase global verfügbar machen
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
-  window.db = firebase.firestore();
-  window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
-</script>
+    <!-- 2. Firebase Konfiguration & Initialisierung -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
+            authDomain: "ffw-manager-19fbd.firebaseapp.com",
+            projectId: "ffw-manager-19fbd",
+            storageBucket: "ffw-manager-19fbd.firebasestorage.app",
+            messagingSenderId: "45591494617",
+            appId: "1:45591494617:web:46ddf894c840871212e3c8"
+        };
 
-<!-- 3. Anwendungsskripte in korrekter Reihenfolge (mit v=3 zur Cache-Invalidierung) -->
-<script src="js/storage.js?v=3"></script>
-<script src="js/kategorien.js?v=3"></script>
-<script src="js/geraete.js?v=3"></script>
-<script src="js/fahrzeuge.js?v=3"></script>
-<script src="js/psa.js?v=3"></script>
-<script src="js/lager.js?v=3"></script>
-<script src="js/pruefungen.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        window.db = firebase.firestore();
+        window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
+    </script>
 
-<!-- 4. Service Worker & Initialisierung -->
-<script>
-  // Service Worker für PWA-Updates
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js').then((reg) => {
-        reg.update();
-      }).catch((err) => {
-        console.error('Service Worker Fehler:', err);
-      });
-    });
+    <!-- 3. Anwendungsskripte in korrekter Reihenfolge (mit v=3 zur Cache-Invalidierung) -->
+    <script src="js/storage.js?v=3"></script>
+    <script src="js/kategorien.js?v=3"></script>
+    <script src="js/geraete.js?v=3"></script>
+    <script src="js/fahrzeuge.js?v=3"></script>
+    <script src="js/psa.js?v=3"></script>
+    <script src="js/lager.js?v=3"></script>
+    <script src="js/pruefungen.js?v=3"></script>
+    <script src="js/app.js?v=3"></script>
 
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
-  }
+    <!-- 4. Service Worker & Initialisierung -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+                    reg.update();
+                }).catch((err) => {
+                    console.error('Service Worker Fehler:', err);
+                });
+            });
 
-  // Cloud-Sync starten & ALLE Ansichten beim Start initialisieren
-  document.addEventListener("DOMContentLoaded", () => {
-    if (typeof starteCloudSync === "function") starteCloudSync();
-    if (typeof filterGeraete === "function") filterGeraete();
-    if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
-    
-    // PSA
-    if (typeof renderPSAView === "function") renderPSAView();
-    else if (typeof ladePSA === "function") ladePSA();
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
 
-    // Lager (Ergänzt)
-    if (typeof renderLagerView === "function") renderLagerView();
-    else if (typeof ladeLager === "function") ladeLager();
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof starteCloudSync === "function") starteCloudSync();
+            if (typeof filterGeraete === "function") filterGeraete();
+            if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
+            
+            // PSA
+            if (typeof renderPSAView === "function") renderPSAView();
+            else if (typeof ladePSA === "function") ladePSA();
 
-    // Prüfungen
-    if (typeof renderPruefungenView === "function") renderPruefungenView();
-    else if (typeof ladePruefungen === "function") ladePruefungen();
-  });
-</script>
+            // Lager
+            if (typeof renderLagerView === "function") renderLagerView();
+            else if (typeof ladeLager === "function") ladeLager();
+
+            // Prüfungen
+            if (typeof renderPruefungenView === "function") renderPruefungenView();
+            else if (typeof ladePruefungen === "function") ladePruefungen();
+        });
+    </script>
 </body>
 </html>
