@@ -37,4 +37,24 @@ function zeigeSeite(seitenName) {
     if ((seitenName === 'pruefungen' || seitenName === 'seite-pruefungen') && typeof renderPruefungenView === 'function') {
     renderPruefungenView();
     }
+    // 4. Daten-Render-Funktionen beim Seitenwechsel auslösen
+    if (seitenName === 'psa' || seitenName === 'seite-psa') {
+        if (typeof renderPSAView === 'function') renderPSAView();
+        else if (typeof ladePSA === 'function') ladePSA();
+        else if (typeof filterPSA === 'function') filterPSA();
+    }
+    if (seitenName === 'lager' || seitenName === 'seite-lager') {
+        if (typeof renderLagerView === 'function') renderLagerView();
+    }
+    if (seitenName === 'geraete' || seitenName === 'seite-geraete') {
+        if (typeof renderGeraeteView === 'function') renderGeraeteView();
+        else if (typeof filterGeraete === 'function') filterGeraete();
+    }
+    if (seitenName === 'fahrzeuge' || seitenName === 'seite-fahrzeuge') {
+        if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
+    }
+    if (seitenName === 'pruefungen' || seitenName === 'seite-pruefungen') {
+        if (typeof renderPruefungenView === 'function') renderPruefungenView();
+        else if (typeof ladePruefungen === 'function') ladePruefungen();
+    }
 }

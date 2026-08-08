@@ -184,22 +184,28 @@
                 <div id="fahrzeuge-container"></div>
             </section>
 
-            <!-- Modul PSA -->
+            <!-- PSA BEREICH -->
             <section id="seite-psa" class="seite-ansicht" style="display: none;">
-                <div id="psa-container"></div>
+                <h2>🧯 PSA (Persönliche Schutzausrüstung)</h2>
+            <button onclick="oeffnePSAModal()" class="btn-primary">+ Neue PSA / Person</button>
+            <div id="psa-liste" class="liste-container">
+            <!-- Hier rendert js/psa.js die Daten rein -->
+            </div>
             </section>
 
             <!-- Modul Lager -->
             <section id="seite-lager" class="seite-ansicht" style="display: none;">
             <div id="lager-container"></div>
             </section>
-            <!-- Ansicht: Prüfungen -->
+
+           <!-- PRÜFUNGEN BEREICH -->
             <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
-            <h2>Prüfungen & Termine</h2>
-            <div id="pruefungen-container">
-        <!-- Hier werden die Prüftermine gerendert -->
+            <h2>📋 Anstehende Prüfungen</h2>
+            <div id="pruefungen-container" class="liste-container">
+            <!-- Hier rendert js/pruefungen.js die Daten rein -->
             </div>
             </section>
+            
             <!-- Verbleibende Module (Platzhalter) -->
             <section id="seite-personal" class="seite-ansicht" style="display: none;"><h2>👥 Personal</h2><p>In Entwicklung...</p></section>
             <section id="seite-auswertungen" class="seite-ansicht" style="display: none;"><h2>📊 Auswertungen</h2><p>In Entwicklung...</p></section>

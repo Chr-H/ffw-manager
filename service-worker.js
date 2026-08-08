@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ffw-manager-v3.6.0'; // ERHÖHT für Cache-Reset
+const CACHE_NAME = 'ffw-manager-v3.6.1'; // ERHÖHT für Cache-Reset
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
