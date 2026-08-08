@@ -34,4 +34,7 @@ function zeigeSeite(seitenName) {
     if ((seitenName === 'fahrzeuge' || seitenName === 'seite-fahrzeuge') && typeof renderFahrzeugeView === 'function') {
         renderFahrzeugeView();
     }
+    if ((seitenName === 'pruefungen' || seitenName === 'seite-pruefungen') && typeof renderPruefungenView === 'function') {
+    renderPruefungenView();
+    }
 }

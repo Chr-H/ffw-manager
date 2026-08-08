@@ -318,3 +318,31 @@ document.addEventListener("DOMContentLoaded", () => {
     ladeGeraete();
     filterGeraete();
 });
+// ==========================================
+// Schnittstellen für Navigation & Dashboard
+// ==========================================
+
+// Alias-Funktion für den Aufruf aus app.js (zeigeSeite)
+function renderGeraeteView() {
+    filterGeraete();
+}
+
+// Ermöglicht das Filtern der Geräte direkt beim Klick auf Dashboard-Kacheln
+function filtereGeraeteNachDashboard(filterTyp) {
+    if (typeof zeigeSeite === 'function') {
+        zeigeSeite('geraete');
+    }
+    
+    const elStat = document.getElementById("filterStatus");
+    if (elStat) {
+        if (filterTyp === 'faellig' || filterTyp === 'wartung') {
+            elStat.value = 'Wartung';
+        } else if (filterTyp === 'defekt') {
+            elStat.value = 'Defekt';
+        } else {
+            elStat.value = '';
+        }
+    }
+    
+    filterGeraete();
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ffw-manager-v3.4.0';
+const CACHE_NAME = 'ffw-manager-v3.5.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const ASSETS_TO_CACHE = [
   './js/fahrzeuge.js',
   './js/psa.js',
   './js/lager.js',
+  './js/pruefungen.js',
   './js/app.js'
 ];
 
