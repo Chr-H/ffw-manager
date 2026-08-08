@@ -2,34 +2,55 @@
 // FFW Manager - Hauptanwendung & Navigation
 // ==========================================
 
-function zeigeSeite(seitenName) {
-    // 0. Name bereinigen (entfernt "seite-", falls es mitübergeben wurde)
-    const pureName = seitenName.replace(/^seite-/, '');
+function zeigeSeite(seitenId) {
+    // 1. Alle Ansichten ausblenden
+    const sektionen = document.querySelectorAll('.seite-ansicht');
+    sektionen.forEach(sec => sec.style.display = 'none');
 
-    // 1. Suche nach Element (z. B. "seite-geraete" oder "geraete")
-    const zielSeite = document.getElementById('seite-' + pureName) || document.getElementById(pureName);
+    // 2. Gewünschte Ansicht einblenden
+    // Beachtet sowohl 'psa' als auch 'seite-psa' als Übergabewert
+    const id = seitenId.startsWith('seite-') ? seitenId : 'seite-' + seitenId;
+    const zielSektion = document.getElementById(id);
 
-    // Sicherheitsprüfung
-    if (!zielSeite) {
-        console.error(`Seite '${seitenName}' wurde im HTML nicht gefunden!`);
+    if (zielSektion) {
+        zielSektion.style.display = 'block';
+    } else {
+        console.warn(`Sektion mit ID "${id}" wurde nicht gefunden.`);
         return;
     }
 
-    // 2. Alle Seitenbereiche ausblenden
-    const alleSeiten = document.querySelectorAll('.seite-ansicht, [id^="seite-"]');
-    alleSeiten.forEach(seite => {
-        seite.style.display = 'none';
-    });
+    // 3. Beim Seitenwechsel das jeweilige Modul neu rendern / aktualisieren
+    const modul = seitenId.replace('seite-', '');
 
-    // 3. Gewählte Seite einblenden
-    zielSeite.style.display = 'block';
+    switch (modul) {
+        case 'dashboard':
+            if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
+            break;
 
-    // 4. Aktiven Navigations-Button hervorheben (falls Nav-Klassen genutzt werden)
-    document.querySelectorAll('.nav-link, .nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('onclick')?.includes(pureName)) {
-            btn.classList.add('active');
-        }
+        case 'geraete':
+            if (typeof filterGeraete === 'function') filterGeraete();
+            break;
+
+        case 'fahrzeuge':
+            if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
+            break;
+
+        case 'psa':
+            if (typeof renderPSAView === 'function') renderPSAView();
+            else if (typeof ladePSA === 'function') ladePSA();
+            break;
+
+        case 'lager':
+            if (typeof renderLagerView === 'function') renderLagerView();
+            else if (typeof ladeLager === 'function') ladeLager();
+            break;
+
+        case 'pruefungen':
+            if (typeof renderPruefungenView === 'function') renderPruefungenView();
+            else if (typeof ladePruefungen === 'function') ladePruefungen();
+            break;
+    }
+}
     });
 
     // 5. Daten-Render-Funktionen beim Seitenwechsel ausführen (sauber per switch)
