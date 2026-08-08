@@ -102,84 +102,91 @@
             </section>
 
 
-            <!-- ========================================= -->
-            <!-- 2. GERÄTEVERWALTUNG                      -->
-            <!-- ========================================= -->
-            <section id="seite-geraete" class="seite-ansicht" style="display: none;">
+  <!-- ========================================= -->
+<!-- 2. GERÄTEVERWALTUNG                      -->
+<!-- ========================================= -->
+<section id="seite-geraete" class="seite-ansicht" style="display: none;">
 
-                <h2>🔧 Geräteverwaltung</h2>
+    <!-- Header mit Druck- und Export-Buttons -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🔧 Geräteverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
+            <button class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+        </div>
+    </div>
 
-                <!-- Formular -->
-                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <h3>➕ Gerät anlegen / bearbeiten</h3>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                        <input id="inventar" type="text" placeholder="Inventarnummer">
-                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
-                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
-                        <input id="hersteller" type="text" placeholder="Hersteller">
-                        <input id="standort" type="text" placeholder="Standort">
-                        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
-                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
-                        <select id="pruefintervall" title="Prüfintervall">
-                            <option value="12">12 Monate (Jährlich)</option>
-                            <option value="24">24 Monate (2 Jahre)</option>
-                            <option value="6">6 Monate (Halbjährlich)</option>
-                            <option value="1">1 Monat (Monatlich)</option>
-                        </select>
-                        <select id="status">
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                            <option value="Wartung">🟡 Wartung</option>
-                            <option value="Defekt">🔴 Defekt</option>
-                            <option value="Außer Dienst">⚫ Außer Dienst</option>
-                        </select>
-                        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
-                    </div>
-                </div>
+    <!-- Formular -->
+    <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>➕ Gerät anlegen / bearbeiten</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <input id="inventar" type="text" placeholder="Inventarnummer">
+            <input id="bezeichnung" type="text" placeholder="Bezeichnung">
+            <select id="kategorie"><option value="">Kategorie auswählen</option></select>
+            <input id="hersteller" type="text" placeholder="Hersteller">
+            <input id="standort" type="text" placeholder="Standort">
+            <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
+            <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
+            <select id="pruefintervall" title="Prüfintervall">
+                <option value="12">12 Monate (Jährlich)</option>
+                <option value="24">24 Monate (2 Jahre)</option>
+                <option value="6">6 Monate (Halbjährlich)</option>
+                <option value="1">1 Monat (Monatlich)</option>
+            </select>
+            <select id="status">
+                <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                <option value="Wartung">🟡 Wartung</option>
+                <option value="Defekt">🔴 Defekt</option>
+                <option value="Außer Dienst">⚫ Außer Dienst</option>
+            </select>
+            <button onclick="neuesGeraet()">➕ Gerät speichern</button>
+        </div>
+    </div>
 
-                <hr style="margin:20px 0;">
+    <hr style="margin:20px 0;">
 
-                <!-- Filter -->
-                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
-                    <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
-                    <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
-                    <select id="filterStatus" onchange="filterGeraete()">
-                        <option value="">Alle Status</option>
-                        <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                        <option value="Wartung">🟡 Wartung</option>
-                        <option value="Defekt">🔴 Defekt</option>
-                        <option value="Außer Dienst">⚫ Außer Dienst</option>
-                    </select>
-                </div>
+    <!-- Filter -->
+    <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
+        <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
+        <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
+        <select id="filterStatus" onchange="filterGeraete()">
+            <option value="">Alle Status</option>
+            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+            <option value="Wartung">🟡 Wartung</option>
+            <option value="Defekt">🔴 Defekt</option>
+            <option value="Außer Dienst">⚫ Außer Dienst</option>
+        </select>
+    </div>
 
-                <!-- Split-Layout: Links Liste, Rechts Akte -->
-                <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
-                    
-                    <!-- Linke Spalte: Tabelle -->
-                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                        <table class="geraete-tabelle" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th>Aktionen</th>
-                                    <th>Inv.-Nr.</th>
-                                    <th>Bezeichnung</th>
-                                    <th>Kategorie</th>
-                                    <th>Hersteller</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="geraeteListe"></tbody>
-                        </table>
-                    </div>
+    <!-- Split-Layout: Links Liste, Rechts Akte -->
+    <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
+        
+        <!-- Linke Spalte: Tabelle mit ID 'geraete-tabelle' -->
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th class="no-print">Aktionen</th>
+                        <th>Inv.-Nr.</th>
+                        <th>Bezeichnung</th>
+                        <th>Kategorie</th>
+                        <th>Hersteller</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="geraeteListe"></tbody>
+            </table>
+        </div>
 
-                    <!-- Rechte Spalte: Geräteakte -->
-                    <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
-                        <h2>📋 Geräteakte</h2>
-                        <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
-                    </div>
+        <!-- Rechte Spalte: Geräteakte -->
+        <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
+            <h2>📋 Geräteakte</h2>
+            <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
+        </div>
 
-                </div>
+    </div>
 
-            </section>
+</section>
 
 
             <!-- Modul Fahrzeuge -->

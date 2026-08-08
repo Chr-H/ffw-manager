@@ -442,3 +442,42 @@ window.loescheGeraet = loescheGeraet;
 window.exportGeraeteCSV = exportGeraeteCSV;
 window.renderGeraeteView = renderGeraeteView;
 window.filtereGeraeteNachDashboard = filtereGeraeteNachDashboard;
+
+// CSV Export der Geräteliste
+function exportGeraeteCSV() {
+    const daten = typeof getGeraete === "function" ? getGeraete() : (ladeDaten("geraete") || []);
+
+    if (!Array.isArray(daten) || daten.length === 0) {
+        alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
+        return;
+    }
+
+    const headers = ["Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Erstinbetriebnahme", "Letzte Prüfung", "Nächste Prüfung", "Status"];
+    const rows = daten.map(g => [
+        g.inventarnummer || '',
+        g.bezeichnung || '',
+        g.kategorie || '',
+        g.hersteller || '',
+        g.standort || '',
+        g.erstinbetriebnahme || '',
+        g.letztePruefung || '',
+        g.naechstePruefung || '',
+        g.status || ''
+    ]);
+
+    const heute = new Date().toISOString().split('T')[0];
+
+    if (typeof window.downloadCSV === "function") {
+        window.downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
+    } else {
+        const csvLines = [headers.join(";")];
+        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Geraeteliste_FFW_${heute}.csv`;
+        link.click();
+    }
+}
+
+window.exportGeraeteCSV = exportGeraeteCSV;
