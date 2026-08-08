@@ -379,3 +379,56 @@ body{
     margin-top:0;
 
 }
+/* ==========================================
+   Druck-Layouts (Drucken & PDF-Export)
+   ========================================== */
+@media print {
+    /* Unnötige UI-Elemente für den Druck ausblenden */
+    .sidebar, 
+    .nav-bar, 
+    .btn, 
+    .filter-container, 
+    .action-buttons, 
+    .no-print {
+        display: none !important;
+    }
+
+    /* Hauptcontainer auf volle Breite skalieren */
+    body, .main-content, .seite-ansicht {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Tabellen optimieren */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 11pt;
+    }
+
+    th, td {
+        border: 1px solid #ddd !important;
+        padding: 6px 8px !important;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f2f2f2 !important;
+        font-weight: bold;
+    }
+
+    /* Unterschriften-Block beim Druck anzeigen */
+    .print-footer {
+        display: block !important;
+        margin-top: 50px;
+        page-break-inside: avoid;
+    }
+}
+
+/* Unterschriften-Block im normalen Screen ausblenden */
+.print-footer {
+    display: none;
+}

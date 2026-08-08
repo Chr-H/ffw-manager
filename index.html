@@ -180,14 +180,20 @@
             </section>
 
 
-            <!-- Modul Fahrzeuge -->
+           <!-- Modul Fahrzeuge -->
             <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
                 <div id="fahrzeuge-container"></div>
             </section>
 
             <!-- PSA BEREICH -->
-          <section id="seite-psa" class="seite-ansicht" style="display: none;">
-            <div id="psa-container"></div>
+            <section id="seite-psa" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
+                    <button class="btn btn-secondary no-print" onclick="druckeListe('PSA-Bestandsliste', 'psa-tabelle')">
+                        🖨️ PSA-Liste drucken / PDF
+                    </button>
+                </div>
+                <div id="psa-container"></div>
             </section>
 
             <!-- Modul Lager -->
@@ -197,7 +203,12 @@
 
             <!-- PRÜFUNGEN BEREICH -->
             <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
-                <h2>📋 Anstehende Prüfungen</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>📋 Anstehende Prüfungen</h2>
+                    <button class="btn btn-secondary no-print" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-tabelle')">
+                        🖨️ Prüfbericht drucken / PDF
+                    </button>
+                </div>
                 <div id="pruefungen-container" class="liste-container">
                     <!-- Hier rendert js/pruefungen.js die Daten rein -->
                 </div>

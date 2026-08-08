@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.3)
+// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.4)
 // ==========================================
 
 function getPSA() {
@@ -12,7 +12,7 @@ function speicherePSA(psaListe) {
     document.dispatchEvent(new Event("psaGeaendert"));
 }
 
-// Hilfsfunktion: Safe HTML Attribute & Text Escaping
+// Safe HTML Escaping
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     return String(text)
@@ -23,15 +23,29 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// Hilfsfunktion: Datum formatieren & Überfälligkeit prüfen
+// Robuste Datumsformatierung & Überfälligkeitsprüfung
 function formatiereDatum(datumStr) {
     if (!datumStr) return '-';
-    const d = new Date(datumStr);
+    
+    // Vermeidung von Zeitzonenverschiebungen bei 'YYYY-MM-DD'
+    const parts = datumStr.split('-');
+    let d;
+    if (parts.length === 3) {
+        d = new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+        d = new Date(datumStr);
+    }
+
     if (isNaN(d.getTime())) return '-';
 
     const heute = new Date();
     heute.setHours(0, 0, 0, 0);
-    const formatted = d.toLocaleDateString("de-DE");
+
+    const formatted = d.toLocaleDateString("de-DE", {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
 
     if (d < heute) {
         return `<strong style="color:#c62828;" title="Prüfung überfällig!">⚠️ ${formatted}</strong>`;
@@ -39,7 +53,7 @@ function formatiereDatum(datumStr) {
     return formatted;
 }
 
-// 1. Tabellenansicht mit Filterleiste rendern
+// 1. Hauptansicht rendern
 function renderPSAView() {
     const container = document.getElementById('psa-container') || 
                       document.getElementById('psaContainer') || 
@@ -50,7 +64,7 @@ function renderPSAView() {
 
     if (!container) return;
 
-    let html = `
+    container.innerHTML = `
         <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>🧑‍🚒 PSA-Verwaltung</h2>
             <button class="btn btn-primary" onclick="openPSAModal()">+ PSA ausgeben / anlegen</button>
@@ -86,20 +100,17 @@ function renderPSAView() {
                         <th style="padding:10px;">Nächste Prüfung</th>
                     </tr>
                 </thead>
-                <tbody id="psa-tabelle-body">
-                </tbody>
+                <tbody id="psa-tabelle-body"></tbody>
             </table>
         </div>
     `;
 
-    container.innerHTML = html;
     filterPSA();
 }
 
-// Live-Filterfunktion
+// 2. Filter-Funktion
 function filterPSA() {
     let tbody = document.getElementById('psa-tabelle-body');
-    
     if (!tbody) {
         renderPSAView();
         tbody = document.getElementById('psa-tabelle-body');
@@ -107,7 +118,7 @@ function filterPSA() {
     }
 
     const psaListe = getPSA();
-    const SuchText = (document.getElementById('psa-filter-suche')?.value || '').toLowerCase().trim();
+    const suchText = (document.getElementById('psa-filter-suche')?.value || '').toLowerCase().trim();
     const statusFilter = document.getElementById('psa-filter-status')?.value || '';
 
     const gefiltert = psaListe.filter(item => {
@@ -118,10 +129,10 @@ function filterPSA() {
         const seriennummer = (item.seriennummer || '').toLowerCase();
         const status = item.status || 'Einsatzbereit';
 
-        const passtText = traeger.includes(SuchText) || 
-                          spind.includes(SuchText) || 
-                          bezeichnung.includes(SuchText) || 
-                          seriennummer.includes(SuchText);
+        const passtText = traeger.includes(suchText) || 
+                          spind.includes(suchText) || 
+                          bezeichnung.includes(suchText) || 
+                          seriennummer.includes(suchText);
 
         const passtStatus = statusFilter === '' || status === statusFilter;
 
@@ -167,7 +178,7 @@ function filterPSA() {
     tbody.innerHTML = rowsHtml;
 }
 
-// 2. PSA-Akte (Detailansicht)
+// 3. PSA-Akte (Detailansicht)
 function openPSAAkteModal(id) {
     const item = getPSA().find(p => p && p.id === id);
     if (!item) return;
@@ -182,7 +193,7 @@ function openPSAAkteModal(id) {
     } else {
         historieHtml = '<ul style="list-style:none; padding:0; margin:0;">';
         item.historie.slice().reverse().forEach(h => {
-            const histDatum = h.datum ? new Date(h.datum).toLocaleDateString("de-DE") : '-';
+            const histDatum = h.datum ? escapeHtml(new Date(h.datum).toLocaleDateString("de-DE")) : '-';
             historieHtml += `
                 <li style="border-left:3px solid #1976D2; padding-left:10px; margin-bottom:10px; background:#f9f9f9; padding:8px; border-radius:0 4px 4px 0;">
                     <div style="font-size:0.85rem; color:#666;">📅 ${histDatum} - <strong>${escapeHtml(h.typ)}</strong> ${h.pruefer ? '(' + escapeHtml(h.pruefer) + ')' : ''}</div>
@@ -194,9 +205,8 @@ function openPSAAkteModal(id) {
     }
 
     const modalHtml = `
-        <div id="psa-akte-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
+        <div id="psa-akte-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
             <div style="background:#fff; padding:20px; border-radius:8px; width:92%; max-width:650px; max-height:90vh; overflow-y:auto;">
-                
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:10px;">
                     <div>
                         <h2 style="margin:0;">📂 PSA-Akte: ${escapeHtml(item.bezeichnung)}</h2>
@@ -310,7 +320,7 @@ function addPSAHistorieEintrag(event, id) {
     openPSAAkteModal(id);
 }
 
-// 3. Modal zum Anlegen/Bearbeiten der Grunddaten
+// 4. Modal zum Anlegen/Bearbeiten
 function openPSAModal(id = null) {
     let item = { id: '', traeger: '', spind: '', bezeichnung: '', groesse: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
 
@@ -322,7 +332,7 @@ function openPSAModal(id = null) {
     const safeId = escapeHtml(item.id);
 
     const modalHtml = `
-        <div id="psa-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
+        <div id="psa-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
             <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
                 <h3>${item.id ? '✏️ PSA bearbeiten' : '➕ PSA zuweisen / anlegen'}</h3>
                 <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
@@ -437,6 +447,14 @@ function loeschePSA(id) {
     speicherePSA(psaListe);
     renderPSAView();
 }
+
+// Globales Event für Keyboard Accessibility (Escape-Taste schließt Modale)
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        closePSAModal();
+        closePSAAkteModal();
+    }
+});
 
 // Aliase & Event-Listener
 function oeffnePSAModal(id = null) { openPSAModal(id); }
