@@ -1,9 +1,20 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.1)
+// FFW Manager - Geräteverwaltung (v0.6.2)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
 let bearbeitungsId = null;
+
+// Hilfsfunktion: Safe HTML Escaping gegen XSS-Lücken
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 // Hilfsfunktion: Datums-String (YYYY-MM-DD) ohne Zeitzonen-Versatz formatieren
 function formatiereDatum(datumStr) {
@@ -16,6 +27,11 @@ function formatiereDatum(datumStr) {
 function ladeGeraete() {
     geraete = ladeDaten("geraete") || [];
     return geraete;
+}
+
+// Sichere Schnittstelle für externe Exporte
+function getGeraete() {
+    return ladeGeraete();
 }
 
 function speichereGeraete() {
@@ -180,6 +196,7 @@ function zeigeGefilterteGeraete(liste) {
         return;
     }
 
+    let html = "";
     liste.forEach(g => {
         let statusClass = "";
         switch (g.status) {
@@ -189,20 +206,24 @@ function zeigeGefilterteGeraete(liste) {
             case "Außer Dienst": statusClass = "status-grau"; break;
         }
 
-        ausgabe.innerHTML += `
+        const safeId = escapeHtml(g.id);
+
+        html += `
         <tr>
             <td style="white-space: nowrap;">
-                <button class="btn btn-details" title="Details / Akte" onclick="zeigeGeraeteDetails('${g.id}')">👁️</button>
-                <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="bearbeiteGeraet('${g.id}')">✏️</button>
-                <button class="btn btn-loeschen" title="Löschen" onclick="loescheGeraet('${g.id}')">🗑️</button>
+                <button class="btn btn-details" title="Details / Akte" onclick="zeigeGeraeteDetails('${safeId}')">👁️</button>
+                <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="bearbeiteGeraet('${safeId}')">✏️</button>
+                <button class="btn btn-loeschen" title="Löschen" onclick="loescheGeraet('${safeId}')">🗑️</button>
             </td>
-            <td><strong>${g.inventarnummer || '-'}</strong></td>
-            <td>${g.bezeichnung || '-'}</td>
-            <td>${g.kategorie || '-'}</td>
-            <td>${g.hersteller || "-"}</td>
-            <td class="${statusClass}">${g.status || 'Einsatzbereit'}</td>
+            <td><strong>${escapeHtml(g.inventarnummer || '-')}</strong></td>
+            <td>${escapeHtml(g.bezeichnung || '-')}</td>
+            <td>${escapeHtml(g.kategorie || '-')}</td>
+            <td>${escapeHtml(g.hersteller || "-")}</td>
+            <td class="${statusClass}">${escapeHtml(g.status || 'Einsatzbereit')}</td>
         </tr>`;
     });
+
+    ausgabe.innerHTML = html;
 }
 
 function zeigeGeraeteDetails(id) {
@@ -213,7 +234,6 @@ function zeigeGeraeteDetails(id) {
     if (!g || !detailsContainer) return;
 
     const naechstePruefFormatted = formatiereDatum(g.naechstePruefung);
-    const letztePruefFormatted = formatiereDatum(g.letztePruefung);
     const inbetriebnahmeFormatted = formatiereDatum(g.erstinbetriebnahme);
 
     const historie = g.historie || [];
@@ -226,25 +246,26 @@ function zeigeGeraeteDetails(id) {
             const hDatum = formatiereDatum(h.datum);
             historieHtml += `
                 <li style="margin-bottom: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 4px;">
-                    <strong>📅 ${hDatum}</strong> - <span style="color:#2e7d32;">${h.ergebnis || 'Geprüft'}</span>
-                    <br><small>Prüfer: ${h.pruefer || 'Unbekannt'} ${h.bemerkung ? '| Note: ' + h.bemerkung : ''}</small>
+                    <strong>📅 ${hDatum}</strong> - <span style="color:#2e7d32;">${escapeHtml(h.ergebnis || 'Geprüft')}</span>
+                    <br><small>Prüfer: ${escapeHtml(h.pruefer || 'Unbekannt')} ${h.bemerkung ? '| Note: ' + escapeHtml(h.bemerkung) : ''}</small>
                 </li>
             `;
         });
     }
 
     const heuteISO = new Date().toISOString().split('T')[0];
+    const safeId = escapeHtml(g.id);
 
     detailsContainer.innerHTML = `
         <h2>📋 Geräteakte</h2>
-        <h3 style="color:#B71C1C; margin-top:5px;">${g.bezeichnung}</h3>
+        <h3 style="color:#B71C1C; margin-top:5px;">${escapeHtml(g.bezeichnung)}</h3>
         <hr style="margin:10px 0;">
-        <p><strong>Inventarnummer:</strong> ${g.inventarnummer}</p>
-        <p><strong>Kategorie:</strong> ${g.kategorie}</p>
-        <p><strong>Hersteller:</strong> ${g.hersteller || "-"}</p>
-        <p><strong>Standort:</strong> ${g.standort || "-"}</p>
+        <p><strong>Inventarnummer:</strong> ${escapeHtml(g.inventarnummer)}</p>
+        <p><strong>Kategorie:</strong> ${escapeHtml(g.kategorie)}</p>
+        <p><strong>Hersteller:</strong> ${escapeHtml(g.hersteller || "-")}</p>
+        <p><strong>Standort:</strong> ${escapeHtml(g.standort || "-")}</p>
         <p><strong>Erstinbetriebnahme:</strong> ${inbetriebnahmeFormatted}</p>
-        <p><strong>Status:</strong> ${g.status}</p>
+        <p><strong>Status:</strong> ${escapeHtml(g.status)}</p>
         <p><strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span></p>
         
         <hr style="margin:15px 0;">
@@ -257,7 +278,7 @@ function zeigeGeraeteDetails(id) {
             <strong style="font-size:0.9rem;">+ Neue Prüfung eintragen</strong>
             <input type="date" id="neuesPruefDatum" value="${heuteISO}" style="width:100%; margin:4px 0; padding:4px;">
             <input type="text" id="prueferName" placeholder="Prüfer Name" style="width:100%; margin:4px 0; padding:4px;">
-            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${g.id}')">Prüfung protokollieren</button>
+            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${safeId}')">Prüfung protokollieren</button>
         </div>
     `;
 }
@@ -331,8 +352,50 @@ function loescheGeraet(id) {
     }
 }
 
+// Direct CSV Export direkt im Modul
+function exportGeraeteCSV() {
+    const daten = getGeraete();
+
+    if (!Array.isArray(daten) || daten.length === 0) {
+        alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
+        return;
+    }
+
+    const headers = ["ID", "Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Status", "Letzte Prüfung", "Nächste Prüfung"];
+    const rows = daten.map(g => [
+        g.id || '',
+        g.inventarnummer || '',
+        g.bezeichnung || '',
+        g.kategorie || '',
+        g.hersteller || '',
+        g.standort || '',
+        g.status || '',
+        g.letztePruefung || '',
+        g.naechstePruefung || ''
+    ]);
+
+    const heute = new Date().toISOString().split('T')[0];
+    
+    if (typeof window.downloadCSV === "function") {
+        window.downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
+    } else {
+        // Fallback falls downloadCSV nicht global vorhanden ist
+        const csvLines = [headers.join(";")];
+        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Geraeteliste_FFW_${heute}.csv`;
+        link.click();
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     ladeGeraete();
+    filterGeraete();
+});
+
+document.addEventListener("geraeteGeaendert", () => {
     filterGeraete();
 });
 
@@ -364,3 +427,18 @@ function filtereGeraeteNachDashboard(filterTyp) {
     
     filterGeraete();
 }
+
+// Globale Freigaben
+window.getGeraete = getGeraete;
+window.ladeGeraete = ladeGeraete;
+window.speichereGeraete = speichereGeraete;
+window.neuesGeraet = neuesGeraet;
+window.resetFormular = resetFormular;
+window.filterGeraete = filterGeraete;
+window.zeigeGeraeteDetails = zeigeGeraeteDetails;
+window.fuegePruefungHinzu = fuegePruefungHinzu;
+window.bearbeiteGeraet = bearbeiteGeraet;
+window.loescheGeraet = loescheGeraet;
+window.exportGeraeteCSV = exportGeraeteCSV;
+window.renderGeraeteView = renderGeraeteView;
+window.filtereGeraeteNachDashboard = filtereGeraeteNachDashboard;

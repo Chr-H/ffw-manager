@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Prüfungsverwaltung (v1.1.0)
+// FFW Manager - Prüfungsverwaltung (v1.2.0)
 // ==========================================
 
 function getPruefungen() {
@@ -65,7 +65,10 @@ function renderPruefungenView() {
     container.innerHTML = `
         <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>📋 Prüfungsübersicht & Termine</h2>
-            <button class="btn btn-primary" onclick="openPruefungModal()">+ Neue Prüfung anlegen</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
+                <button class="btn btn-primary" onclick="openPruefungModal()">+ Neue Prüfung anlegen</button>
+            </div>
         </div>
 
         <!-- Filter- & Suchleiste -->
@@ -151,7 +154,7 @@ function filterPruefungen() {
 
         rowsHtml += `
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:8px 10px;">
+                <td style="padding:8px 10px; white-space:nowrap;">
                     <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPruefungModal('${safeId}')">✏️</button>
                     <button class="btn btn-loeschen" title="Löschen" onclick="loeschePruefung('${safeId}')">🗑️</button>
                 </td>
@@ -172,6 +175,7 @@ function filterPruefungen() {
 function openPruefungModal(id = null) {
     let item = { 
         id: '', 
+        geraetId: '',
         objekt: '', 
         art: 'Sichtprüfung', 
         datum: new Date().toISOString().split('T')[0], 
@@ -185,6 +189,14 @@ function openPruefungModal(id = null) {
         if (found) item = found;
     }
 
+    // Abfrage vorhandener Geräte für Verknüpfung
+    const geraeteListe = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
+    let geraeteOptions = '<option value="">-- Manuelle Eingabe / Kein Gerät --</option>';
+    geraeteListe.forEach(g => {
+        const sel = item.geraetId === g.id ? 'selected' : '';
+        geraeteOptions += `<option value="${escapeHtml(g.id)}" ${sel}>${escapeHtml(g.inventarnummer)} - ${escapeHtml(g.bezeichnung)}</option>`;
+    });
+
     const safeId = escapeHtml(item.id);
 
     const modalHtml = `
@@ -192,10 +204,19 @@ function openPruefungModal(id = null) {
             <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
                 <h3>${item.id ? '✏️ Prüfung bearbeiten' : '➕ Neue Prüfung eintragen'}</h3>
                 <form onsubmit="savePruefungFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                    
+                    <div>
+                        <label><strong>Verknüpftes Gerät (Optional)</strong></label>
+                        <select id="pruef-geraetId" onchange="waehleGeraetAus(this.value)" style="width:100%; padding:8px; margin-top:4px;">
+                            ${geraeteOptions}
+                        </select>
+                    </div>
+
                     <div>
                         <label><strong>Gegenstand / Objekt *</strong></label>
                         <input type="text" id="pruef-objekt" value="${escapeHtml(item.objekt)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. TS 8/8 oder Atemschutzmaske #12">
                     </div>
+
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Prüfart</strong></label>
@@ -215,20 +236,23 @@ function openPruefungModal(id = null) {
                             </select>
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Prüfdatum *</strong></label>
-                            <input type="date" id="pruef-datum" value="${escapeHtml(item.datum)}" required style="width:100%; padding:8px; margin-top:4px;">
+                            <input type="date" id="pruef-datum" value="${escapeHtml(item.datum)}" required onchange="berechneAutoNaechstePruefung()" style="width:100%; padding:8px; margin-top:4px;">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Nächste Prüfung</strong></label>
                             <input type="date" id="pruef-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
                         </div>
                     </div>
+
                     <div>
                         <label><strong>Prüfer / Sachkundiger</strong></label>
                         <input type="text" id="pruef-pruefer" value="${escapeHtml(item.pruefer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="Name des Prüfers">
                     </div>
+
                     <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
                         <button type="button" class="btn" onclick="closePruefungModal()" style="background:#ccc;">Abbrechen</button>
                         <button type="submit" class="btn btn-primary">💾 Speichern</button>
@@ -242,6 +266,44 @@ function openPruefungModal(id = null) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
+function waehleGeraetAus(geraetId) {
+    if (!geraetId) return;
+    const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
+    const g = geraete.find(item => item.id === geraetId);
+    if (g) {
+        const objInput = document.getElementById('pruef-objekt');
+        if (objInput) objInput.value = `${g.inventarnummer} - ${g.bezeichnung}`;
+        berechneAutoNaechstePruefung();
+    }
+}
+
+function berechneAutoNaechstePruefung() {
+    const geraetId = document.getElementById('pruef-geraetId')?.value;
+    const datumVal = document.getElementById('pruef-datum')?.value;
+    const naechsteInput = document.getElementById('pruef-naechstePruefung');
+
+    if (!datumVal || !naechsteInput) return;
+
+    let intervallMonate = 12; // Standard: 1 Jahr
+    if (geraetId) {
+        const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
+        const g = geraete.find(item => item.id === geraetId);
+        if (g && g.pruefintervall) {
+            intervallMonate = parseInt(g.pruefintervall);
+        }
+    }
+
+    const teile = datumVal.split('-');
+    if (teile.length === 3) {
+        const d = new Date(parseInt(teile[0]), parseInt(teile[1]) - 1, parseInt(teile[2]));
+        d.setMonth(d.getMonth() + intervallMonate);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        naechsteInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+}
+
 function closePruefungModal() {
     const existing = document.getElementById('pruefung-modal');
     if (existing) existing.remove();
@@ -253,8 +315,10 @@ function savePruefungFromModal(event, existingId) {
     const liste = getPruefungen();
     const isEdit = Boolean(existingId && existingId !== 'null' && existingId !== 'undefined' && existingId.trim() !== '');
 
+    const geraetId = document.getElementById('pruef-geraetId').value;
     const newItem = {
         id: isEdit ? existingId : "PRUEF-" + Date.now(),
+        geraetId: geraetId,
         objekt: document.getElementById('pruef-objekt').value.trim(),
         art: document.getElementById('pruef-art').value,
         ergebnis: document.getElementById('pruef-ergebnis').value,
@@ -275,6 +339,30 @@ function savePruefungFromModal(event, existingId) {
     }
 
     speicherePruefungen(liste);
+
+    // Optional: Synchronisiere mit Geräte-Historie aus geraete.js falls Gerät verknüpft
+    if (geraetId) {
+        const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
+        const gIdx = geraete.findIndex(g => g.id === geraetId);
+        if (gIdx !== -1) {
+            if (!geraete[gIdx].historie) geraete[gIdx].historie = [];
+            geraete[gIdx].historie.push({
+                datum: newItem.datum,
+                ergebnis: `${newItem.art}: ${newItem.ergebnis}`,
+                pruefer: newItem.pruefer || 'System'
+            });
+            geraete[gIdx].letztePruefung = newItem.datum;
+            if (newItem.naechstePruefung) {
+                geraete[gIdx].naechstePruefung = newItem.naechstePruefung;
+            }
+            if (typeof window.speichereGeraete === 'function') {
+                window.speichereGeraete();
+            } else {
+                speichereDaten('geraete', geraete);
+            }
+        }
+    }
+
     closePruefungModal();
     filterPruefungen();
 }
@@ -284,6 +372,41 @@ function loeschePruefung(id) {
     const liste = getPruefungen().filter(p => p && p.id !== id);
     speicherePruefungen(liste);
     filterPruefungen();
+}
+
+// Direct CSV Export für Prüfungen
+function exportPruefungenCSV() {
+    const daten = getPruefungen();
+
+    if (!Array.isArray(daten) || daten.length === 0) {
+        alert("⚠️ Es wurden keine Prüfungsdaten zum Exportieren gefunden.");
+        return;
+    }
+
+    const headers = ["ID", "Gegenstand/Objekt", "Prüfart", "Prüfdatum", "Nächste Prüfung", "Prüfer", "Ergebnis"];
+    const rows = daten.map(p => [
+        p.id || '',
+        p.objekt || '',
+        p.art || '',
+        p.datum || '',
+        p.naechstePruefung || '',
+        p.pruefer || '',
+        p.ergebnis || ''
+    ]);
+
+    const heute = new Date().toISOString().split('T')[0];
+
+    if (typeof window.downloadCSV === "function") {
+        window.downloadCSV(`Pruefungen_FFW_${heute}.csv`, headers, rows);
+    } else {
+        const csvLines = [headers.join(";")];
+        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Pruefungen_FFW_${heute}.csv`;
+        link.click();
+    }
 }
 
 // Globaler Keydown Listener für Schließen per ESC-Taste
@@ -306,9 +429,16 @@ document.addEventListener("pruefungenGeaendert", () => { filterPruefungen(); });
 document.addEventListener("DOMContentLoaded", () => { renderPruefungenView(); });
 
 // Globale Bereitstellung
+window.getPruefungen = getPruefungen;
+window.speicherePruefungen = speicherePruefungen;
 window.renderPruefungenView = renderPruefungenView;
 window.filterPruefungen = filterPruefungen;
 window.openPruefungModal = openPruefungModal;
+window.oeffnePruefungModal = oeffnePruefungModal;
 window.closePruefungModal = closePruefungModal;
 window.savePruefungFromModal = savePruefungFromModal;
 window.loeschePruefung = loeschePruefung;
+window.ladePruefungen = ladePruefungen;
+window.exportPruefungenCSV = exportPruefungenCSV;
+window.waehleGeraetAus = waehleGeraetAus;
+window.berechneAutoNaechstePruefung = berechneAutoNaechstePruefung;

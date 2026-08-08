@@ -23,17 +23,19 @@
 
         <!-- Navigation (Sidebar) -->
         <aside class="sidebar">
-            <ul>
-                <li onclick="zeigeSeite('dashboard')">🏠 Dashboard</li>
-                <li onclick="zeigeSeite('geraete')">🔧 Geräte</li>
-                <li onclick="zeigeSeite('fahrzeuge')">🚒 Fahrzeuge</li>
-                <li onclick="zeigeSeite('psa')">🧯 PSA</li>
-                <li onclick="zeigeSeite('pruefungen')">📋 Prüfungen</li>
-                <li onclick="zeigeSeite('lager')">📦 Lager</li>
-                <li onclick="zeigeSeite('personal')">👥 Personal</li>
-                <li onclick="zeigeSeite('auswertungen')">📊 Auswertungen</li>
-                <li onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</li>
-            </ul>
+            <nav>
+                <ul>
+                    <li onclick="zeigeSeite('dashboard')">🏠 Dashboard</li>
+                    <li onclick="zeigeSeite('geraete')">🔧 Geräte</li>
+                    <li onclick="zeigeSeite('fahrzeuge')">🚒 Fahrzeuge</li>
+                    <li onclick="zeigeSeite('psa')">🧯 PSA</li>
+                    <li onclick="zeigeSeite('pruefungen')">📋 Prüfungen</li>
+                    <li onclick="zeigeSeite('lager')">📦 Lager</li>
+                    <li onclick="zeigeSeite('personal')">👥 Personal</li>
+                    <li onclick="zeigeSeite('auswertungen')">📊 Auswertungen</li>
+                    <li onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</li>
+                </ul>
+            </nav>
         </aside>
 
         <!-- Hauptinhaltsbereich -->
@@ -180,7 +182,7 @@
             </section>
 
 
-           <!-- Modul Fahrzeuge -->
+            <!-- Modul Fahrzeuge -->
             <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
                 <div id="fahrzeuge-container"></div>
             </section>
@@ -215,9 +217,18 @@
             </section>
 
             <!-- Verbleibende Module (Platzhalter) -->
-            <section id="seite-personal" class="seite-ansicht" style="display: none;"><h2>👥 Personal</h2><p>In Entwicklung...</p></section>
-            <section id="seite-auswertungen" class="seite-ansicht" style="display: none;"><h2>📊 Auswertungen</h2><p>In Entwicklung...</p></section>
-            <section id="seite-einstellungen" class="seite-ansicht" style="display: none;"><h2>⚙️ Einstellungen</h2><p>In Entwicklung...</p></section>
+            <section id="seite-personal" class="seite-ansicht" style="display: none;">
+                <h2>👥 Personal</h2>
+                <p>In Entwicklung...</p>
+            </section>
+            <section id="seite-auswertungen" class="seite-ansicht" style="display: none;">
+                <h2>📊 Auswertungen</h2>
+                <p>In Entwicklung...</p>
+            </section>
+            <section id="seite-einstellungen" class="seite-ansicht" style="display: none;">
+                <h2>⚙️ Einstellungen</h2>
+                <p>In Entwicklung...</p>
+            </section>
 
         </main>
 
