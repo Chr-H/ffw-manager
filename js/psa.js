@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.2)
+// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.3)
 // ==========================================
 
 function getPSA() {
@@ -12,9 +12,9 @@ function speicherePSA(psaListe) {
     document.dispatchEvent(new Event("psaGeaendert"));
 }
 
-// Hilfsfunktion: Escape von HTML-Sonderzeichen gegen XSS
+// Hilfsfunktion: Safe HTML Attribute & Text Escaping
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === null || text === undefined) return '';
     return String(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -30,7 +30,7 @@ function formatiereDatum(datumStr) {
     if (isNaN(d.getTime())) return '-';
 
     const heute = new Date();
-    heute.setHours(0,0,0,0);
+    heute.setHours(0, 0, 0, 0);
     const formatted = d.toLocaleDateString("de-DE");
 
     if (d < heute) {
@@ -93,14 +93,13 @@ function renderPSAView() {
     `;
 
     container.innerHTML = html;
-    filterPSA(); // Initiales Befüllen der Tabelle
+    filterPSA();
 }
 
 // Live-Filterfunktion
 function filterPSA() {
     let tbody = document.getElementById('psa-tabelle-body');
     
-    // Falls das Tabellenelement fehlt, Ansicht neu aufbauen
     if (!tbody) {
         renderPSAView();
         tbody = document.getElementById('psa-tabelle-body');
@@ -136,7 +135,9 @@ function filterPSA() {
 
     let rowsHtml = '';
     gefiltert.forEach(item => {
+        const safeId = escapeHtml(item.id);
         const status = item.status || 'Einsatzbereit';
+        
         let statusBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🟢 Einsatzbereit</span>`;
         if (status === 'In Reinigung') {
             statusBadge = `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🧺 In Reinigung</span>`;
@@ -147,11 +148,11 @@ function filterPSA() {
         }
 
         rowsHtml += `
-            <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${item.id}')">
+            <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${safeId}')">
                 <td style="padding:8px 10px;" onclick="event.stopPropagation();">
-                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${item.id}')">📂 Akte</button>
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${item.id}')">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${item.id}')">🗑️</button>
+                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${safeId}')">📂 Akte</button>
+                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${safeId}')">✏️</button>
+                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${safeId}')">🗑️</button>
                 </td>
                 <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + escapeHtml(item.spind) : '-'}</strong></td>
                 <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || item.name || 'Unbekannt')}</td>
@@ -171,6 +172,7 @@ function openPSAAkteModal(id) {
     const item = getPSA().find(p => p && p.id === id);
     if (!item) return;
 
+    const safeId = escapeHtml(item.id);
     item.historie = Array.isArray(item.historie) ? item.historie : [];
     item.status = item.status || 'Einsatzbereit';
 
@@ -220,14 +222,14 @@ function openPSAAkteModal(id) {
                             <option value="Defekt" ${item.status === 'Defekt' ? 'selected' : ''}>🔴 Defekt</option>
                             <option value="Ausgemustert" ${item.status === 'Ausgemustert' ? 'selected' : ''}>⚪ Ausgemustert</option>
                         </select>
-                        <button class="btn btn-primary" onclick="speicherePSAStatus('${item.id}')">Status aktualisieren</button>
+                        <button class="btn btn-primary" onclick="speicherePSAStatus('${safeId}')">Status aktualisieren</button>
                     </div>
                 </div>
 
                 <!-- Neue Historie / Ereignis eintragen -->
                 <details style="margin-bottom:20px; background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px;">
                     <summary style="font-weight:bold; cursor:pointer;">➕ Neuer Eintrag (Reinigung, Prüfung, Defekt, etc.)</summary>
-                    <form onsubmit="addPSAHistorieEintrag(event, '${item.id}')" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                    <form onsubmit="addPSAHistorieEintrag(event, '${safeId}')" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
                         <div style="display:flex; gap:10px;">
                             <select id="hist-typ" style="flex:1; padding:6px;" required>
                                 <option value="Reinigung / Wäsche">🧺 Reinigung / Wäsche</option>
@@ -265,7 +267,6 @@ function closePSAAkteModal() {
     if (existing) existing.remove();
 }
 
-// Status direkt aus der Akte aktualisieren
 function speicherePSAStatus(id) {
     const psaListe = getPSA();
     const item = psaListe.find(p => p && p.id === id);
@@ -290,7 +291,6 @@ function speicherePSAStatus(id) {
     }
 }
 
-// Eintrag zur Historie hinzufügen
 function addPSAHistorieEintrag(event, id) {
     event.preventDefault();
     const psaListe = getPSA();
@@ -319,11 +319,13 @@ function openPSAModal(id = null) {
         if (found) item = found;
     }
 
+    const safeId = escapeHtml(item.id);
+
     const modalHtml = `
         <div id="psa-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
             <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
                 <h3>${item.id ? '✏️ PSA bearbeiten' : '➕ PSA zuweisen / anlegen'}</h3>
-                <form onsubmit="savePSAFromModal(event, '${item.id || ''}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
                     <div style="display:flex; gap:10px;">
                         <div style="flex:2;">
                             <label><strong>Name des Trägers *</strong></label>
@@ -362,11 +364,11 @@ function openPSAModal(id = null) {
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Ausgabedatum</strong></label>
-                            <input type="date" id="psa-ausgabeDatum" value="${item.ausgabeDatum || ''}" style="width:100%; padding:8px; margin-top:4px;">
+                            <input type="date" id="psa-ausgabeDatum" value="${escapeHtml(item.ausgabeDatum)}" style="width:100%; padding:8px; margin-top:4px;">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Nächste Prüfung</strong></label>
-                            <input type="date" id="psa-naechstePruefung" value="${item.naechstePruefung || ''}" style="width:100%; padding:8px; margin-top:4px;">
+                            <input type="date" id="psa-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
                         </div>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
@@ -391,9 +393,7 @@ function savePSAFromModal(event, existingId) {
     event.preventDefault();
 
     const psaListe = getPSA();
-    
-    // Prüfen, ob es eine gültige ID zum Bearbeiten gibt
-    const isEdit = existingId && existingId !== 'null' && existingId !== 'undefined' && existingId.trim() !== '';
+    const isEdit = Boolean(existingId && existingId !== 'null' && existingId !== 'undefined' && existingId.trim() !== '');
     const existingItem = isEdit ? (psaListe.find(p => p && p.id === existingId) || {}) : {};
 
     const traegerWert = document.getElementById('psa-traeger').value.trim();
@@ -401,17 +401,17 @@ function savePSAFromModal(event, existingId) {
     const newItem = {
         id: isEdit ? existingId : "PSA-" + Date.now(),
         traeger: traegerWert,
-        name: traegerWert, // Kompatibilität für Module mit .name
+        name: traegerWert,
         spind: document.getElementById('psa-spind').value.trim(),
         bezeichnung: document.getElementById('psa-bezeichnung').value.trim(),
-        kategorie: 'PSA', // Für pruefungen.js zwingend notwendig
+        kategorie: 'PSA',
         groesse: document.getElementById('psa-groesse').value.trim(),
         seriennummer: document.getElementById('psa-seriennummer').value.trim(),
         ausgabeDatum: document.getElementById('psa-ausgabeDatum').value,
         naechstePruefung: document.getElementById('psa-naechstePruefung').value,
         status: existingItem.status || 'Einsatzbereit',
         historie: Array.isArray(existingItem.historie) ? existingItem.historie : [],
-        pruefungen: Array.isArray(existingItem.pruefungen) ? existingItem.pruefungen : [] // Für pruefungen.js
+        pruefungen: Array.isArray(existingItem.pruefungen) ? existingItem.pruefungen : []
     };
 
     if (isEdit) {
@@ -427,8 +427,6 @@ function savePSAFromModal(event, existingId) {
 
     speicherePSA(psaListe);
     closePSAModal();
-    
-    // Sofort Ansicht neu zeichnen
     renderPSAView();
 }
 
@@ -440,26 +438,14 @@ function loeschePSA(id) {
     renderPSAView();
 }
 
-// ==========================================
-// ALIASE & EVENT-LISTENER (Verhindert Fehler)
-// ==========================================
-function oeffnePSAModal(id = null) {
-    openPSAModal(id);
-}
+// Aliase & Event-Listener
+function oeffnePSAModal(id = null) { openPSAModal(id); }
+function ladePSA() { renderPSAView(); }
 
-function ladePSA() {
-    renderPSAView();
-}
+document.addEventListener("psaGeaendert", () => { filterPSA(); });
+document.addEventListener("DOMContentLoaded", () => { renderPSAView(); });
 
-document.addEventListener("psaGeaendert", () => {
-    filterPSA();
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-    renderPSAView();
-});
-
-// Globale Bereitstellung für Inline-Events
+// Globale Bereitstellung
 window.renderPSAView = renderPSAView;
 window.filterPSA = filterPSA;
 window.openPSAModal = openPSAModal;
