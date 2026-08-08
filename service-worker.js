@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ffw-manager-v3.5.0';
+const CACHE_NAME = 'ffw-manager-v3.6.0'; // ERHÖHT für Cache-Reset
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -14,17 +14,13 @@ const ASSETS_TO_CACHE = [
   './js/app.js'
 ];
 
-// 1. Install-Event: Neue Dateien cachen
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
   self.skipWaiting();
 });
 
-// 2. Activate-Event: Alte Cache-Versionen aufräumen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -40,11 +36,8 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Fetch-Event: Aus dem Cache laden (Offline-Support)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });

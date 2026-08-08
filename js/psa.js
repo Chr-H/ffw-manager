@@ -387,3 +387,14 @@ function loeschePSA(id) {
 document.addEventListener("DOMContentLoaded", () => {
     renderPSAView();
 });
+function renderPSAView() {
+    if (typeof ladePSA === 'function') {
+        ladePSA();
+    } else if (typeof filterPSA === 'function') {
+        filterPSA();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    renderPSAView();
+});

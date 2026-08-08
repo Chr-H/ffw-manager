@@ -232,15 +232,15 @@
   window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
 </script>
 
-<!-- 3. Anwendungsskripte in korrekter Reihenfolge -->
-<script src="js/storage.js?v=2"></script>
-<script src="js/kategorien.js?v=2"></script>
-<script src="js/geraete.js?v=2"></script>
-<script src="js/fahrzeuge.js?v=2"></script>
-<script src="js/psa.js?v=2"></script>
-<script src="js/lager.js?v=2"></script>
-<script src="js/pruefungen.js?v=2"></script>
-<script src="js/app.js?v=2"></script>
+<!-- 3. Anwendungsskripte in korrekter Reihenfolge (mit v=3 zur Cache-Invalidierung) -->
+<script src="js/storage.js?v=3"></script>
+<script src="js/kategorien.js?v=3"></script>
+<script src="js/geraete.js?v=3"></script>
+<script src="js/fahrzeuge.js?v=3"></script>
+<script src="js/psa.js?v=3"></script>
+<script src="js/lager.js?v=3"></script>
+<script src="js/pruefungen.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
 
 <!-- 4. Service Worker & Initialisierung -->
 <script>
@@ -263,7 +263,7 @@
     });
   }
 
-  // Cloud-Sync starten & Ansichten initialisieren
+  // Cloud-Sync starten & ALLE Ansichten beim Start initialisieren
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof starteCloudSync === "function") {
       starteCloudSync();
@@ -273,6 +273,16 @@
     }
     if (typeof renderFahrzeugeView === "function") {
       renderFahrzeugeView();
+    }
+    // FIX: PSA-Ansicht beim Laden initialisieren
+    if (typeof renderPSAView === "function") {
+      renderPSAView();
+    } else if (typeof ladePSA === "function") {
+      ladePSA();
+    }
+    // FIX: Prüfungs-Ansicht beim Laden initialisieren
+    if (typeof ladePruefungen === "function") {
+      ladePruefungen();
     }
   });
 </script>
