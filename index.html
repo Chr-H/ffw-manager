@@ -102,12 +102,8 @@
             </section>
 
 
-  <!-- ========================================= -->
-<!-- 2. GERÄTEVERWALTUNG                      -->
-<!-- ========================================= -->
+  <!-- GERÄTE BEREICH -->
 <section id="seite-geraete" class="seite-ansicht" style="display: none;">
-
-    <!-- Header mit Druck- und Export-Buttons -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h2>🔧 Geräteverwaltung</h2>
         <div style="display: flex; gap: 10px;" class="no-print">
@@ -116,7 +112,7 @@
         </div>
     </div>
 
-    <!-- Formular -->
+    <!-- Formular & Filter bleiben wie gehabt -->
     <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
         <h3>➕ Gerät anlegen / bearbeiten</h3>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
@@ -145,7 +141,6 @@
 
     <hr style="margin:20px 0;">
 
-    <!-- Filter -->
     <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
         <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
         <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
@@ -158,10 +153,7 @@
         </select>
     </div>
 
-    <!-- Split-Layout: Links Liste, Rechts Akte -->
     <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
-        
-        <!-- Linke Spalte: Tabelle mit ID 'geraete-tabelle' -->
         <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
             <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
                 <thead>
@@ -178,14 +170,37 @@
             </table>
         </div>
 
-        <!-- Rechte Spalte: Geräteakte -->
         <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
             <h2>📋 Geräteakte</h2>
             <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
         </div>
-
     </div>
+</section>
 
+
+<!-- PSA BEREICH -->
+<section id="seite-psa" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
+            <button class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
+        </div>
+    </div>
+    <div id="psa-container"></div>
+</section>
+
+
+<!-- PRÜFUNGEN BEREICH -->
+<section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>📋 Anstehende Prüfungen</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
+            <button class="btn btn-secondary" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-container')">🖨️ Prüfbericht drucken / PDF</button>
+        </div>
+    </div>
+    <div id="pruefungen-container" class="liste-container"></div>
 </section>
 
 

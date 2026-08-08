@@ -183,62 +183,107 @@ function exportGeraeteCSV() {
 // Druck- & PDF-Exportfunktionen
 // ==========================================
 
-function druckeListe(titel, tabelleId) {
-    const tabelle = document.getElementById(tabelleId);
-    
-    if (!tabelle) {
+// Universelle Druckfunktion für Tabellen und Container
+function druckeListe(titel, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) {
+        alert("Fehler: Element mit ID '" + elementId + "' wurde nicht gefunden!");
+        return;
+    }
+
+    // Falls Element keine direkte Tabelle ist, suche nach einer Tabelle innerhalb des Containers
+    let tabelle = el.tagName === "TABLE" ? el : el.querySelector("table");
+
+    if (!tabelle || tabelle.rows.length <= 1) {
         alert("Keine Daten zum Drucken vorhanden!");
         return;
     }
 
-    const druckFenster = window.open('', '', 'width=900,height=700');
-    const datum = new Date().toLocaleDateString('de-DE');
+    // Kopie für den Druck erstellen, um Original-DOM nicht zu verändern
+    const druckKopie = tabelle.cloneNode(true);
 
+    // Spalten mit 'no-print' Klasse (wie Aktionsbuttons) ausblenden
+    druckKopie.querySelectorAll('.no-print').forEach(node => node.remove());
+
+    const druckFenster = window.open('', '_blank', 'width=900,height=650');
     druckFenster.document.write(`
         <!DOCTYPE html>
-        <html lang="de">
+        <html>
         <head>
-            <meta charset="UTF-8">
             <title>${titel}</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-                .header { border-bottom: 2px solid #b30000; padding-bottom: 10px; margin-bottom: 20px; }
-                .header h1 { margin: 0; color: #b30000; font-size: 20pt; }
-                .header p { margin: 5px 0 0 0; font-size: 10pt; color: #666; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 10pt; }
-                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-                th { background-color: #f5f5f5; }
-                .footer { margin-top: 60px; display: flex; justify-content: space-between; font-size: 10pt; }
-                .unterschrift-linie { border-top: 1px solid #000; width: 220px; text-align: center; padding-top: 5px; }
+                body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+                h1 { font-size: 18pt; margin-bottom: 5px; }
+                p { font-size: 10pt; color: #666; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; font-size: 10pt; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                tr:nth-child(even) { background-color: #fafafa; }
+                @page { size: auto; margin: 15mm; }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>Freiwillige Feuerwehr – ${titel}</h1>
-                <p>Erstellt am: ${datum}</p>
-            </div>
-
-            ${tabelle.outerHTML}
-
-            <div class="footer">
-                <div class="unterschrift-linie">Datum / Ort</div>
-                <div class="unterschrift-linie">Unterschrift Prüfer / Gerätewart</div>
-            </div>
-
-            <script>
-                window.onload = function() {
-                    window.print();
-                    window.close();
-                };
-            <\/script>
+            <h1>Feuerwehr Musterstadt - ${titel}</h1>
+            <p>Erstellt am: ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')} Uhr</p>
+            ${druckKopie.outerHTML}
         </body>
         </html>
     `);
 
     druckFenster.document.close();
+    druckFenster.focus();
+    setTimeout(() => {
+        druckFenster.print();
+        druckFenster.close();
+    }, 300);
 }
 
-// Globale Freigabe
-window.downloadCSV = downloadCSV;
-window.exportPruefungenCSV = exportPruefungenCSV;
-window.exportGeraeteCSV = exportGeraeteCSV;
+// Hilfsfunktion zum Erstellen und Herunterladen von CSV-Dateien
+function downloadCSV(dateiname, headers, datenZeilen) {
+    const csvContent = [
+        headers.join(";"),
+        ...datenZeilen.map(row => row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(";"))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = dateiname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// CSV Export für PSA
+function exportPSACSV() {
+    const daten = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
+    if (!daten || daten.length === 0) {
+        alert("Keine PSA-Daten zum Exportieren vorhanden!");
+        return;
+    }
+    const headers = ["Name", "Bekleidung / Teil", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
+    const rows = daten.map(p => [p.person, p.teil, p.groesse, p.seriennummer, p.ausgabedatum, p.naechstePruefung, p.status]);
+    downloadCSV(`PSA_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+}
+
+// CSV Export für Prüfungen
+function exportPruefungenCSV() {
+    const geraete = typeof ladeDaten === "function" ? ladeDaten("geraete") : [];
+    const psa = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
+    
+    const allePruefungen = [
+        ...geraete.map(g => ({ typ: 'Gerät', bez: g.bezeichnung, id: g.inventarnummer, datum: g.naechstePruefung, status: g.status })),
+        ...psa.map(p => ({ typ: 'PSA', bez: `${p.person} - ${p.teil}`, id: p.seriennummer, datum: p.naechstePruefung, status: p.status }))
+    ];
+
+    if (allePruefungen.length === 0) {
+        alert("Keine Prüfdaten zum Exportieren vorhanden!");
+        return;
+    }
+
+    const headers = ["Typ", "Bezeichnung / Inhaber", "ID / Kennung", "Nächste Prüfung", "Status"];
+    const rows = allePruefungen.map(p => [p.typ, p.bez, p.id, p.datum, p.status]);
+    downloadCSV(`Pruefungen_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+}
