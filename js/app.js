@@ -35,21 +35,3 @@ function zeigeSeite(seitenName) {
         renderFahrzeugeView();
     }
 }
-
-    // 3. Gewählte Seite einblenden
-    zielSeite.style.display = 'block';
-
-    // 4. Ansichten beim Umschalten aktualisieren
-    if ((seitenName === 'psa' || seitenName === 'seite-psa') && typeof renderPSAView === 'function') {
-        renderPSAView();
-    }
-    if ((seitenName === 'fahrzeuge' || seitenName === 'seite-fahrzeuge') && typeof renderFahrzeugeView === 'function') {
-        renderFahrzeugeView();
-    }
-    if ((seitenName === 'geraete' || seitenName === 'seite-geraete') && typeof filterGeraete === 'function') {
-        filterGeraete();
-    }
-    if ((seitenName === 'lager' || seitenName === 'seite-lager') && typeof renderLagerView === 'function') {
-        renderLagerView();
-    }
-}
