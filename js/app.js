@@ -2,22 +2,22 @@
 // FFW Manager - Hauptanwendung & Navigation
 // ==========================================
 
-function zeigeSeite(seitenId) {
-    // 1. Alle Ansichten ausblenden
-    const sektionen = document.querySelectorAll('.seite-ansicht');
-    sektionen.forEach(sec => sec.style.display = 'none');
+function zeigeSeite(seiteId) {
+    // Alle Seiten ausblenden
+    document.querySelectorAll('.seite-ansicht').forEach(s => s.style.display = 'none');
+    
+    // Zielseite einblenden
+    const ziel = document.getElementById('seite-' + seiteId);
+    if (ziel) ziel.style.display = 'block';
 
-    // 2. Gewünschte Ansicht einblenden
-    const id = seitenId.startsWith('seite-') ? seitenId : 'seite-' + seitenId;
-    const zielSektion = document.getElementById(id);
-
-    if (zielSektion) {
-        zielSektion.style.display = 'block';
-    } else {
-        console.warn(`Sektion mit ID "${id}" wurde nicht gefunden.`);
-        return;
+    // Funktionen beim Seitenwechsel ausführen
+    if (seiteId === 'fahrzeuge' && typeof renderFahrzeugeView === 'function') {
+        renderFahrzeugeView();
     }
-
+    if (seiteId === 'geraete' && typeof filterGeraete === 'function') {
+        filterGeraete();
+    }
+}
     // 3. Beim Seitenwechsel das jeweilige Modul neu rendern / aktualisieren
     const modul = seitenId.replace('seite-', '');
 
