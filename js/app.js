@@ -28,33 +28,14 @@ function zeigeSeite(seitenId) {
             break;
 
         case 'geraete':
-            if (typeof filterGeraete === 'function') filterGeraete();
+            if (typeof renderGeraeteView === 'function') renderGeraeteView();
+            else if (typeof filterGeraete === 'function') filterGeraete();
             break;
 
         case 'fahrzeuge':
             if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
             break;
 
-        case 'psa':
-            if (typeof renderPSAView === 'function') renderPSAView();
-            else if (typeof ladePSA === 'function') ladePSA();
-            break;
-
-        case 'lager':
-            if (typeof renderLagerView === 'function') renderLagerView();
-            else if (typeof ladeLager === 'function') ladeLager();
-            break;
-
-        case 'pruefungen':
-            if (typeof renderPruefungenView === 'function') renderPruefungenView();
-            else if (typeof ladePruefungen === 'function') ladePruefungen();
-            break;
-    }
-}
-    });
-
-    // 5. Daten-Render-Funktionen beim Seitenwechsel ausführen (sauber per switch)
-    switch (pureName) {
         case 'psa':
             if (typeof renderPSAView === 'function') renderPSAView();
             else if (typeof ladePSA === 'function') ladePSA();
@@ -66,22 +47,13 @@ function zeigeSeite(seitenId) {
             else if (typeof ladeLager === 'function') ladeLager();
             break;
 
-        case 'geraete':
-            if (typeof renderGeraeteView === 'function') renderGeraeteView();
-            else if (typeof filterGeraete === 'function') filterGeraete();
-            break;
-
-        case 'fahrzeuge':
-            if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
-            break;
-
         case 'pruefungen':
             if (typeof renderPruefungenView === 'function') renderPruefungenView();
             else if (typeof ladePruefungen === 'function') ladePruefungen();
             break;
 
         default:
-            console.log(`Navigation zu '${pureName}' ausgeführt.`);
+            console.log(`Navigation zu '${modul}' ausgeführt.`);
             break;
     }
 }
