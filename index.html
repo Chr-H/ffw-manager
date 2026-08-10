@@ -104,12 +104,12 @@
 
   <!-- GERÄTE BEREICH -->
 <section id="seite-geraete" class="seite-ansicht" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h2>🔧 Geräteverwaltung</h2>
-        <div style="display: flex; gap: 10px;" class="no-print">
-            <button class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
-            <button class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
-        </div>
+    <div style="display: flex; gap: 10px;" class="no-print">
+    <button class="btn btn-secondary" onclick="document.getElementById('importGeraeteInput').click()">📥 CSV Import</button>
+    <input type="file" id="importGeraeteInput" style="display:none;" accept=".csv" onchange="importGeraeteCSV(this)">
+    <button class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
+    <button class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+    </div>
     </div>
 
     <!-- Formular & Filter bleiben wie gehabt -->
