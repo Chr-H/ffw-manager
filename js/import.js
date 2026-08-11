@@ -152,7 +152,7 @@ function importPSACSV(inputElement) {
     }
 }
 
-function exportPSACSV() {
+window.exportPSACSV = function() {
     let psaDaten = window.psaDaten || [];
     if (typeof ladeDaten === "function") {
         psaDaten = ladeDaten("psa") || ladeDaten("ffw_psa") || psaDaten;
@@ -167,17 +167,20 @@ function exportPSACSV() {
         return;
     }
 
-    // Genau die Spaltenüberschriften, die deine App zeigt
+    // Exakte Kopfzeile für sauberen Excel-Import
     const headers = ["Spind", "Träger", "Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
     let csvContent = "\uFEFF" + headers.join(";") + "\n";
 
     psaDaten.forEach(item => {
+        if (!item) return;
+
+        // Abfangen aller möglichen Varianten (psa.js v2.1.4 Kompatibilität)
         const spind = String(item.spind || "").replace(/"/g, '""');
-        const traeger = String(item.traeger || item.name || item.traegerName || "").replace(/"/g, '""');
-        const ausruestung = String(item.bekleidung || item.ausruestung || "").replace(/"/g, '""');
+        const traeger = String(item.traeger || item.name || "").replace(/"/g, '""');
+        const ausruestung = String(item.bezeichnung || item.ausruestung || item.bekleidung || "").replace(/"/g, '""');
         const groesse = String(item.groesse || "").replace(/"/g, '""');
         const seriennummer = String(item.seriennummer || item.sn || "").replace(/"/g, '""');
-        const ausgabedatum = String(item.ausgabedatum || item.datum || "").replace(/"/g, '""');
+        const ausgabedatum = String(item.ausgabeDatum || item.ausgabedatum || item.datum || "").replace(/"/g, '""');
         const naechstePruefung = String(item.naechstePruefung || item.pruefung || "").replace(/"/g, '""');
         const status = String(item.status || "Einsatzbereit").replace(/"/g, '""');
 
@@ -203,7 +206,7 @@ function exportPSACSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
+};
 
 // ==========================================
 // 2. GERÄTE IMPORT
