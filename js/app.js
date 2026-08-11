@@ -203,10 +203,19 @@ function druckeListe(titel, elementId) {
         return;
     }
 
-    // Kopie für den Druck erstellen, um Original-DOM nicht zu verändern
+    // Kopie für den Druck erstellen
     const druckKopie = tabelle.cloneNode(true);
 
-    // Spalten mit 'no-print' Klasse (wie Aktionsbuttons) ausblenden
+    // 1. Alle Aktions-Spalten/Buttons automatisch aus der Druckkopie entfernen
+    druckKopie.querySelectorAll('tr').forEach(row => {
+        Array.from(row.cells).forEach(cell => {
+            if (cell.querySelector('button') || cell.classList.contains('no-print')) {
+                cell.remove();
+            }
+        });
+    });
+
+    // 2. Verbliebene no-print Elemente löschen
     druckKopie.querySelectorAll('.no-print').forEach(node => node.remove());
 
     const druckFenster = window.open('', '_blank', 'width=900,height=650');
