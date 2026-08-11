@@ -17,9 +17,10 @@ function importGeraeteCSV(inputElement) {
             return;
         }
 
+        // Trennzeichen ermitteln (Semicolon oder Komma)
         const trenner = zeilen[0].includes(";") ? ";" : ",";
         
-        // Spaltenköpfe säubern & Excel-Sonderzeichen reparieren
+        // Headerzeile analysieren
         const rawHeaders = zeilen[0].split(trenner).map(h => {
             let s = h.replace(/^"|"$/g, '').trim().toLowerCase();
             return s.replace(/,,/g, 'ä').replace(/á/g, 'ß');
@@ -35,55 +36,79 @@ function importGeraeteCSV(inputElement) {
                 .split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
                 .map(w => w.replace(/^"|"$/g, '').trim().replace(/,,/g, 'ä').replace(/á/g, 'ß'));
 
+            if (werte.length === 0 || werte.every(v => v === "")) continue;
+
             let gObj = {};
             rawHeaders.forEach((header, index) => {
                 gObj[header] = werte[index] || "";
             });
 
-            // Auslesen aller möglichen Spaltenbezeichnungen aus Excel
-            const csvId = (gObj["id"] || "").trim();
-            const invNummer = (gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || gObj["inventar"] || gObj["inventarnummer"] || "").trim();
-            const bezeichnung = (gObj["bezeichnung"] || gObj["name"] || "").trim();
-            const kategorie = (gObj["kategorie / ty"] || gObj["kategorie"] || gObj["typ"] || "").trim();
-            const standort = (gObj["fahrzeug / sta"] || gObj["fahrzeug"] || gObj["standort"] || "").trim();
+            // 1. Auslesen über feste Spalten-Indizes (schützt vor Excel-Header-Fehlern)
+            const indexId = werte[0] || "";
+            const indexBezeichnung = werte[1] || "";
+            const indexKategorie = werte[2] || "";
+            const indexStandort = werte[3] || "";
+            const indexStatus = werte[4] || "";
+            const indexPruefung = werte[5] || "";
+            const indexInvNr = werte[6] || "";
+            const indexBemerkung = werte[7] || "";
+
+            // Werte ermitteln
+            const csvId = (indexId.startsWith("GER-") ? indexId : (gObj["id"] || indexId)).trim();
+            const bezeichnung = (indexBezeichnung || gObj["bezeichnung"] || gObj["name"] || "").trim();
+            const invNummer = (indexInvNr || gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || gObj["inventar"] || "").trim();
+            const kategorie = (indexKategorie || gObj["kategorie / ty"] || gObj["kategorie"] || "").trim();
+            const standort = (indexStandort || gObj["fahrzeug / sta"] || gObj["fahrzeug"] || gObj["standort"] || "").trim();
+            const status = (indexStatus || gObj["status"] || "Einsatzbereit").trim();
+            const pruefung = (indexPruefung || gObj["nächste prüfung"] || gObj["n,,chste prfun"] || "").trim();
+            const bemerkung = (indexBemerkung || gObj["bemerkung"] || "").trim();
 
             if (!bezeichnung && !invNummer && !csvId) continue;
 
-            // --- 3-STUFIGER ABGLEICH GEGEN DUPLETTEN ---
+            // 2. Abgleich (inkl. Zahlenvergleich für Excel "1" vs "001")
             const index = window.geraeteDaten.findIndex(g => {
                 const gId = String(g.id || "").trim().toLowerCase();
                 const gInv = String(g.inventar || g.inventarnummer || g.seriennummer || "").trim().toLowerCase();
                 const gBezeich = String(g.bezeichnung || "").trim().toLowerCase();
                 const gStandort = String(g.standort || g.fahrzeug || "").trim().toLowerCase();
 
-                // 1. Stufe: Exakter ID-Match
+                // Match 1: Exakte ID
                 if (csvId && gId && csvId.toLowerCase() === gId) return true;
 
-                // 2. Stufe: Exakter Inv.-Nr. / Seriennummer Match
-                if (invNummer && gInv && invNummer.toLowerCase() === gInv) return true;
+                // Match 2: Inv.-Nr. / Seriennummer (Text- und Zahlenvergleich)
+                if (invNummer && gInv) {
+                    if (invNummer.toLowerCase() === gInv) return true;
+                    const numCsv = parseInt(invNummer, 10);
+                    const numG = parseInt(gInv, 10);
+                    if (!isNaN(numCsv) && !isNaN(numG) && numCsv === numG) return true;
+                }
 
-                // 3. Stufe: Fallback auf Kombination aus Bezeichnung + Standort (falls IDs/Nummern fehlen)
+                // Match 3: Fallback auf Bezeichnung + Standort
                 if (bezeichnung && gBezeich === bezeichnung.toLowerCase() && standort && gStandort === standort.toLowerCase()) return true;
 
                 return false;
             });
 
-            // IDs und Inventarnummern konsolidieren
-            const finaleId = csvId || (index !== -1 && window.geraeteDaten[index].id ? window.geraeteDaten[index].id : `GER-${Date.now()}${i}`);
-            const finaleInvNr = invNummer || (index !== -1 ? (window.geraeteDaten[index].inventar || window.geraeteDaten[index].seriennummer) : `AUTO-${i}`);
+            // 3. Objekt zusammenstellen
+            const bestehendesGeraet = index !== -1 ? window.geraeteDaten[index] : null;
+
+            const finaleId = csvId || (bestehendesGeraet ? bestehendesGeraet.id : `GER-${Date.now()}${i}`);
+            const finaleInvNr = (bestehendesGeraet && bestehendesGeraet.inventar) 
+                ? bestehendesGeraet.inventar 
+                : (invNummer || `AUTO-${i}`);
 
             const sauberesGeraet = {
                 id: finaleId,
                 inventar: finaleInvNr,
                 inventarnummer: finaleInvNr,
                 seriennummer: finaleInvNr,
-                bezeichnung: bezeichnung || "Unbekannt",
-                kategorie: kategorie,
-                hersteller: gObj["hersteller"] || gObj["herst."] || (index !== -1 ? window.geraeteDaten[index].hersteller : ""),
-                standort: standort,
-                status: gObj["status"] || "Einsatzbereit",
-                naechstePruefung: gObj["nächste prüfung"] || gObj["n,,chste prfun"] || gObj["pruefdatum"] || "",
-                bemerkung: gObj["bemerkung"] || gObj["notiz"] || ""
+                bezeichnung: bezeichnung || (bestehendesGeraet ? bestehendesGeraet.bezeichnung : "Unbekannt"),
+                kategorie: kategorie || (bestehendesGeraet ? bestehendesGeraet.kategorie : ""),
+                hersteller: bestehendesGeraet ? (bestehendesGeraet.hersteller || "") : "",
+                standort: standort || (bestehendesGeraet ? bestehendesGeraet.standort : ""),
+                status: status || "Einsatzbereit",
+                naechstePruefung: pruefung || (bestehendesGeraet ? bestehendesGeraet.naechstePruefung : ""),
+                bemerkung: bemerkung || (bestehendesGeraet ? bestehendesGeraet.bemerkung : "")
             };
 
             if (index !== -1) {
@@ -97,12 +122,11 @@ function importGeraeteCSV(inputElement) {
             }
         }
 
-        // Filter zurücksetzen
+        // Filter zurücksetzen & UI aktualisieren
         if (document.getElementById("sucheGeraet")) document.getElementById("sucheGeraet").value = "";
         if (document.getElementById("filterKategorie")) document.getElementById("filterKategorie").value = "";
         if (document.getElementById("filterStatus")) document.getElementById("filterStatus").value = "";
 
-        // Speichern & Anzeigen
         if (typeof speichereGeraete === "function") speichereGeraete();
         if (typeof filterGeraete === "function") filterGeraete();
         else if (typeof renderGeraeteListe === "function") renderGeraeteListe();
