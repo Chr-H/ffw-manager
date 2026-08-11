@@ -2,7 +2,7 @@
 // FFW Manager - Service Worker (v3.7.2)
 // ==========================================
 
-const CACHE_NAME = 'ffw-manager-v3.8.5'; // Erhöht für Lager-Update
+const CACHE_NAME = 'ffw-manager-v3.8.6'; // Erhöht für Lager-Update
 
 const ASSETS_TO_CACHE = [
   './',

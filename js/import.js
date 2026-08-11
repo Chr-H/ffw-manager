@@ -19,7 +19,7 @@ function importGeraeteCSV(inputElement) {
 
         const trenner = zeilen[0].includes(";") ? ";" : ",";
         
-        // Spaltenköpfe säubern & kaputte Umlaute korrigieren
+        // Spaltenköpfe säubern & Excel-Sonderzeichen reparieren
         const rawHeaders = zeilen[0].split(trenner).map(h => {
             let s = h.replace(/^"|"$/g, '').trim().toLowerCase();
             return s.replace(/,,/g, 'ä').replace(/á/g, 'ß');
@@ -40,58 +40,69 @@ function importGeraeteCSV(inputElement) {
                 gObj[header] = werte[index] || "";
             });
 
-            // 1. IDs und Inventarnummern flexibel aus allen Spaltenvarianten auslesen
+            // Auslesen aller möglichen Spaltenbezeichnungen aus Excel
             const csvId = (gObj["id"] || "").trim();
             const invNummer = (gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || gObj["inventar"] || gObj["inventarnummer"] || "").trim();
-            const bezeichnung = gObj["bezeichnung"] || gObj["name"] || "Unbekannt";
+            const bezeichnung = (gObj["bezeichnung"] || gObj["name"] || "").trim();
+            const kategorie = (gObj["kategorie / ty"] || gObj["kategorie"] || gObj["typ"] || "").trim();
+            const standort = (gObj["fahrzeug / sta"] || gObj["fahrzeug"] || gObj["standort"] || "").trim();
 
-            if (!csvId && !invNummer && !bezeichnung) continue;
+            if (!bezeichnung && !invNummer && !csvId) continue;
 
-            // 2. Abgleich mit bestehenden Daten (Sucht in ALLEN Datensatz-Feldern)
+            // --- 3-STUFIGER ABGLEICH GEGEN DUPLETTEN ---
             const index = window.geraeteDaten.findIndex(g => {
                 const gId = String(g.id || "").trim().toLowerCase();
                 const gInv = String(g.inventar || g.inventarnummer || g.seriennummer || "").trim().toLowerCase();
-                
-                return (csvId && gId === csvId.toLowerCase()) || 
-                       (invNummer && gInv === invNummer.toLowerCase());
+                const gBezeich = String(g.bezeichnung || "").trim().toLowerCase();
+                const gStandort = String(g.standort || g.fahrzeug || "").trim().toLowerCase();
+
+                // 1. Stufe: Exakter ID-Match
+                if (csvId && gId && csvId.toLowerCase() === gId) return true;
+
+                // 2. Stufe: Exakter Inv.-Nr. / Seriennummer Match
+                if (invNummer && gInv && invNummer.toLowerCase() === gInv) return true;
+
+                // 3. Stufe: Fallback auf Kombination aus Bezeichnung + Standort (falls IDs/Nummern fehlen)
+                if (bezeichnung && gBezeich === bezeichnung.toLowerCase() && standort && gStandort === standort.toLowerCase()) return true;
+
+                return false;
             });
 
-            // 3. Eindeutige IDs sicherstellen
+            // IDs und Inventarnummern konsolidieren
             const finaleId = csvId || (index !== -1 && window.geraeteDaten[index].id ? window.geraeteDaten[index].id : `GER-${Date.now()}${i}`);
             const finaleInvNr = invNummer || (index !== -1 ? (window.geraeteDaten[index].inventar || window.geraeteDaten[index].seriennummer) : `AUTO-${i}`);
 
-            // 4. Einheitliches Geräte-Objekt erstellen
             const sauberesGeraet = {
                 id: finaleId,
                 inventar: finaleInvNr,
                 inventarnummer: finaleInvNr,
                 seriennummer: finaleInvNr,
-                bezeichnung: bezeichnung,
-                kategorie: gObj["kategorie / ty"] || gObj["kategorie"] || gObj["typ"] || "",
-                hersteller: gObj["hersteller"] || gObj["herst."] || "",
-                standort: gObj["fahrzeug / sta"] || gObj["fahrzeug"] || gObj["standort"] || "",
+                bezeichnung: bezeichnung || "Unbekannt",
+                kategorie: kategorie,
+                hersteller: gObj["hersteller"] || gObj["herst."] || (index !== -1 ? window.geraeteDaten[index].hersteller : ""),
+                standort: standort,
                 status: gObj["status"] || "Einsatzbereit",
                 naechstePruefung: gObj["nächste prüfung"] || gObj["n,,chste prfun"] || gObj["pruefdatum"] || "",
                 bemerkung: gObj["bemerkung"] || gObj["notiz"] || ""
             };
 
             if (index !== -1) {
-                // UPDATE: Vorhandenes Gerät aktualisieren
+                // UPDATE
                 window.geraeteDaten[index] = { ...window.geraeteDaten[index], ...sauberesGeraet };
                 aktualisiert++;
             } else {
-                // NEU: Neues Gerät hinzufügen
+                // NEU
                 window.geraeteDaten.push(sauberesGeraet);
                 neuHinzugefuegt++;
             }
         }
 
-        // Filter & UI zurücksetzen
+        // Filter zurücksetzen
         if (document.getElementById("sucheGeraet")) document.getElementById("sucheGeraet").value = "";
         if (document.getElementById("filterKategorie")) document.getElementById("filterKategorie").value = "";
         if (document.getElementById("filterStatus")) document.getElementById("filterStatus").value = "";
 
-        // Speichern & Aktualisieren
+        // Speichern & Anzeigen
         if (typeof speichereGeraete === "function") speichereGeraete();
         if (typeof filterGeraete === "function") filterGeraete();
         else if (typeof renderGeraeteListe === "function") renderGeraeteListe();
