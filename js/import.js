@@ -77,7 +77,17 @@ function importGeraeteCSV(inputElement) {
         }
 
         // Speichern & Ansicht aktualisieren
+        // 1. Eingabefelder der Suche/Filter zurücksetzen (damit neue Geräte nicht unsichtbar gefiltert werden)
+        if (document.getElementById("sucheGeraet")) document.getElementById("sucheGeraet").value = "";
+        if (document.getElementById("filterKategorie")) document.getElementById("filterKategorie").value = "";
+        if (document.getElementById("filterStatus")) document.getElementById("filterStatus").value = "";
+
+        // 2. Daten speichern
         if (typeof speichereGeraete === "function") speichereGeraete();
+
+        // 3. Ansicht & Tabelle erzwingen neu zu laden
+        if (typeof ladeGeraete === "function") ladeGeraete();
+        if (typeof renderGeraete === "function") renderGeraete();
         if (typeof filterGeraete === "function") filterGeraete();
 
         alert(`Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Geräte hinzugefügt\n- ${aktualisiert} bestehende Geräte aktualisiert`);
