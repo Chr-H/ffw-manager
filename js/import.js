@@ -2,11 +2,26 @@ function importGeraeteCSV(inputElement) {
     const file = inputElement.files[0];
     if (!file) return;
 
+    // 1. ZWINGEND: Bestand aus LocalStorage/Funktion vor dem Import laden
+    if (typeof ladeDaten === "function") {
+        window.geraeteDaten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || window.geraeteDaten;
+    }
+    
+    if (!window.geraeteDaten || !Array.isArray(window.geraeteDaten) || window.geraeteDaten.length === 0) {
+        const gespeichert = localStorage.getItem("geraete") || localStorage.getItem("ffw_geraete") || localStorage.getItem("geraeteDaten");
+        if (gespeichert) {
+            try { window.geraeteDaten = JSON.parse(gespeichert); } catch(e) {}
+        }
+    }
+
+    if (!Array.isArray(window.geraeteDaten)) {
+        window.geraeteDaten = [];
+    }
+
     const reader = new FileReader();
     reader.onload = function(e) {
         let text = e.target.result;
         
-        // UTF-8 BOM entfernen
         if (text.charCodeAt(0) === 0xFEFF) {
             text = text.substr(1);
         }
@@ -24,10 +39,6 @@ function importGeraeteCSV(inputElement) {
 
         let aktualisiert = 0;
         let neuHinzugefuegt = 0;
-
-        if (!window.geraeteDaten) window.geraeteDaten = [];
-
-        // Speichert Indizes, die in diesem Durchlauf bereits aktualisiert wurden
         const bereitsGematcht = new Set();
 
         for (let i = 1; i < zeilen.length; i++) {
@@ -40,7 +51,6 @@ function importGeraeteCSV(inputElement) {
             let gObj = {};
             rawHeaders.forEach((header, idx) => { gObj[header] = werte[idx] || ""; });
 
-            // Spalten auslesen
             const csvId = (werte[0] && werte[0].startsWith("GER-") ? werte[0] : (gObj["id"] || werte[0] || "")).trim();
             const bezeichnung = (werte[1] || gObj["bezeichnung"] || gObj["name"] || "").trim();
             const kategorie = (werte[2] || gObj["kategorie / ty"] || gObj["kategorie"] || "").trim();
@@ -54,26 +64,24 @@ function importGeraeteCSV(inputElement) {
 
             let index = -1;
 
-            // 1. Priorität: Eindeutiger Match über Inv.-Nr. / Seriennummer (z. B. "3", "A17", "001")
+            // Match über Bezeichnung (z. B. "Steckleiter", "TS") oder Inv.-Nr. (z. B. "3", "A17")
             if (invNummer) {
                 index = window.geraeteDaten.findIndex((g, idx) => {
                     if (bereitsGematcht.has(idx)) return false;
                     const gInv = String(g.inventar || g.inventarnummer || g.seriennummer || "").trim().toLowerCase();
-                    if (gInv === invNummer.toLowerCase()) return true;
+                    if (gInv && gInv === invNummer.toLowerCase()) return true;
                     
-                    // Numerischer Toleranzvergleich (z. B. Excel "1" vs "001")
                     const n1 = parseInt(invNummer, 10);
                     const n2 = parseInt(gInv, 10);
                     return !isNaN(n1) && !isNaN(n2) && n1 === n2;
                 });
             }
 
-            // 2. Priorität: Match über ID (nur wenn Inv.-Nr. nicht gematcht hat)
-            if (index === -1 && csvId) {
+            if (index === -1 && bezeichnung) {
                 index = window.geraeteDaten.findIndex((g, idx) => {
                     if (bereitsGematcht.has(idx)) return false;
-                    const gId = String(g.id || "").trim().toLowerCase();
-                    return gId === csvId.toLowerCase();
+                    const gBezeich = String(g.bezeichnung || "").trim().toLowerCase();
+                    return gBezeich === bezeichnung.toLowerCase();
                 });
             }
 
@@ -106,12 +114,12 @@ function importGeraeteCSV(inputElement) {
             }
         }
 
-        // UI & Speicher-Update
-        if (document.getElementById("sucheGeraet")) document.getElementById("sucheGeraet").value = "";
-        if (document.getElementById("filterKategorie")) document.getElementById("filterKategorie").value = "";
-        if (document.getElementById("filterStatus")) document.getElementById("filterStatus").value = "";
-
+        // Dauerhaft in allen LocalStorage-Schlüsseln sichern
         if (typeof speichereGeraete === "function") speichereGeraete();
+        if (typeof speichereDaten === "function") speichereDaten("geraete", window.geraeteDaten);
+        localStorage.setItem("geraete", JSON.stringify(window.geraeteDaten));
+        localStorage.setItem("ffw_geraete", JSON.stringify(window.geraeteDaten));
+
         if (typeof filterGeraete === "function") filterGeraete();
         else if (typeof renderGeraeteListe === "function") renderGeraeteListe();
 
