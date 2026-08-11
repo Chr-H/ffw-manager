@@ -265,11 +265,23 @@ function exportPSACSV() {
         alert("Keine PSA-Daten zum Exportieren vorhanden!");
         return;
     }
-    const headers = ["Name", "Bekleidung / Teil", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
-    const rows = daten.map(p => [p.person, p.teil, p.groesse, p.seriennummer, p.ausgabedatum, p.naechstePruefung, p.status]);
+
+    const headers = ["Spind", "Träger", "Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
+    
+    // Mappt alle 8 Spalten exakt passend zur psa.js v2.1.4
+    const rows = daten.map(p => [
+        p.spind || "",
+        p.traeger || p.name || "",
+        p.bezeichnung || p.ausruestung || p.teil || "",
+        p.groesse || "",
+        p.seriennummer || "",
+        p.ausgabeDatum || p.ausgabedatum || "",
+        p.naechstePruefung || "",
+        p.status || "Einsatzbereit"
+    ]);
+
     downloadCSV(`PSA_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
 }
-
 // CSV Export für Prüfungen
 function exportPruefungenCSV() {
     const geraete = typeof ladeDaten === "function" ? ladeDaten("geraete") : [];
