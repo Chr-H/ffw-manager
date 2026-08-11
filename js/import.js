@@ -3,7 +3,7 @@ function importGeraeteCSV(inputElement) {
         const file = inputElement.files[0];
         if (!file) return;
 
-        // 1. Datenbestand laden
+        // 1. Bestand sicher aus Speicher / Firebase-Array laden
         if (typeof ladeDaten === "function") {
             window.geraeteDaten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || window.geraeteDaten;
         }
@@ -61,7 +61,7 @@ function importGeraeteCSV(inputElement) {
 
                     let index = -1;
 
-                    // Match über Inv.-Nr. mit Null-Check
+                    // Match über Inv.-Nr.
                     if (invNummer) {
                         index = window.geraeteDaten.findIndex((g, idx) => {
                             if (!g || bereitsGematcht.has(idx)) return false;
@@ -74,7 +74,7 @@ function importGeraeteCSV(inputElement) {
                         });
                     }
 
-                    // Match über Bezeichnung mit Null-Check
+                    // Match über Bezeichnung
                     if (index === -1 && bezeichnung) {
                         index = window.geraeteDaten.findIndex((g, idx) => {
                             if (!g || bereitsGematcht.has(idx)) return false;
@@ -85,21 +85,22 @@ function importGeraeteCSV(inputElement) {
 
                     const bestehend = (index !== -1 && window.geraeteDaten[index]) ? window.geraeteDaten[index] : null;
 
-                    const finaleId = csvId || (bestehend ? bestehend.id : `GER-${Date.now()}_${i}`);
-                    const finaleInv = invNummer || (bestehend ? (bestehend.inventar || bestehend.seriennummer) : `AUTO-${i}`);
+                    const finaleId = csvId || (bestehend && bestehend.id ? bestehend.id : `GER-${Date.now()}_${i}`);
+                    const finaleInv = invNummer || (bestehend && (bestehend.inventar || bestehend.seriennummer) ? (bestehend.inventar || bestehend.seriennummer) : `AUTO-${i}`);
 
+                    // GARANTIERT KEINE 'undefined'-WERTE FÜR FIREBASE
                     const sauberesGeraet = {
-                        id: finaleId,
-                        inventar: finaleInv,
-                        inventarnummer: finaleInv,
-                        seriennummer: finaleInv,
-                        bezeichnung: bezeichnung || (bestehend ? bestehend.bezeichnung : "Unbekannt"),
-                        kategorie: kategorie || (bestehend ? bestehend.kategorie : ""),
-                        hersteller: bestehend ? (bestehend.hersteller || "") : "",
-                        standort: standort || (bestehend ? bestehend.standort : ""),
-                        status: status || "Einsatzbereit",
-                        naechstePruefung: pruefung || (bestehend ? bestehend.naechstePruefung : ""),
-                        bemerkung: bemerkung || (bestehend ? bestehend.bemerkung : "")
+                        id: String(finaleId || ""),
+                        inventar: String(finaleInv || ""),
+                        inventarnummer: String(finaleInv || ""),
+                        seriennummer: String(finaleInv || ""),
+                        bezeichnung: String(bezeichnung || (bestehend && bestehend.bezeichnung ? bestehend.bezeichnung : "Unbekannt")),
+                        kategorie: String(kategorie || (bestehend && bestehend.kategorie ? bestehend.kategorie : "")),
+                        hersteller: String(bestehend && bestehend.hersteller ? bestehend.hersteller : ""),
+                        standort: String(standort || (bestehend && bestehend.standort ? bestehend.standort : "")),
+                        status: String(status || "Einsatzbereit"),
+                        naechstePruefung: String(pruefung || (bestehend && bestehend.naechstePruefung ? bestehend.naechstePruefung : "")),
+                        bemerkung: String(bemerkung || (bestehend && bestehend.bemerkung ? bestehend.bemerkung : ""))
                     };
 
                     if (index !== -1) {
@@ -112,9 +113,19 @@ function importGeraeteCSV(inputElement) {
                     }
                 }
 
-                // Speichern
+                // Gesamtes Array absichern (entfernt alle eventuellen 'undefined' Werte aus alten Daten)
+                window.geraeteDaten = window.geraeteDaten.map(g => {
+                    const sanitized = {};
+                    Object.keys(g || {}).forEach(key => {
+                        sanitized[key] = g[key] === undefined ? "" : g[key];
+                    });
+                    return sanitized;
+                });
+
+                // In Firebase & LocalStorage speichern
                 if (typeof speichereGeraete === "function") speichereGeraete();
                 if (typeof speichereDaten === "function") speichereDaten("geraete", window.geraeteDaten);
+                
                 localStorage.setItem("geraete", JSON.stringify(window.geraeteDaten));
                 localStorage.setItem("ffw_geraete", JSON.stringify(window.geraeteDaten));
 
