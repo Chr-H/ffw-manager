@@ -145,21 +145,10 @@ function exportPruefungenCSV() {
  * Export-Funktion für Geräte
  */
 function exportGeraeteCSV() {
-    let daten = [];
+    let daten = window.geraeteDaten || [];
     
-    if (typeof getGeraete === "function") {
-        daten = getGeraete();
-    }
     if ((!daten || daten.length === 0) && typeof ladeDaten === "function") {
         daten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || [];
-    }
-    if (!daten || daten.length === 0) {
-        try {
-            const raw = localStorage.getItem("geraete") || localStorage.getItem("ffw_geraete");
-            if (raw) daten = JSON.parse(raw);
-        } catch (e) {
-            console.error("Fehler beim Lesen aus localStorage:", e);
-        }
     }
 
     if (!Array.isArray(daten) || daten.length === 0) {
@@ -175,7 +164,7 @@ function exportGeraeteCSV() {
         g.standort || g.fahrzeug || '',
         g.status || '',
         g.naechstePruefung || g.pruefdatum || '',
-        g.seriennummer || g.inventarnummer || '',
+        g.inventar || g.seriennummer || g.inventarnummer || '',
         g.bemerkung || g.notiz || ''
     ]);
 

@@ -19,11 +19,10 @@ function importGeraeteCSV(inputElement) {
 
         const trenner = zeilen[0].includes(";") ? ";" : ",";
         
-        // 1. Spaltenköpfe säubern & kaputte Excel-Umlaute/Sonderzeichen reparieren
+        // Spaltenköpfe säubern & kaputte Umlaute korrigieren
         const rawHeaders = zeilen[0].split(trenner).map(h => {
             let s = h.replace(/^"|"$/g, '').trim().toLowerCase();
-            s = s.replace(/,,/g, 'ä').replace(/á/g, 'ß'); // Behebt "N,,chste", "Schl,,uche", "Auáer"
-            return s;
+            return s.replace(/,,/g, 'ä').replace(/á/g, 'ß');
         });
 
         let aktualisiert = 0;
@@ -34,74 +33,68 @@ function importGeraeteCSV(inputElement) {
         for (let i = 1; i < zeilen.length; i++) {
             const werte = zeilen[i]
                 .split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
-                .map(w => w.replace(/^"|"$/g, '').trim());
+                .map(w => w.replace(/^"|"$/g, '').trim().replace(/,,/g, 'ä').replace(/á/g, 'ß'));
 
             let gObj = {};
             rawHeaders.forEach((header, index) => {
-                // Wert ebenfalls von kaputten Umlauten bereinigen
-                let val = werte[index] || "";
-                val = val.replace(/,,/g, 'ä').replace(/á/g, 'ß');
-                gObj[header] = val;
+                gObj[header] = werte[index] || "";
             });
 
-            // 2. Werte flexibel aus allen möglichen Header-Varianten auslesen
+            // 1. IDs und Inventarnummern flexibel aus allen Spaltenvarianten auslesen
             const csvId = (gObj["id"] || "").trim();
-            
-            // Die kurze Inventarnummer steht in deiner CSV unter "seriennumme" oder "seriennummer"
-            const invNummer = (gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || gObj["inventar"] || "").trim();
+            const invNummer = (gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || gObj["inventar"] || gObj["inventarnummer"] || "").trim();
             const bezeichnung = gObj["bezeichnung"] || gObj["name"] || "Unbekannt";
 
-            // Abgleich über ID ODER über die kurze Inventarnummer
+            if (!csvId && !invNummer && !bezeichnung) continue;
+
+            // 2. Abgleich mit bestehenden Daten (Sucht in ALLEN Datensatz-Feldern)
             const index = window.geraeteDaten.findIndex(g => {
                 const gId = String(g.id || "").trim().toLowerCase();
-                const gInv = String(g.inventar || "").trim().toLowerCase();
+                const gInv = String(g.inventar || g.inventarnummer || g.seriennummer || "").trim().toLowerCase();
                 
                 return (csvId && gId === csvId.toLowerCase()) || 
                        (invNummer && gInv === invNummer.toLowerCase());
             });
 
-            // 3. Wenn keine ID da ist (z. B. neue Zeilen 8 & 9), zwingend eine neue erzeugen!
+            // 3. Eindeutige IDs sicherstellen
             const finaleId = csvId || (index !== -1 && window.geraeteDaten[index].id ? window.geraeteDaten[index].id : `GER-${Date.now()}${i}`);
-            const finaleInvNr = invNummer || (csvId ? csvId : `AUTO-${i}`);
+            const finaleInvNr = invNummer || (index !== -1 ? (window.geraeteDaten[index].inventar || window.geraeteDaten[index].seriennummer) : `AUTO-${i}`);
 
+            // 4. Einheitliches Geräte-Objekt erstellen
             const sauberesGeraet = {
                 id: finaleId,
                 inventar: finaleInvNr,
+                inventarnummer: finaleInvNr,
+                seriennummer: finaleInvNr,
                 bezeichnung: bezeichnung,
-                kategorie: gObj["kategorie / ty"] || gObj["kategorie"] || "",
-                standort: gObj["fahrzeug / sta"] || gObj["standort"] || "",
+                kategorie: gObj["kategorie / ty"] || gObj["kategorie"] || gObj["typ"] || "",
+                hersteller: gObj["hersteller"] || gObj["herst."] || "",
+                standort: gObj["fahrzeug / sta"] || gObj["fahrzeug"] || gObj["standort"] || "",
                 status: gObj["status"] || "Einsatzbereit",
-                letztePruefung: gObj["nächste prüfung"] || gObj["n,,chste prfun"] || gObj["pruefung"] || "",
-                bemerkung: gObj["bemerkung"] || ""
+                naechstePruefung: gObj["nächste prüfung"] || gObj["n,,chste prfun"] || gObj["pruefdatum"] || "",
+                bemerkung: gObj["bemerkung"] || gObj["notiz"] || ""
             };
 
             if (index !== -1) {
-                // UPDATE
+                // UPDATE: Vorhandenes Gerät aktualisieren
                 window.geraeteDaten[index] = { ...window.geraeteDaten[index], ...sauberesGeraet };
                 aktualisiert++;
             } else {
-                // NEU HINZUFÜGEN
+                // NEU: Neues Gerät hinzufügen
                 window.geraeteDaten.push(sauberesGeraet);
                 neuHinzugefuegt++;
             }
         }
 
-        // 4. Suche/Filter in der Benutzeroberfläche zurücksetzen
+        // Filter & UI zurücksetzen
         if (document.getElementById("sucheGeraet")) document.getElementById("sucheGeraet").value = "";
         if (document.getElementById("filterKategorie")) document.getElementById("filterKategorie").value = "";
         if (document.getElementById("filterStatus")) document.getElementById("filterStatus").value = "";
 
-        // 5. In Firebase / LocalStorage dauerhaft speichern
-        if (typeof speichereGeraete === "function") {
-            speichereGeraete();
-        }
-
-        // 6. Tabelle direkt im Browser neu anzeigen
-        if (typeof filterGeraete === "function") {
-            filterGeraete();
-        } else if (typeof renderGeraeteListe === "function") {
-            renderGeraeteListe();
-        }
+        // Speichern & Aktualisieren
+        if (typeof speichereGeraete === "function") speichereGeraete();
+        if (typeof filterGeraete === "function") filterGeraete();
+        else if (typeof renderGeraeteListe === "function") renderGeraeteListe();
 
         alert(`Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Geräte hinzugefügt\n- ${aktualisiert} bestehende Geräte aktualisiert`);
         
