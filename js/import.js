@@ -1,177 +1,129 @@
-/**
- * FFW Manager - Universal CSV Import Module
- * Liest CSV-Dateien (Semikolon- oder Komma-getrennt) ein und speichert sie in der Datenbank.
- */
+// =========================================
+// CSV EXPORT (Geraete)
+// =========================================
+function exportGeraeteCSV() {
+    // 1. Hole alle Geräte aus dem Speicher/Cloud
+    const geraete = window.geraeteDaten || [];
+    
+    if (geraete.length === 0) {
+        alert("Keine Geräte zum Exportieren vorhanden.");
+        return;
+    }
 
-// Hilfsfunktion zum Parsen von CSV-Zeilen mit Anführungszeichen & Trennzeichen
-function parseCSV(text) {
-    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-    if (lines.length === 0) return [];
+    // 2. Feste Headings definieren
+    const headers = ["inventar", "bezeichnung", "kategorie", "hersteller", "standort", "erstinbetriebnahme", "letztePruefung", "pruefintervall", "status"];
+    
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // UTF-8 BOM für Excel
+    csvContent += headers.join(";") + "\r\n";
 
-    // Erkenne Trennzeichen (; oder ,)
-    const firstLine = lines[0];
-    const delimiter = (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length ? ';' : ',';
+    // 3. Zeilen zusammenbauen
+    geraete.forEach(g => {
+        const row = headers.map(header => {
+            let val = g[header] || "";
+            // Anführungszeichen maskieren und Maskierung für Semikolons
+            val = String(val).replace(/"/g, '""');
+            return `"${val}"`;
+        });
+        csvContent += row.join(";") + "\r\n";
+    });
 
-    const parseLine = (line) => {
-        const result = [];
-        let cur = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                if (inQuotes && line[i + 1] === '"') {
-                    cur += '"';
-                    i++;
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (char === delimiter && !inQuotes) {
-                result.push(cur.trim());
-                cur = '';
-            } else {
-                cur += char;
-            }
-        }
-        result.push(cur.trim());
-        return result;
-    };
-
-    return lines.map(parseLine);
+    // 4. Download anstoßen
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `FFW_Geraete_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
-// Allgemeine Import-Steuerung
-function handleCSVImport(inputElement, moduleName, mappingFn) {
+// =========================================
+// CSV IMPORT (Geraete) - mit Update/Merge-Funktion
+// =========================================
+function importGeraeteCSV(inputElement) {
     const file = inputElement.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        try {
-            const rawData = parseCSV(e.target.result);
-            if (rawData.length < 2) {
-                alert("Die CSV-Datei enthält keine Datenzeilen außer der Kopfzeile.");
-                return;
-            }
+        const text = e.target.result;
+        const zeilen = text.split(/\r\n|\n/);
+        
+        if (zeilen.length < 2) {
+            alert("Die Datei enthält keine Daten.");
+            return;
+        }
 
-            // Kopfzeile überspringen (Zeile 0)
-            const rows = rawData.slice(1);
-            const bestehendeDaten = typeof ladeDaten === "function" ? (ladeDaten(moduleName) || []) : [];
-            const neueEintraege = [];
+        // Trennzeichen ermitteln (Semikolon oder Komma)
+        const trenner = zeilen[0].includes(";") ? ";" : ",";
+        
+        // Header einlesen und säubern (Anführungszeichen entfernen)
+        const headers = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
-            rows.forEach((row, idx) => {
-                const item = mappingFn(row, idx);
-                if (item) {
-                    neueEintraege.push(item);
-                }
+        let aktualisiert = 0;
+        let neuHinzugefuegt = 0;
+
+        // Sicherstellen, dass die Datenstruktur existiert
+        if (!window.geraeteDaten) window.geraeteDaten = [];
+
+        for (let i = 1; i < zeilen.length; i++) {
+            if (!zeilen[i].trim()) continue; // Leere Zeilen überspringen
+
+            // Spalten splitten (berücksichtigt Anführungszeichen)
+            const werte = zeilen[i].split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
+                                   .map(w => w.replace(/^"|"$/g, '').trim());
+
+            let geraetObj = {};
+            headers.forEach((header, index) => {
+                geraetObj[header] = werte[index] || "";
             });
 
-            if (neueEintraege.length === 0) {
-                alert("Es konnten keine gültigen Datensätze aus der CSV gelesen werden.");
-                return;
-            }
+            // Pflichtfeld Inventarnummer prüfen
+            const invNr = geraetObj["inventar"] || geraetObj["inventarnummer"] || geraetObj["inv.-nr."];
+            if (!invNr) continue; 
 
-            const zusammengefuegt = [...bestehendeDaten, ...neueEintraege];
-            
-            if (typeof speichereDaten === "function") {
-                speichereDaten(moduleName, zusammengefuegt);
-                alert(`✅ Erfolg: ${neueEintraege.length} Datensätze wurden erfolgreich in '${moduleName}' importiert.`);
-                
-                // UI Views aktualisieren
-                if (moduleName === 'geraete' && typeof filterGeraete === 'function') filterGeraete();
-                if (moduleName === 'fahrzeuge' && typeof ladeFahrzeugTabelle === 'function') ladeFahrzeugTabelle();
-                if (moduleName === 'psa' && typeof filterPSA === 'function') filterPSA();
-                if (moduleName === 'lager' && typeof ladeLagerTabelle === 'function') ladeLagerTabelle();
+            // Standardisiertes Objekt aufbauen
+            const sauberesGeraet = {
+                inventar: invNr,
+                bezeichnung: geraetObj["bezeichnung"] || "Unbekannt",
+                kategorie: geraetObj["kategorie"] || "",
+                hersteller: geraetObj["hersteller"] || "",
+                standort: geraetObj["standort"] || "",
+                erstinbetriebnahme: geraetObj["erstinbetriebnahme"] || "",
+                letztePruefung: geraetObj["letztepruefung"] || "",
+                pruefintervall: geraetObj["pruefintervall"] || "12",
+                status: geraetObj["status"] || "Einsatzbereit"
+            };
+
+            // Prüfen, ob das Gerät bereits existiert
+            const existierenderIndex = window.geraeteDaten.findIndex(g => String(g.inventar).trim() === String(invNr).trim());
+
+            if (existierenderIndex !== -1) {
+                // UPDATE: Bestehendes Gerät überschreiben
+                window.geraeteDaten[existierenderIndex] = { ...window.geraeteDaten[existierenderIndex], ...sauberesGeraet };
+                aktualisiert++;
             } else {
-                alert("Fehler: Speicherfunktion steht nicht zur Verfügung.");
+                // NEU: Hinzufügen
+                window.geraeteDaten.push(sauberesGeraet);
+                neuHinzugefuegt++;
             }
-        } catch (err) {
-            console.error("CSV Import Fehler:", err);
-            alert("Fehler beim Lesen der CSV-Datei. Bitte prüfen Sie das Dateiformat.");
-        } finally {
-            inputElement.value = ""; // Input zurücksetzen
         }
+
+        // Speichern in LocalStorage / Firebase
+        if (typeof speichereGeraete === "function") {
+            speichereGeraete();
+        }
+
+        // Anzeige aktualisieren
+        if (typeof filterGeraete === "function") {
+            filterGeraete();
+        }
+
+        alert(`Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Geräte hinzugefügt\n- ${aktualisiert} bestehende Geräte aktualisiert`);
+        
+        // Input-Feld zurücksetzen
+        inputElement.value = "";
     };
 
-    // ISO-8859-1 sorgt für korrekte deutsche Umlaute bei Excel-CSVs
-    reader.readAsText(file, 'ISO-8859-1');
+    reader.readAsText(file, "UTF-8");
 }
-
-// 1. Import Geräte
-// Spaltenerwartung: Inv-Nr | Bezeichnung | Kategorie | Hersteller | Standort | Baujahr | Status | Nächste Prüfung
-function importGeraeteCSV(input) {
-    handleCSVImport(input, 'geraete', (col, idx) => {
-        if (!col[0] && !col[1]) return null;
-        return {
-            id: 'ger_' + Date.now() + '_' + idx,
-            invNr: col[0] || ('INV-' + (Date.now() + idx)),
-            bezeichnung: col[1] || 'Unbekanntes Gerät',
-            kategorie: col[2] || 'Sonstiges',
-            hersteller: col[3] || '-',
-            standort: col[4] || '-',
-            baujahr: col[5] || '',
-            status: col[6] || 'Einsatzbereit',
-            naechstePruefung: col[7] || ''
-        };
-    });
-}
-
-// 2. Import Fahrzeuge
-// Spaltenerwartung: Funkrufname | Typ | Kennzeichen | Baujahr | TÜV | SP | Status
-function importFahrzeugeCSV(input) {
-    handleCSVImport(input, 'fahrzeuge', (col, idx) => {
-        if (!col[0]) return null;
-        return {
-            id: 'fz_' + Date.now() + '_' + idx,
-            funkrufname: col[0],
-            typ: col[1] || '-',
-            kennzeichen: col[2] || '-',
-            baujahr: col[3] || '',
-            tuev: col[4] || '',
-            sp: col[5] || '',
-            status: col[6] || 'Einsatzbereit',
-            beladung: [],
-            wartungen: [],
-            pruefplan: []
-        };
-    });
-}
-
-// 3. Import PSA
-// Spaltenerwartung: Träger / Name | Artikel | Größe | Seriennummer | Ausgegeben Am | Status
-function importPSACSV(input) {
-    handleCSVImport(input, 'psa', (col, idx) => {
-        if (!col[0] && !col[1]) return null;
-        return {
-            id: 'psa_' + Date.now() + '_' + idx,
-            traeger: col[0] || 'Unbekannt',
-            artikel: col[1] || 'PSA Gegenstand',
-            groesse: col[2] || '-',
-            seriennummer: col[3] || '-',
-            ausgegebenAm: col[4] || '',
-            status: col[5] || 'Einsatzbereit'
-        };
-    });
-}
-
-// 4. Import Lager
-// Spaltenerwartung: Artikelname | Kategorie | Bestand | Mindestbestand | Einheit | Lagerort
-function importLagerCSV(input) {
-    handleCSVImport(input, 'lager', (col, idx) => {
-        if (!col[0]) return null;
-        return {
-            id: 'lag_' + Date.now() + '_' + idx,
-            artikel: col[0],
-            kategorie: col[1] || 'Verbrauchsmaterial',
-            bestand: parseInt(col[2]) || 0,
-            mindestbestand: parseInt(col[3]) || 0,
-            einheit: col[4] || 'Stk.',
-            lagerort: col[5] || '-'
-        };
-    });
-}
-
-// Globale Bereitstellung
-window.importGeraeteCSV = importGeraeteCSV;
-window.importFahrzeugeCSV = importFahrzeugeCSV;
-window.importPSACSV = importPSACSV;
-window.importLagerCSV = importLagerCSV;
