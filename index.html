@@ -101,199 +101,190 @@
 
             </section>
 
+            <!-- ========================================= -->
+            <!-- 2. GERÄTE BEREICH                         -->
+            <!-- ========================================= -->
+            <section id="seite-geraete" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>🛠️ Geräteverwaltung</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button class="btn btn-secondary" onclick="document.getElementById('importGeraeteInput').click()">📥 CSV Import</button>
+                        <input type="file" id="importGeraeteInput" style="display:none;" accept=".csv" onchange="importGeraeteCSV(this)">
+                        <button class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
+                        <button class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+                    </div>
+                </div>
 
-  <!-- GERÄTE BEREICH -->
-<section id="seite-geraete" class="seite-ansicht" style="display: none;">
-    <div style="display: flex; gap: 10px;" class="no-print">
-    <button class="btn btn-secondary" onclick="document.getElementById('importGeraeteInput').click()">📥 CSV Import</button>
-    <input type="file" id="importGeraeteInput" style="display:none;" accept=".csv" onchange="importGeraeteCSV(this)">
-    <button class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
-    <button class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
-    </div>
-    </div>
+                <!-- Formular -->
+                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h3>➕ Gerät anlegen / bearbeiten</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                        <input id="inventar" type="text" placeholder="Inventarnummer">
+                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
+                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
+                        <input id="hersteller" type="text" placeholder="Hersteller">
+                        <input id="standort" type="text" placeholder="Standort">
+                        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
+                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
+                        <select id="pruefintervall" title="Prüfintervall">
+                            <option value="12">12 Monate (Jährlich)</option>
+                            <option value="24">24 Monate (2 Jahre)</option>
+                            <option value="6">6 Monate (Halbjährlich)</option>
+                            <option value="1">1 Monat (Monatlich)</option>
+                        </select>
+                        <select id="status">
+                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                            <option value="Wartung">🟡 Wartung</option>
+                            <option value="Defekt">🔴 Defekt</option>
+                            <option value="Außer Dienst">⚫ Außer Dienst</option>
+                        </select>
+                        <button onclick="neuesGeraet()">➕ Gerät speichern</button>
+                    </div>
+                </div>
 
-    <!-- Formular & Filter bleiben wie gehabt -->
-    <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-        <h3>➕ Gerät anlegen / bearbeiten</h3>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-            <input id="inventar" type="text" placeholder="Inventarnummer">
-            <input id="bezeichnung" type="text" placeholder="Bezeichnung">
-            <select id="kategorie"><option value="">Kategorie auswählen</option></select>
-            <input id="hersteller" type="text" placeholder="Hersteller">
-            <input id="standort" type="text" placeholder="Standort">
-            <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
-            <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
-            <select id="pruefintervall" title="Prüfintervall">
-                <option value="12">12 Monate (Jährlich)</option>
-                <option value="24">24 Monate (2 Jahre)</option>
-                <option value="6">6 Monate (Halbjährlich)</option>
-                <option value="1">1 Monat (Monatlich)</option>
-            </select>
-            <select id="status">
-                <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                <option value="Wartung">🟡 Wartung</option>
-                <option value="Defekt">🔴 Defekt</option>
-                <option value="Außer Dienst">⚫ Außer Dienst</option>
-            </select>
-            <button onclick="neuesGeraet()">➕ Gerät speichern</button>
-        </div>
-    </div>
+                <hr style="margin:20px 0;">
 
-    <hr style="margin:20px 0;">
+                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
+                    <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
+                    <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
+                    <select id="filterStatus" onchange="filterGeraete()">
+                        <option value="">Alle Status</option>
+                        <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                        <option value="Wartung">🟡 Wartung</option>
+                        <option value="Defekt">🔴 Defekt</option>
+                        <option value="Außer Dienst">⚫ Außer Dienst</option>
+                    </select>
+                </div>
 
-    <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
-        <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
-        <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
-        <select id="filterStatus" onchange="filterGeraete()">
-            <option value="">Alle Status</option>
-            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-            <option value="Wartung">🟡 Wartung</option>
-            <option value="Defekt">🔴 Defekt</option>
-            <option value="Außer Dienst">⚫ Außer Dienst</option>
-        </select>
-    </div>
+                <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
+                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                        <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th class="no-print">Aktionen</th>
+                                    <th>Inv.-Nr.</th>
+                                    <th>Bezeichnung</th>
+                                    <th>Kategorie</th>
+                                    <th>Hersteller</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="geraeteListe"></tbody>
+                        </table>
+                    </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
-        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-            <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
-                <thead>
-                    <tr>
-                        <th class="no-print">Aktionen</th>
-                        <th>Inv.-Nr.</th>
-                        <th>Bezeichnung</th>
-                        <th>Kategorie</th>
-                        <th>Hersteller</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="geraeteListe"></tbody>
-            </table>
-        </div>
+                    <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
+                        <h2>📋 Geräteakte</h2>
+                        <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
+                    </div>
+                </div>
+            </section>
 
-        <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
-            <h2>📋 Geräteakte</h2>
-            <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
-        </div>
-    </div>
-</section>
+            <!-- ========================================= -->
+            <!-- 3. FAHRZEUGVERWALTUNG & AKTE             -->
+            <!-- ========================================= -->
+            <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>🚒 Fahrzeugverwaltung</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button>
+                        <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)">
+                        <button class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
+                        <button class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+                    </div>
+                </div>
 
+                <!-- Formular: Fahrzeug anlegen -->
+                <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h3>➕ Neues Fahrzeug anlegen</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                        <input id="fz-funkruf" type="text" placeholder="Funkrufname (z.B. Florian 1/40/1)">
+                        <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
+                        <input id="fz-typ" type="text" placeholder="Fahrzeugtyp (z.B. HLF 20)">
+                        <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
+                        <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
+                        <input id="fz-sp" type="date" title="Nächste Sicherheitsprüfung (SP)">
+                        <select id="fz-status">
+                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                            <option value="Wartung">🟡 In Werkstatt / Wartung</option>
+                            <option value="Defekt">🔴 Außer Dienst / Defekt</option>
+                        </select>
+                        <button onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button>
+                    </div>
+                </div>
 
-<!-- PSA BEREICH -->
-<section id="seite-psa" class="seite-ansicht" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
-        <div style="display: flex; gap: 10px;" class="no-print">
-            <button class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
-            <button class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
-        </div>
-    </div>
-    <div id="psa-container"></div>
-</section>
+                <!-- Split-Layout -->
+                <div style="display:grid; grid-template-columns: 1fr 450px; gap:20px; align-items:start;">
+                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                        <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th class="no-print">Aktionen</th>
+                                    <th>Funkrufname</th>
+                                    <th>Typ</th>
+                                    <th>Kennzeichen</th>
+                                    <th>TÜV/HU</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fahrzeugeListe"></tbody>
+                        </table>
+                    </div>
 
+                    <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
+                        <h2>📋 Fahrzeugakte</h2>
+                        <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+                    </div>
+                </div>
+            </section>
 
-<!-- PRÜFUNGEN BEREICH -->
-<section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h2>📋 Anstehende Prüfungen</h2>
-        <div style="display: flex; gap: 10px;" class="no-print">
-            <button class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
-            <button class="btn btn-secondary" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-container')">🖨️ Prüfbericht drucken / PDF</button>
-        </div>
-    </div>
-    <div id="pruefungen-container" class="liste-container"></div>
-</section>
-
-
-          <!-- ========================================= -->
-<!-- 3. FAHRZEUGVERWALTUNG & AKTE             -->
-<!-- ========================================= -->
-<section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h2>🚒 Fahrzeugverwaltung</h2>
-        <div style="display: flex; gap: 10px;" class="no-print">
-            <button class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
-            <button class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
-        </div>
-    </div>
-
-    <!-- Formular: Fahrzeug anlegen -->
-    <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-        <h3>➕ Neues Fahrzeug anlegen</h3>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-            <input id="fz-funkruf" type="text" placeholder="Funkrufname (z.B. Florian 1/40/1)">
-            <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
-            <input id="fz-typ" type="text" placeholder="Fahrzeugtyp (z.B. HLF 20)">
-            <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
-            <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
-            <input id="fz-sp" type="date" title="Nächste Sicherheitsprüfung (SP)">
-            <select id="fz-status">
-                <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                <option value="Wartung">🟡 In Werkstatt / Wartung</option>
-                <option value="Defekt">🔴 Außer Dienst / Defekt</option>
-            </select>
-            <button onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button>
-        </div>
-    </div>
-
-    <!-- Split-Layout: Links Fahrzeuge, Rechts Fahrzeugakte -->
-    <div style="display:grid; grid-template-columns: 1fr 450px; gap:20px; align-items:start;">
-        
-        <!-- Linke Spalte: Fahrzeugtabelle -->
-        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-            <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
-                <thead>
-                    <tr>
-                        <th class="no-print">Aktionen</th>
-                        <th>Funkrufname</th>
-                        <th>Typ</th>
-                        <th>Kennzeichen</th>
-                        <th>TÜV/HU</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="fahrzeugeListe"></tbody>
-            </table>
-        </div>
-
-        <!-- Rechte Spalte: Interaktive Fahrzeugakte -->
-        <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
-            <h2>📋 Fahrzeugakte</h2>
-            <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
-        </div>
-
-    </div>
-</section>
-
-            <!-- PSA BEREICH -->
+            <!-- ========================================= -->
+            <!-- 4. PSA BEREICH                            -->
+            <!-- ========================================= -->
             <section id="seite-psa" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
-                    <button class="btn btn-secondary no-print" onclick="druckeListe('PSA-Bestandsliste', 'psa-tabelle')">
-                        🖨️ PSA-Liste drucken / PDF
-                    </button>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button class="btn btn-secondary" onclick="document.getElementById('importPSAInput').click()">📥 CSV Import</button>
+                        <input type="file" id="importPSAInput" style="display:none;" accept=".csv" onchange="importPSACSV(this)">
+                        <button class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
+                        <button class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
+                    </div>
                 </div>
                 <div id="psa-container"></div>
             </section>
 
-            <!-- Modul Lager -->
+            <!-- ========================================= -->
+            <!-- 5. PRÜFUNGEN BEREICH                      -->
+            <!-- ========================================= -->
+            <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>📋 Anstehende Prüfungen</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
+                        <button class="btn btn-secondary" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-container')">🖨️ Prüfbericht drucken / PDF</button>
+                    </div>
+                </div>
+                <div id="pruefungen-container" class="liste-container"></div>
+            </section>
+
+            <!-- ========================================= -->
+            <!-- 6. LAGER BEREICH                          -->
+            <!-- ========================================= -->
             <section id="seite-lager" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>📦 Lagerverwaltung</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📥 CSV Import</button>
+                        <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
+                    </div>
+                </div>
                 <div id="lager-container"></div>
             </section>
 
-            <!-- PRÜFUNGEN BEREICH -->
-            <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2>📋 Anstehende Prüfungen</h2>
-                    <button class="btn btn-secondary no-print" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-tabelle')">
-                        🖨️ Prüfbericht drucken / PDF
-                    </button>
-                </div>
-                <div id="pruefungen-container" class="liste-container">
-                    <!-- Hier rendert js/pruefungen.js die Daten rein -->
-                </div>
-            </section>
-
-            <!-- Verbleibende Module (Platzhalter) -->
+            <!-- ========================================= -->
+            <!-- 7. VERBLEIBENDE MODULE                    -->
+            <!-- ========================================= -->
             <section id="seite-personal" class="seite-ansicht" style="display: none;">
                 <h2>👥 Personal</h2>
                 <p>In Entwicklung...</p>
@@ -315,7 +306,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- 2. Firebase Konfiguration & Initialisierung -->
+    <!-- 2. Firebase Konfiguration -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
@@ -333,15 +324,16 @@
         window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
     </script>
 
-    <!-- 3. Anwendungsskripte in korrekter Reihenfolge (mit v=3 zur Cache-Invalidierung) -->
-    <script src="js/storage.js?v=3"></script>
-    <script src="js/kategorien.js?v=3"></script>
-    <script src="js/geraete.js?v=3"></script>
+    <!-- 3. Anwendungsskripte -->
+    <script src="js/storage.js?v=4"></script>
+    <script src="js/kategorien.js?v=4"></script>
+    <script src="js/geraete.js?v=4"></script>
     <script src="js/fahrzeuge.js?v=4"></script>
-    <script src="js/psa.js?v=3"></script>
-    <script src="js/lager.js?v=3"></script>
-    <script src="js/pruefungen.js?v=3"></script>
-    <script src="js/app.js?v=3"></script>
+    <script src="js/psa.js?v=4"></script>
+    <script src="js/lager.js?v=4"></script>
+    <script src="js/pruefungen.js?v=4"></script>
+    <script src="js/import.js?v=1"></script>
+    <script src="js/app.js?v=4"></script>
 
     <!-- 4. Service Worker & Initialisierung -->
     <script>
