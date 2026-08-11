@@ -268,19 +268,20 @@
                 <div id="pruefungen-container" class="liste-container"></div>
             </section>
 
-            <!-- ========================================= -->
-            <!-- 6. LAGER BEREICH                          -->
-            <!-- ========================================= -->
-            <section id="seite-lager" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>📦 Lagerverwaltung</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <button class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📥 CSV Import</button>
-                        <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
-                    </div>
-                </div>
-                <div id="lager-container"></div>
-            </section>
+<!-- ========================================= -->
+<!-- 6. LAGER BEREICH                          -->
+<!-- ========================================= -->
+<section id="seite-lager" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>📦 Lagerverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button class="btn btn-secondary" onclick="exportLagerCSV()">📥 CSV Export</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📤 CSV Import</button>
+            <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
+        </div>
+    </div>
+    <div id="lager-container"></div>
+</section>
 
             <!-- ========================================= -->
             <!-- 7. VERBLEIBENDE MODULE                    -->
@@ -334,7 +335,7 @@
     <script src="js/pruefungen.js?v=5"></script>
     <script src="js/import.js?v=5"></script>
     <script src="js/app.js?v=5"></script>
-    
+
     <!-- 4. Service Worker & Initialisierung -->
     <script>
         if ('serviceWorker' in navigator) {
