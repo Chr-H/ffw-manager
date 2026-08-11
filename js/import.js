@@ -19,8 +19,12 @@ function importGeraeteCSV(inputElement) {
 
         const trenner = zeilen[0].includes(";") ? ";" : ",";
         
-        // Spaltenköpfe flexibel säubern
-        const headers = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+        // 1. Spaltenköpfe säubern & kaputte Excel-Umlaute/Sonderzeichen reparieren
+        const rawHeaders = zeilen[0].split(trenner).map(h => {
+            let s = h.replace(/^"|"$/g, '').trim().toLowerCase();
+            s = s.replace(/,,/g, 'ä').replace(/á/g, 'ß'); // Behebt "N,,chste", "Schl,,uche", "Auáer"
+            return s;
+        });
 
         let aktualisiert = 0;
         let neuHinzugefuegt = 0;
@@ -33,34 +37,41 @@ function importGeraeteCSV(inputElement) {
                 .map(w => w.replace(/^"|"$/g, '').trim());
 
             let gObj = {};
-            headers.forEach((header, index) => {
-                gObj[header] = werte[index] || "";
+            rawHeaders.forEach((header, index) => {
+                // Wert ebenfalls von kaputten Umlauten bereinigen
+                let val = werte[index] || "";
+                val = val.replace(/,,/g, 'ä').replace(/á/g, 'ß');
+                gObj[header] = val;
             });
 
-            // Flexibles Auslesen passend zu deiner CSV
-            const csvId = (gObj["id"] || gObj["inventar"] || gObj["inventarnummer"] || "").trim();
-            const seriennummer = (gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || "").trim();
+            // 2. Werte flexibel aus allen möglichen Header-Varianten auslesen
+            const csvId = (gObj["id"] || "").trim();
+            
+            // Die kurze Inventarnummer steht in deiner CSV unter "seriennumme" oder "seriennummer"
+            const invNummer = (gObj["seriennumme"] || gObj["seriennummer"] || gObj["inv.-nr."] || gObj["inventar"] || "").trim();
             const bezeichnung = gObj["bezeichnung"] || gObj["name"] || "Unbekannt";
 
-            // Wichtig: Match über ID ODER Seriennummer/Inventarnummer
+            // Abgleich über ID ODER über die kurze Inventarnummer
             const index = window.geraeteDaten.findIndex(g => {
-                const gInv = String(g.inventar || "").trim().toLowerCase();
                 const gId = String(g.id || "").trim().toLowerCase();
+                const gInv = String(g.inventar || "").trim().toLowerCase();
                 
                 return (csvId && gId === csvId.toLowerCase()) || 
-                       (csvId && gInv === csvId.toLowerCase()) ||
-                       (seriennummer && gInv === seriennummer.toLowerCase());
+                       (invNummer && gInv === invNummer.toLowerCase());
             });
 
-            // Vorbereitung des Ziel-Objekts
+            // 3. Wenn keine ID da ist (z. B. neue Zeilen 8 & 9), zwingend eine neue erzeugen!
+            const finaleId = csvId || (index !== -1 && window.geraeteDaten[index].id ? window.geraeteDaten[index].id : `GER-${Date.now()}${i}`);
+            const finaleInvNr = invNummer || (csvId ? csvId : `AUTO-${i}`);
+
             const sauberesGeraet = {
-                id: csvId || (index !== -1 ? window.geraeteDaten[index].id : `GER-${Date.now()}${i}`),
-                inventar: csvId || seriennummer || `AUTO-${i}`,
+                id: finaleId,
+                inventar: finaleInvNr,
                 bezeichnung: bezeichnung,
                 kategorie: gObj["kategorie / ty"] || gObj["kategorie"] || "",
                 standort: gObj["fahrzeug / sta"] || gObj["standort"] || "",
                 status: gObj["status"] || "Einsatzbereit",
-                seriennummer: seriennummer,
+                letztePruefung: gObj["nächste prüfung"] || gObj["n,,chste prfun"] || gObj["pruefung"] || "",
                 bemerkung: gObj["bemerkung"] || ""
             };
 
@@ -69,23 +80,28 @@ function importGeraeteCSV(inputElement) {
                 window.geraeteDaten[index] = { ...window.geraeteDaten[index], ...sauberesGeraet };
                 aktualisiert++;
             } else {
-                // NEU
+                // NEU HINZUFÜGEN
                 window.geraeteDaten.push(sauberesGeraet);
                 neuHinzugefuegt++;
             }
         }
 
-        // Filter zurücksetzen
+        // 4. Suche/Filter in der Benutzeroberfläche zurücksetzen
         if (document.getElementById("sucheGeraet")) document.getElementById("sucheGeraet").value = "";
         if (document.getElementById("filterKategorie")) document.getElementById("filterKategorie").value = "";
         if (document.getElementById("filterStatus")) document.getElementById("filterStatus").value = "";
 
-        // Speichern
-        if (typeof speichereGeraete === "function") speichereGeraete();
+        // 5. In Firebase / LocalStorage dauerhaft speichern
+        if (typeof speichereGeraete === "function") {
+            speichereGeraete();
+        }
 
-        // UI-Update
-        if (typeof renderGeraeteListe === "function") renderGeraeteListe();
-        if (typeof filterGeraete === "function") filterGeraete();
+        // 6. Tabelle direkt im Browser neu anzeigen
+        if (typeof filterGeraete === "function") {
+            filterGeraete();
+        } else if (typeof renderGeraeteListe === "function") {
+            renderGeraeteListe();
+        }
 
         alert(`Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Geräte hinzugefügt\n- ${aktualisiert} bestehende Geräte aktualisiert`);
         
