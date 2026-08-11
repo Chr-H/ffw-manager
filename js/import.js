@@ -402,8 +402,7 @@ function importLagerCSV(inputElement) {
         const file = inputElement.files[0];
         if (!file) return;
 
-        // Nutzt primär die getLager() aus deiner lager.js
-        let lagerDaten = typeof getLager === "function" ? getLager() : (typeof ladeDaten === "function" ? ladeDaten("lager") : []);
+        let lagerDaten = typeof getLager === "function" ? getLager() : [];
 
         const reader = new FileReader();
         reader.onerror = function() { alert("Fehler beim Lesen der Datei."); };
@@ -432,7 +431,7 @@ function importLagerCSV(inputElement) {
                 const idxKat = findIndex("kategorie", "kat");
                 const idxBez = findIndex("bezeichnung", "name", "artikel");
                 const idxGroesse = findIndex("groesse", "größe", "gr");
-                const idxBestand = findIndex("bestand", "menge", "ist");
+                const idxBestand = findIndex("bestand", "menge");
                 const idxSoll = findIndex("mindest", "soll");
                 const idxEinheit = findIndex("einheit");
                 const idxOrt = findIndex("lagerort", "ort");
@@ -457,7 +456,7 @@ function importLagerCSV(inputElement) {
 
                     if (!bezeichnung) continue;
 
-                    // Exakter Abgleich nach Bezeichnung UND Größe
+                    // Sauberer Vergleich: Unterscheidet leere Größe von konkreten Größen (42, 44)
                     const index = lagerDaten.findIndex(item => {
                         if (!item) return false;
                         const itemBez = String(item.bezeichnung || item.name || "").trim().toLowerCase();
@@ -469,10 +468,10 @@ function importLagerCSV(inputElement) {
                     const parsedMindest = parseFloat(mindestbestand.replace(',', '.')) || 0;
 
                     const neuesItem = {
-                        id: index !== -1 ? lagerDaten[index].id : `LAGER-${Date.now()}_${i}`,
+                        id: index !== -1 ? lagerDaten[index].id : `LAGER-${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
                         bezeichnung: bezeichnung,
                         name: bezeichnung,
-                        kategorie: kategorie || (index !== -1 ? lagerDaten[index].kategorie : ""),
+                        kategorie: kategorie,
                         groesse: groesse,
                         größe: groesse,
                         bestand: parsedBestand,
@@ -480,13 +479,13 @@ function importLagerCSV(inputElement) {
                         mindestbestand: parsedMindest,
                         sollbestand: parsedMindest,
                         einheit: einheit || "Stk.",
-                        lagerort: lagerort || (index !== -1 ? lagerDaten[index].lagerort : ""),
-                        ort: lagerort || (index !== -1 ? lagerDaten[index].lagerort : ""),
+                        lagerort: lagerort,
+                        ort: lagerort,
                         historie: index !== -1 ? (lagerDaten[index].historie || []) : []
                     };
 
                     if (index !== -1) {
-                        lagerDaten[index] = { ...lagerDaten[index], ...neuesItem };
+                        lagerDaten[index] = neuesItem;
                         aktualisiert++;
                     } else {
                         lagerDaten.push(neuesItem);
@@ -494,17 +493,18 @@ function importLagerCSV(inputElement) {
                     }
                 }
 
-                // WICHTIG: Nutzt speichereLager() & filterLager() aus lager.js zum Speichern und Aktualisieren der Sicht
+                // Daten speichern
                 if (typeof speichereLager === "function") {
                     speichereLager(lagerDaten);
                 } else if (typeof speichereDaten === "function") {
                     speichereDaten("lager", lagerDaten);
                 }
 
-                if (typeof filterLager === "function") {
-                    filterLager();
-                } else if (typeof renderLagerView === "function") {
+                // Benutzeroberfläche erzwingend neu rendern
+                if (typeof renderLagerView === "function") {
                     renderLagerView();
+                } else if (typeof filterLager === "function") {
+                    filterLager();
                 }
 
                 alert(`Lager-Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Artikel hinzugefügt\n- ${aktualisiert} bestehende Artikel aktualisiert`);
