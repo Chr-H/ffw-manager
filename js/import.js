@@ -3,7 +3,7 @@ function importGeraeteCSV(inputElement) {
         const file = inputElement.files[0];
         if (!file) return;
 
-        // 1. Bestand sicher aus Speicher / Firebase-Array laden
+        // 1. Bestand aus Speicher / Firebase-Array laden
         if (typeof ladeDaten === "function") {
             window.geraeteDaten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || window.geraeteDaten;
         }
@@ -61,7 +61,7 @@ function importGeraeteCSV(inputElement) {
 
                     let index = -1;
 
-                    // Match über Inv.-Nr.
+                    // Match 1: Über Inv.-Nr. / Seriennummer (falls vorhanden)
                     if (invNummer) {
                         index = window.geraeteDaten.findIndex((g, idx) => {
                             if (!g || bereitsGematcht.has(idx)) return false;
@@ -74,21 +74,29 @@ function importGeraeteCSV(inputElement) {
                         });
                     }
 
-                    // Match über Bezeichnung
-                    if (index === -1 && bezeichnung) {
+                    // Match 2: Über exakte ID (falls vergeben)
+                    if (index === -1 && csvId) {
+                        index = window.geraeteDaten.findIndex((g, idx) => {
+                            if (!g || bereitsGematcht.has(idx)) return false;
+                            return String(g.id || "").trim().toLowerCase() === csvId.toLowerCase();
+                        });
+                    }
+
+                    // Match 3: Über Bezeichnung UND Standort (nur wenn Inv.-Nr vorhanden ist)
+                    if (index === -1 && bezeichnung && invNummer) {
                         index = window.geraeteDaten.findIndex((g, idx) => {
                             if (!g || bereitsGematcht.has(idx)) return false;
                             const gBezeich = String(g.bezeichnung || "").trim().toLowerCase();
-                            return gBezeich === bezeichnung.toLowerCase();
+                            const gStandort = String(g.standort || g.fahrzeug || "").trim().toLowerCase();
+                            return gBezeich === bezeichnung.toLowerCase() && gStandort === standort.toLowerCase();
                         });
                     }
 
                     const bestehend = (index !== -1 && window.geraeteDaten[index]) ? window.geraeteDaten[index] : null;
 
-                    const finaleId = csvId || (bestehend && bestehend.id ? bestehend.id : `GER-${Date.now()}_${i}`);
-                    const finaleInv = invNummer || (bestehend && (bestehend.inventar || bestehend.seriennummer) ? (bestehend.inventar || bestehend.seriennummer) : `AUTO-${i}`);
+                    const finaleId = csvId || (bestehend && bestehend.id ? bestehend.id : `GER-${Date.now()}_${i}_${Math.floor(Math.random()*1000)}`);
+                    const finaleInv = invNummer || (bestehend && (bestehend.inventar || bestehend.seriennummer) ? (bestehend.inventar || bestehend.seriennummer) : "");
 
-                    // GARANTIERT KEINE 'undefined'-WERTE FÜR FIREBASE
                     const sauberesGeraet = {
                         id: String(finaleId || ""),
                         inventar: String(finaleInv || ""),
@@ -109,11 +117,13 @@ function importGeraeteCSV(inputElement) {
                         aktualisiert++;
                     } else {
                         window.geraeteDaten.push(sauberesGeraet);
+                        // Neu hinzugefügtes Gerät sofort sperren, damit die nächste Pumpe es nicht überschreibt
+                        bereitsGematcht.add(window.geraeteDaten.length - 1);
                         neuHinzugefuegt++;
                     }
                 }
 
-                // Gesamtes Array absichern (entfernt alle eventuellen 'undefined' Werte aus alten Daten)
+                // Absicherung für Firebase (keine 'undefined' Werte)
                 window.geraeteDaten = window.geraeteDaten.map(g => {
                     const sanitized = {};
                     Object.keys(g || {}).forEach(key => {
@@ -122,7 +132,7 @@ function importGeraeteCSV(inputElement) {
                     return sanitized;
                 });
 
-                // In Firebase & LocalStorage speichern
+                // Speichern & UI aktualisieren
                 if (typeof speichereGeraete === "function") speichereGeraete();
                 if (typeof speichereDaten === "function") speichereDaten("geraete", window.geraeteDaten);
                 
