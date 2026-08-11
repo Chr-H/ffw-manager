@@ -32,12 +32,24 @@ function importPSACSV(inputElement) {
                 }
 
                 const trenner = zeilen[0].includes(";") ? ";" : ",";
-                const headers = zeilen[0].split(trenner).map(h => 
-                    h.replace(/^"|"$/g, '').trim().toLowerCase()
-                );
+                const rawHeaders = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
-                // Erkennen, ob Spind in der Datei existiert
-                const hatSpindSpalte = headers.some(h => h.includes("spind"));
+                // Hilfsfunktion: Spaltenindex anhand von Schlüsselwörtern finden (Tolerant für Umlaut-Fehler)
+                const findIndex = (...keywords) => {
+                    return rawHeaders.findIndex(h => {
+                        const cleanH = h.replace(/[^a-z0-9]/g, '');
+                        return keywords.some(kw => cleanH.includes(kw.toLowerCase().replace(/[^a-z0-9]/g, '')));
+                    });
+                };
+
+                const idxSpind = findIndex("spind");
+                const idxTraeger = findIndex("traeger", "träger", "person", "name");
+                const idxAusruestung = findIndex("ausruestung", "ausrüstung", "bezeichnung", "bekleidung", "teil");
+                const idxGroesse = findIndex("groesse", "größe");
+                const idxSeriennummer = findIndex("seriennummer", "sn");
+                const idxAusgabe = findIndex("ausgabedatum", "ausgabe");
+                const idxPruefung = findIndex("naechstepruefung", "prüfung");
+                const idxStatus = findIndex("status");
 
                 let aktualisiert = 0;
                 let neuHinzugefuegt = 0;
@@ -50,29 +62,17 @@ function importPSACSV(inputElement) {
 
                     if (werte.length === 0 || werte.every(v => v === "")) continue;
 
-                    let spind = "", traeger = "", bekleidung = "", groesse = "", seriennummer = "", ausgabedatum = "", pruefung = "", status = "";
+                    // Werte flexibel ermitteln (mit Fallback auf Standard-Indices)
+                    const spind = idxSpind !== -1 ? werte[idxSpind] : (idxSpind === -1 && rawHeaders.length >= 8 ? werte[0] : "");
+                    const traeger = idxTraeger !== -1 ? werte[idxTraeger] : werte[idxSpind !== -1 ? 1 : 0] || "";
+                    const bezeichnung = idxAusruestung !== -1 ? werte[idxAusruestung] : werte[idxSpind !== -1 ? 2 : 1] || "";
+                    const groesse = idxGroesse !== -1 ? werte[idxGroesse] : werte[idxSpind !== -1 ? 3 : 2] || "";
+                    const seriennummer = idxSeriennummer !== -1 ? werte[idxSeriennummer] : werte[idxSpind !== -1 ? 4 : 3] || "";
+                    const ausgabeDatum = idxAusgabe !== -1 ? werte[idxAusgabe] : werte[idxSpind !== -1 ? 5 : 4] || "";
+                    const naechstePruefung = idxPruefung !== -1 ? werte[idxPruefung] : werte[idxSpind !== -1 ? 6 : 5] || "";
+                    const status = idxStatus !== -1 ? werte[idxStatus] : werte[idxSpind !== -1 ? 7 : 6] || "Einsatzbereit";
 
-                    if (hatSpindSpalte) {
-                        spind = werte[0] || "";
-                        traeger = werte[1] || "";
-                        bekleidung = werte[2] || "";
-                        groesse = werte[3] || "";
-                        seriennummer = werte[4] || "";
-                        ausgabedatum = werte[5] || "";
-                        pruefung = werte[6] || "";
-                        status = werte[7] || "Einsatzbereit";
-                    } else {
-                        // Altes Format ohne Spind-Spalte
-                        traeger = werte[0] || "";
-                        bekleidung = werte[1] || "";
-                        groesse = werte[2] || "";
-                        seriennummer = werte[3] || "";
-                        ausgabedatum = werte[4] || "";
-                        pruefung = werte[5] || "";
-                        status = werte[6] || "Einsatzbereit";
-                    }
-
-                    if (!traeger && !bekleidung && !seriennummer) continue;
+                    if (!traeger && !bezeichnung && !seriennummer) continue;
 
                     let index = -1;
 
@@ -85,30 +85,34 @@ function importPSACSV(inputElement) {
                         });
                     }
 
-                    // Match 2: Über Träger + Bekleidung
-                    if (index === -1 && traeger && bekleidung) {
+                    // Match 2: Über Träger + Bezeichnung
+                    if (index === -1 && traeger && bezeichnung) {
                         index = window.psaDaten.findIndex((p, idx) => {
                             if (!p || bereitsGematcht.has(idx)) return false;
                             const pTraeger = String(p.traeger || p.name || "").trim().toLowerCase();
-                            const pBekl = String(p.bekleidung || p.ausruestung || "").trim().toLowerCase();
-                            return pTraeger === traeger.toLowerCase() && pBekl === bekleidung.toLowerCase();
+                            const pBekl = String(p.bezeichnung || p.bekleidung || p.ausruestung || "").trim().toLowerCase();
+                            return pTraeger === traeger.toLowerCase() && pBekl === bezeichnung.toLowerCase();
                         });
                     }
 
                     const bestehend = (index !== -1 && window.psaDaten[index]) ? window.psaDaten[index] : null;
 
+                    // WICHTIG: Alle Varianten abspeichern, damit psa.js v2.1.4 alles findet!
                     const sauberePSA = {
                         id: String((bestehend && bestehend.id) ? bestehend.id : `PSA-${Date.now()}_${i}`),
                         spind: String(spind || (bestehend && bestehend.spind ? bestehend.spind : "")),
                         traeger: String(traeger || (bestehend && bestehend.traeger ? bestehend.traeger : "")),
                         name: String(traeger || (bestehend && bestehend.name ? bestehend.name : "")),
-                        bekleidung: String(bekleidung || (bestehend && bestehend.bekleidung ? bestehend.bekleidung : "")),
-                        ausruestung: String(bekleidung || (bestehend && bestehend.ausruestung ? bestehend.ausruestung : "")),
+                        bezeichnung: String(bezeichnung || (bestehend && bestehend.bezeichnung ? bestehend.bezeichnung : "")),
+                        ausruestung: String(bezeichnung || (bestehend && bestehend.ausruestung ? bestehend.ausruestung : "")),
+                        bekleidung: String(bezeichnung || (bestehend && bestehend.bekleidung ? bestehend.bekleidung : "")),
                         groesse: String(groesse || (bestehend && bestehend.groesse ? bestehend.groesse : "")),
                         seriennummer: String(seriennummer || (bestehend && bestehend.seriennummer ? bestehend.seriennummer : "")),
-                        ausgabedatum: String(ausgabedatum || (bestehend && bestehend.ausgabedatum ? bestehend.ausgabedatum : "")),
-                        naechstePruefung: String(pruefung || (bestehend && bestehend.naechstePruefung ? bestehend.naechstePruefung : "")),
-                        status: String(status || "Einsatzbereit")
+                        ausgabeDatum: String(ausgabeDatum || (bestehend && bestehend.ausgabeDatum ? bestehend.ausgabeDatum : "")),
+                        ausgabedatum: String(ausgabeDatum || (bestehend && bestehend.ausgabedatum ? bestehend.ausgabedatum : "")),
+                        naechstePruefung: String(naechstePruefung || (bestehend && bestehend.naechstePruefung ? bestehend.naechstePruefung : "")),
+                        status: String(status || "Einsatzbereit"),
+                        historie: bestehend && Array.isArray(bestehend.historie) ? bestehend.historie : []
                     };
 
                     if (index !== -1) {
@@ -122,22 +126,15 @@ function importPSACSV(inputElement) {
                     }
                 }
 
-                // Absicherung für Firebase
-                window.psaDaten = window.psaDaten.map(p => {
-                    const sanitized = {};
-                    Object.keys(p || {}).forEach(key => { sanitized[key] = p[key] === undefined ? "" : p[key]; });
-                    return sanitized;
-                });
-
-                // Speichern
-                if (typeof speicherePSA === "function") speicherePSA();
-                if (typeof speichereDaten === "function") speichereDaten("psa", window.psaDaten);
+                // Daten abspeichern
+                if (typeof speicherePSA === "function") speicherePSA(window.psaDaten);
+                else if (typeof speichereDaten === "function") speichereDaten("psa", window.psaDaten);
 
                 localStorage.setItem("psa", JSON.stringify(window.psaDaten));
                 localStorage.setItem("ffw_psa", JSON.stringify(window.psaDaten));
 
-                if (typeof filterPSA === "function") filterPSA();
-                else if (typeof renderPSAListe === "function") renderPSAListe();
+                if (typeof renderPSAView === "function") renderPSAView();
+                else if (typeof filterPSA === "function") filterPSA();
 
                 alert(`PSA-Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Einträge hinzugefügt\n- ${aktualisiert} bestehende Einträge aktualisiert`);
                 inputElement.value = "";
@@ -151,7 +148,6 @@ function importPSACSV(inputElement) {
         alert("Fehler beim Starten des PSA-Imports:\n" + err.message);
     }
 }
-
 window.exportPSACSV = function() {
     let psaDaten = window.psaDaten || [];
     if (typeof ladeDaten === "function") {
