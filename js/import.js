@@ -357,6 +357,11 @@ function importGeraeteCSV(inputElement) {
 // ==========================================
 
 // 1. Export-Funktion
+// ==========================================
+// LAGERLISTE - EXPORT & IMPORT (Inkl. Größe)
+// ==========================================
+
+// 1. Export-Funktion
 function exportLagerCSV() {
     let daten = typeof ladeDaten === "function" ? ladeDaten("lager") : null;
     
@@ -370,11 +375,12 @@ function exportLagerCSV() {
         return;
     }
 
-    const headers = ["Kategorie", "Bezeichnung", "Bestand", "Soll-Bestand", "Einheit", "Lagerort", "Status"];
+    const headers = ["Kategorie", "Bezeichnung", "Größe", "Bestand", "Soll-Bestand", "Einheit", "Lagerort", "Status"];
 
     const rows = daten.map(item => [
         item.kategorie || "",
         item.bezeichnung || item.name || item.artikel || "",
+        item.groesse || item.größe || "",
         item.bestand !== undefined ? item.bestand : (item.menge || 0),
         item.sollbestand !== undefined ? item.sollbestand : (item.soll || 0),
         item.einheit || "Stk",
@@ -396,6 +402,133 @@ function exportLagerCSV() {
         link.click();
     }
 }
+
+// 2. Import-Funktion
+function importLagerCSV(inputElement) {
+    try {
+        const file = inputElement.files[0];
+        if (!file) return;
+
+        let lagerDaten = (typeof ladeDaten === "function" ? ladeDaten("lager") : null) || [];
+        if (!lagerDaten.length) {
+            const gespeicherte = localStorage.getItem("lager") || localStorage.getItem("ffw_lager");
+            if (gespeicherte) try { lagerDaten = JSON.parse(gespeicherte); } catch(e){}
+        }
+
+        const reader = new FileReader();
+        reader.onerror = function() { alert("Fehler beim Lesen der Datei."); };
+
+        reader.onload = function(e) {
+            try {
+                let text = e.target.result;
+                if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1);
+
+                const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
+                if (zeilen.length < 2) {
+                    alert("Die Datei enthält keine Daten.");
+                    return;
+                }
+
+                const trenner = zeilen[0].includes(";") ? ";" : ",";
+                const rawHeaders = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+
+                // Tolerante Spaltenindex-Suche
+                const findIndex = (...keywords) => {
+                    return rawHeaders.findIndex(h => {
+                        const cleanH = h.replace(/[^a-z0-9]/g, '');
+                        return keywords.some(kw => cleanH.includes(kw.toLowerCase().replace(/[^a-z0-9]/g, '')));
+                    });
+                };
+
+                const idxKat = findIndex("kategorie", "kat");
+                const idxBez = findIndex("bezeichnung", "name", "artikel", "gegenstand");
+                const idxGroesse = findIndex("groesse", "größe", "gr");
+                const idxBestand = findIndex("bestand", "menge", "ist");
+                const idxSoll = findIndex("soll", "mindest");
+                const idxEinheit = findIndex("einheit");
+                const idxOrt = findIndex("lagerort", "ort", "fach");
+                const idxStatus = findIndex("status");
+
+                let aktualisiert = 0;
+                let neuHinzugefuegt = 0;
+
+                for (let i = 1; i < zeilen.length; i++) {
+                    const werte = zeilen[i]
+                        .split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
+                        .map(w => w.replace(/^"|"$/g, '').trim());
+
+                    if (werte.length === 0 || werte.every(v => v === "")) continue;
+
+                    const kategorie = idxKat !== -1 ? werte[idxKat] : werte[0] || "";
+                    const bezeichnung = idxBez !== -1 ? werte[idxBez] : werte[1] || "";
+                    const groesse = idxGroesse !== -1 ? werte[idxGroesse] : (rawHeaders.length >= 8 ? werte[2] : "");
+                    
+                    // Bei 8 Spalten rutschen die folgenden Werte um 1 nach rechts:
+                    const offset = rawHeaders.length >= 8 ? 1 : 0;
+                    const bestand = idxBestand !== -1 ? werte[idxBestand] : werte[2 + offset] || "0";
+                    const sollbestand = idxSoll !== -1 ? werte[idxSoll] : werte[3 + offset] || "0";
+                    const einheit = idxEinheit !== -1 ? werte[idxEinheit] : werte[4 + offset] || "Stk";
+                    const lagerort = idxOrt !== -1 ? werte[idxOrt] : werte[5 + offset] || "";
+                    const status = idxStatus !== -1 ? werte[idxStatus] : werte[6 + offset] || "In Ordnung";
+
+                    if (!bezeichnung) continue;
+
+                    // Match über BEZEICHNUNG UND GRÖSSE (verhindert das Überschreiben gleichnamiger Artikel)
+                    const index = lagerDaten.findIndex(item => {
+                        if (!item) return false;
+                        const itemBez = String(item.bezeichnung || item.name || "").trim().toLowerCase();
+                        const itemGr = String(item.groesse || item.größe || "").trim().toLowerCase();
+                        return itemBez === bezeichnung.toLowerCase() && itemGr === groesse.toLowerCase();
+                    });
+
+                    const neuesItem = {
+                        id: index !== -1 ? lagerDaten[index].id : `LAGER-${Date.now()}_${i}`,
+                        kategorie: kategorie || (index !== -1 ? lagerDaten[index].kategorie : "Ausrüstung"),
+                        bezeichnung: bezeichnung,
+                        name: bezeichnung,
+                        groesse: groesse,
+                        größe: groesse,
+                        bestand: isNaN(parseInt(bestand)) ? 0 : parseInt(bestand),
+                        sollbestand: isNaN(parseInt(sollbestand)) ? 0 : parseInt(sollbestand),
+                        einheit: einheit || "Stk",
+                        lagerort: lagerort || (index !== -1 ? lagerDaten[index].lagerort : ""),
+                        status: status || "In Ordnung"
+                    };
+
+                    if (index !== -1) {
+                        lagerDaten[index] = { ...lagerDaten[index], ...neuesItem };
+                        aktualisiert++;
+                    } else {
+                        lagerDaten.push(neuesItem);
+                        neuHinzugefuegt++;
+                    }
+                }
+
+                // Speichern & View aktualisieren
+                if (typeof speichereDaten === "function") speichereDaten("lager", lagerDaten);
+                if (typeof speichereLager === "function") speichereLager(lagerDaten);
+
+                localStorage.setItem("lager", JSON.stringify(lagerDaten));
+                localStorage.setItem("ffw_lager", JSON.stringify(lagerDaten));
+
+                if (typeof renderLagerView === "function") renderLagerView();
+                else if (typeof renderLager === "function") renderLager();
+
+                alert(`Lager-Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Artikel hinzugefügt\n- ${aktualisiert} bestehende Artikel aktualisiert`);
+                inputElement.value = "";
+            } catch (err) {
+                alert("Fehler beim Lager-Import:\n" + err.message);
+            }
+        };
+
+        reader.readAsText(file, "UTF-8");
+    } catch (err) {
+        alert("Fehler beim Starten des Lager-Imports:\n" + err.message);
+    }
+}
+
+window.exportLagerCSV = exportLagerCSV;
+window.importLagerCSV = importLagerCSV;
 
 // 2. Import-Funktion
 function importLagerCSV(inputElement) {

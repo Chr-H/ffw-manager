@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Lagerverwaltung (v1.1.0)
+// FFW Manager - Lagerverwaltung (v1.2.0)
 // ==========================================
 
 function getLager() {
@@ -22,7 +22,7 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// Hilfsfunktion: Datum formatierten
+// Hilfsfunktion: Datum formatieren
 function formatiereDatum(datumStr) {
     if (!datumStr) return '-';
     const d = new Date(datumStr);
@@ -44,7 +44,7 @@ function renderLagerView() {
         <!-- Filter- & Suchleiste -->
         <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <div style="flex:2; min-width:200px;">
-                <input type="text" id="lager-filter-suche" oninput="filterLager()" placeholder="🔍 Suche nach Artikel, Kategorie, Lagerort..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                <input type="text" id="lager-filter-suche" oninput="filterLager()" placeholder="🔍 Suche nach Artikel, Kategorie, Größe, Lagerort..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
             </div>
             <div style="flex:1; min-width:150px;">
                 <select id="lager-filter-bestand" onchange="filterLager()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
@@ -63,6 +63,7 @@ function renderLagerView() {
                         <th style="padding:10px;">Aktionen</th>
                         <th style="padding:10px;">Artikelbezeichnung</th>
                         <th style="padding:10px;">Kategorie</th>
+                        <th style="padding:10px;">Größe</th>
                         <th style="padding:10px;">Lagerort</th>
                         <th style="padding:10px;">Bestand</th>
                         <th style="padding:10px;">Mindestbestand</th>
@@ -89,17 +90,22 @@ function filterLager() {
     const bestandFilter = document.getElementById('lager-filter-bestand')?.value || '';
 
     const gefiltert = lagerListe.filter(item => {
-        const bezeichnung = (item.bezeichnung || '').toLowerCase();
+        const bezeichnung = (item.bezeichnung || item.name || '').toLowerCase();
         const kategorie = (item.kategorie || '').toLowerCase();
-        const lagerort = (item.lagerort || '').toLowerCase();
+        const groesse = (item.groesse || item.größe || '').toLowerCase();
+        const lagerort = (item.lagerort || item.ort || '').toLowerCase();
         const artikelnr = (item.artikelnr || '').toLowerCase();
 
         const passtText = bezeichnung.includes(SuchText) || 
                           kategorie.includes(SuchText) || 
+                          groesse.includes(SuchText) || 
                           lagerort.includes(SuchText) ||
                           artikelnr.includes(SuchText);
 
-        const istKritisch = Number(item.bestand || 0) <= Number(item.mindestbestand || 0);
+        const bestandVal = Number(item.bestand !== undefined ? item.bestand : (item.menge || 0));
+        const mindestVal = Number(item.mindestbestand !== undefined ? item.mindestbestand : (item.sollbestand || item.soll || 0));
+
+        const istKritisch = bestandVal <= mindestVal;
         const passtBestand = bestandFilter === '' || 
                             (bestandFilter === 'kritisch' && istKritisch) || 
                             (bestandFilter === 'ok' && !istKritisch);
@@ -108,15 +114,16 @@ function filterLager() {
     });
 
     if (gefiltert.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#666;">Keine passenden Lagerartikel gefunden.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:#666;">Keine passenden Lagerartikel gefunden.</td></tr>`;
         return;
     }
 
     let rowsHtml = '';
     gefiltert.forEach(item => {
-        const bestand = Number(item.bestand || 0);
-        const mindestbestand = Number(item.mindestbestand || 0);
+        const bestand = Number(item.bestand !== undefined ? item.bestand : (item.menge || 0));
+        const mindestbestand = Number(item.mindestbestand !== undefined ? item.mindestbestand : (item.sollbestand || item.soll || 0));
         const einheit = escapeHtml(item.einheit || 'Stk.');
+        const groesse = escapeHtml(item.groesse || item.größe || '-');
 
         const istKritisch = bestand <= mindestbestand;
         const statusBadge = istKritisch 
@@ -132,9 +139,10 @@ function filterLager() {
                     <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openLagerModal('${item.id}')">✏️</button>
                     <button class="btn btn-loeschen" title="Löschen" onclick="loescheLagerItem('${item.id}')">🗑️</button>
                 </td>
-                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.bezeichnung || 'Unbekannt')}</td>
+                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.bezeichnung || item.name || 'Unbekannt')}</td>
                 <td style="padding:10px;">${escapeHtml(item.kategorie || '-')}</td>
-                <td style="padding:10px;">📍 ${escapeHtml(item.lagerort || '-')}</td>
+                <td style="padding:10px; font-weight:bold;">${groesse}</td>
+                <td style="padding:10px;">📍 ${escapeHtml(item.lagerort || item.ort || '-')}</td>
                 <td style="padding:10px; font-size:1.05rem; ${bestandStyle}">${bestand} ${einheit}</td>
                 <td style="padding:10px; color:#666;">${mindestbestand} ${einheit}</td>
                 <td style="padding:10px;">${statusBadge}</td>
@@ -152,6 +160,7 @@ function openLagerAkteModal(id) {
 
     item.historie = item.historie || [];
     const einheit = escapeHtml(item.einheit || 'Stk.');
+    const groesse = escapeHtml(item.groesse || item.größe || 'keine');
 
     let historieHtml = '';
     if (item.historie.length === 0) {
@@ -180,15 +189,15 @@ function openLagerAkteModal(id) {
                 
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:10px;">
                     <div>
-                        <h2 style="margin:0;">📦 Lagerakte: ${escapeHtml(item.bezeichnung)}</h2>
-                        <p style="margin:5px 0 0 0; color:#555;">Kategorie: <strong>${escapeHtml(item.kategorie || 'Keine')}</strong> | Lagerort: <strong>${escapeHtml(item.lagerort || 'Nicht angegeben')}</strong></p>
+                        <h2 style="margin:0;">📦 Lagerakte: ${escapeHtml(item.bezeichnung || item.name)}</h2>
+                        <p style="margin:5px 0 0 0; color:#555;">Kategorie: <strong>${escapeHtml(item.kategorie || 'Keine')}</strong> | Größe: <strong>${groesse}</strong> | Lagerort: <strong>${escapeHtml(item.lagerort || 'Nicht angegeben')}</strong></p>
                     </div>
                     <button onclick="closeLagerAkteModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">✖</button>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0; background:#f8f9fa; padding:12px; border-radius:6px;">
-                    <div><strong>Aktueller Bestand:</strong> <span style="font-size:1.1rem; font-weight:bold;">${item.bestand || 0} ${einheit}</span></div>
-                    <div><strong>Mindestbestand:</strong> ${item.mindestbestand || 0} ${einheit}</div>
+                    <div><strong>Aktueller Bestand:</strong> <span style="font-size:1.1rem; font-weight:bold;">${item.bestand ?? item.menge ?? 0} ${einheit}</span></div>
+                    <div><strong>Mindestbestand:</strong> ${item.mindestbestand ?? item.sollbestand ?? 0} ${einheit}</div>
                     <div><strong>Lieferant / Quelle:</strong> ${escapeHtml(item.lieferant || '-')}</div>
                     <div><strong>Artikel- / EAN-Nr.:</strong> ${escapeHtml(item.artikelnr || '-')}</div>
                 </div>
@@ -247,9 +256,11 @@ function bucheLagerBestand(event, id) {
     if (mengeInput <= 0) return;
 
     const effMenge = art === 'abgang' ? -mengeInput : mengeInput;
-    const neuerBestand = Math.max(0, parseFloat(item.bestand || 0) + effMenge);
+    const aktuellerBestand = parseFloat(item.bestand !== undefined ? item.bestand : (item.menge || 0));
+    const neuerBestand = Math.max(0, aktuellerBestand + effMenge);
 
     item.bestand = neuerBestand;
+    item.menge = neuerBestand;
     item.historie = item.historie || [];
     item.historie.push({
         datum: new Date().toISOString(),
@@ -265,27 +276,33 @@ function bucheLagerBestand(event, id) {
 
 // 3. Modal zum Anlegen/Bearbeiten von Lagerartikeln
 function openLagerModal(id = null) {
-    let item = { id: '', bezeichnung: '', kategorie: '', lagerort: '', bestand: 0, mindestbestand: 0, einheit: 'Stk.', lieferant: '', artikelnr: '' };
+    let item = { id: '', bezeichnung: '', kategorie: '', groesse: '', lagerort: '', bestand: 0, mindestbestand: 0, einheit: 'Stk.', lieferant: '', artikelnr: '' };
 
     if (id) {
         const found = getLager().find(l => l.id === id);
-        if (found) item = found;
+        if (found) {
+            item = found;
+            item.groesse = item.groesse || item.größe || '';
+            item.bezeichnung = item.bezeichnung || item.name || '';
+        }
     }
 
     const modalHtml = `
         <div id="lager-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
-            <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
+            <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:550px; max-height:90vh; overflow-y:auto;">
                 <h3>${item.id ? '✏️ Lagerartikel bearbeiten' : '➕ Neuer Lagerartikel'}</h3>
                 <form onsubmit="saveLagerFromModal(event, '${item.id}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
                     <div>
                         <label><strong>Artikelbezeichnung *</strong></label>
-                        <input type="text" id="lager-bezeichnung" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Ölbindemittel, O2-Flasche, Schaummittel">
+                        <input type="text" id="lager-bezeichnung" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Feuerwehrstiefel, Ölbindemittel">
                     </div>
+                    
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Kategorie</strong></label>
                             <input type="text" id="lager-kategorie" list="lager-kategorie-liste" value="${escapeHtml(item.kategorie)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
                             <datalist id="lager-kategorie-liste">
+                                <option value="PSA">
                                 <option value="Verbrauchsmaterial">
                                 <option value="Atemschutz">
                                 <option value="Medizinisch">
@@ -295,23 +312,21 @@ function openLagerModal(id = null) {
                             </datalist>
                         </div>
                         <div style="flex:1;">
-                            <label><strong>Lagerort</strong></label>
-                            <input type="text" id="lager-lagerort" value="${escapeHtml(item.lagerort)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Regal A3, Fach 2">
+                            <label><strong>Größe</strong></label>
+                            <input type="text" id="lager-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42, XL, Gr. 10, -">
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
-                            <label><strong>Aktueller Bestand</strong></label>
-                            <input type="number" step="any" id="lager-bestand" value="${item.bestand ?? 0}" style="width:100%; padding:8px; margin-top:4px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Mindestbestand</strong></label>
-                            <input type="number" step="any" id="lager-mindestbestand" value="${item.mindestbestand ?? 0}" style="width:100%; padding:8px; margin-top:4px;">
+                            <label><strong>Lagerort</strong></label>
+                            <input type="text" id="lager-lagerort" value="${escapeHtml(item.lagerort || item.ort)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. OG, Regal A3">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Einheit</strong></label>
                             <select id="lager-einheit" style="width:100%; padding:8px; margin-top:4px;">
-                                <option value="Stk." ${item.einheit === 'Stk.' ? 'selected' : ''}>Stk.</option>
+                                <option value="Stk" ${item.einheit === 'Stk' || item.einheit === 'Stk.' ? 'selected' : ''}>Stk</option>
+                                <option value="Paar" ${item.einheit === 'Paar' ? 'selected' : ''}>Paar</option>
                                 <option value="Sack" ${item.einheit === 'Sack' ? 'selected' : ''}>Sack</option>
                                 <option value="Kanister" ${item.einheit === 'Kanister' ? 'selected' : ''}>Kanister</option>
                                 <option value="Liter" ${item.einheit === 'Liter' ? 'selected' : ''}>Liter</option>
@@ -320,6 +335,18 @@ function openLagerModal(id = null) {
                             </select>
                         </div>
                     </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label><strong>Aktueller Bestand</strong></label>
+                            <input type="number" step="any" id="lager-bestand" value="${item.bestand ?? item.menge ?? 0}" style="width:100%; padding:8px; margin-top:4px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label><strong>Mindestbestand</strong></label>
+                            <input type="number" step="any" id="lager-mindestbestand" value="${item.mindestbestand ?? item.sollbestand ?? 0}" style="width:100%; padding:8px; margin-top:4px;">
+                        </div>
+                    </div>
+
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Lieferant / Bezugsquelle</strong></label>
@@ -330,6 +357,7 @@ function openLagerModal(id = null) {
                             <input type="text" id="lager-artikelnr" value="${escapeHtml(item.artikelnr)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. MAT-501">
                         </div>
                     </div>
+
                     <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
                         <button type="button" class="btn" onclick="closeLagerModal()" style="background:#ccc;">Abbrechen</button>
                         <button type="submit" class="btn btn-primary">💾 Speichern</button>
@@ -354,13 +382,23 @@ function saveLagerFromModal(event, existingId) {
     const lagerListe = getLager();
     const existingItem = lagerListe.find(l => l.id === existingId) || {};
 
+    const groesse = document.getElementById('lager-groesse').value.trim();
+    const bestand = parseFloat(document.getElementById('lager-bestand').value) || 0;
+    const mindestbestand = parseFloat(document.getElementById('lager-mindestbestand').value) || 0;
+
     const newItem = {
         id: existingId || "LAGER-" + Date.now(),
         bezeichnung: document.getElementById('lager-bezeichnung').value.trim(),
+        name: document.getElementById('lager-bezeichnung').value.trim(),
         kategorie: document.getElementById('lager-kategorie').value.trim(),
+        groesse: groesse,
+        größe: groesse,
         lagerort: document.getElementById('lager-lagerort').value.trim(),
-        bestand: parseFloat(document.getElementById('lager-bestand').value) || 0,
-        mindestbestand: parseFloat(document.getElementById('lager-mindestbestand').value) || 0,
+        ort: document.getElementById('lager-lagerort').value.trim(),
+        bestand: bestand,
+        menge: bestand,
+        mindestbestand: mindestbestand,
+        sollbestand: mindestbestand,
         einheit: document.getElementById('lager-einheit').value,
         lieferant: document.getElementById('lager-lieferant').value.trim(),
         artikelnr: document.getElementById('lager-artikelnr').value.trim(),
