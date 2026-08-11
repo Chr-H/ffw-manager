@@ -358,16 +358,14 @@ function importGeraeteCSV(inputElement) {
 
 // 1. Export-Funktion
 // ==========================================
-// LAGERLISTE - EXPORT & IMPORT (Inkl. Größe)
+// LAGERLISTE - EXPORT & IMPORT (KORRIGIERT)
 // ==========================================
 
-// 1. Export-Funktion
 function exportLagerCSV() {
-    let daten = typeof ladeDaten === "function" ? ladeDaten("lager") : null;
+    let daten = typeof getLager === "function" ? getLager() : null;
     
     if (!daten || !daten.length) {
-        const gespeicherte = localStorage.getItem("lager") || localStorage.getItem("ffw_lager");
-        if (gespeicherte) try { daten = JSON.parse(gespeicherte); } catch(e){}
+        daten = typeof ladeDaten === "function" ? ladeDaten("lager") : null;
     }
 
     if (!daten || daten.length === 0) {
@@ -375,33 +373,155 @@ function exportLagerCSV() {
         return;
     }
 
-    const headers = ["Kategorie", "Bezeichnung", "Größe", "Bestand", "Soll-Bestand", "Einheit", "Lagerort", "Status"];
+    const headers = ["Kategorie", "Bezeichnung", "Größe", "Bestand", "Mindestbestand", "Einheit", "Lagerort"];
 
     const rows = daten.map(item => [
         item.kategorie || "",
-        item.bezeichnung || item.name || item.artikel || "",
+        item.bezeichnung || item.name || "",
         item.groesse || item.größe || "",
         item.bestand !== undefined ? item.bestand : (item.menge || 0),
-        item.sollbestand !== undefined ? item.sollbestand : (item.soll || 0),
-        item.einheit || "Stk",
-        item.lagerort || item.ort || "",
-        item.status || "In Ordnung"
+        item.mindestbestand !== undefined ? item.mindestbestand : (item.sollbestand || item.soll || 0),
+        item.einheit || "Stk.",
+        item.lagerort || item.ort || ""
     ]);
 
-    if (typeof downloadCSV === "function") {
-        downloadCSV(`Lager_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
-    } else {
-        let csvContent = "\uFEFF" + headers.join(";") + "\n";
-        rows.forEach(r => {
-            csvContent += r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";") + "\n";
-        });
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Lager_Export_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
+    let csvContent = "\uFEFF" + headers.join(";") + "\n";
+    rows.forEach(r => {
+        csvContent += r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Lager_Export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+function importLagerCSV(inputElement) {
+    try {
+        const file = inputElement.files[0];
+        if (!file) return;
+
+        // Nutzt primär die getLager() aus deiner lager.js
+        let lagerDaten = typeof getLager === "function" ? getLager() : (typeof ladeDaten === "function" ? ladeDaten("lager") : []);
+
+        const reader = new FileReader();
+        reader.onerror = function() { alert("Fehler beim Lesen der Datei."); };
+
+        reader.onload = function(e) {
+            try {
+                let text = e.target.result;
+                if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1);
+
+                const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
+                if (zeilen.length < 2) {
+                    alert("Die Datei enthält keine Daten.");
+                    return;
+                }
+
+                const trenner = zeilen[0].includes(";") ? ";" : ",";
+                const rawHeaders = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+
+                const findIndex = (...keywords) => {
+                    return rawHeaders.findIndex(h => {
+                        const cleanH = h.replace(/[^a-z0-9]/g, '');
+                        return keywords.some(kw => cleanH.includes(kw.toLowerCase().replace(/[^a-z0-9]/g, '')));
+                    });
+                };
+
+                const idxKat = findIndex("kategorie", "kat");
+                const idxBez = findIndex("bezeichnung", "name", "artikel");
+                const idxGroesse = findIndex("groesse", "größe", "gr");
+                const idxBestand = findIndex("bestand", "menge", "ist");
+                const idxSoll = findIndex("mindest", "soll");
+                const idxEinheit = findIndex("einheit");
+                const idxOrt = findIndex("lagerort", "ort");
+
+                let aktualisiert = 0;
+                let neuHinzugefuegt = 0;
+
+                for (let i = 1; i < zeilen.length; i++) {
+                    const werte = zeilen[i]
+                        .split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
+                        .map(w => w.replace(/^"|"$/g, '').trim());
+
+                    if (werte.length === 0 || werte.every(v => v === "")) continue;
+
+                    const kategorie = idxKat !== -1 ? werte[idxKat] : werte[0] || "";
+                    const bezeichnung = idxBez !== -1 ? werte[idxBez] : werte[1] || "";
+                    const groesse = idxGroesse !== -1 ? werte[idxGroesse] : "";
+                    const bestand = idxBestand !== -1 ? werte[idxBestand] : "0";
+                    const mindestbestand = idxSoll !== -1 ? werte[idxSoll] : "0";
+                    const einheit = idxEinheit !== -1 ? werte[idxEinheit] : "Stk.";
+                    const lagerort = idxOrt !== -1 ? werte[idxOrt] : "";
+
+                    if (!bezeichnung) continue;
+
+                    // Exakter Abgleich nach Bezeichnung UND Größe
+                    const index = lagerDaten.findIndex(item => {
+                        if (!item) return false;
+                        const itemBez = String(item.bezeichnung || item.name || "").trim().toLowerCase();
+                        const itemGr = String(item.groesse || item.größe || "").trim().toLowerCase();
+                        return itemBez === bezeichnung.toLowerCase() && itemGr === groesse.toLowerCase();
+                    });
+
+                    const parsedBestand = parseFloat(bestand.replace(',', '.')) || 0;
+                    const parsedMindest = parseFloat(mindestbestand.replace(',', '.')) || 0;
+
+                    const neuesItem = {
+                        id: index !== -1 ? lagerDaten[index].id : `LAGER-${Date.now()}_${i}`,
+                        bezeichnung: bezeichnung,
+                        name: bezeichnung,
+                        kategorie: kategorie || (index !== -1 ? lagerDaten[index].kategorie : ""),
+                        groesse: groesse,
+                        größe: groesse,
+                        bestand: parsedBestand,
+                        menge: parsedBestand,
+                        mindestbestand: parsedMindest,
+                        sollbestand: parsedMindest,
+                        einheit: einheit || "Stk.",
+                        lagerort: lagerort || (index !== -1 ? lagerDaten[index].lagerort : ""),
+                        ort: lagerort || (index !== -1 ? lagerDaten[index].lagerort : ""),
+                        historie: index !== -1 ? (lagerDaten[index].historie || []) : []
+                    };
+
+                    if (index !== -1) {
+                        lagerDaten[index] = { ...lagerDaten[index], ...neuesItem };
+                        aktualisiert++;
+                    } else {
+                        lagerDaten.push(neuesItem);
+                        neuHinzugefuegt++;
+                    }
+                }
+
+                // WICHTIG: Nutzt speichereLager() & filterLager() aus lager.js zum Speichern und Aktualisieren der Sicht
+                if (typeof speichereLager === "function") {
+                    speichereLager(lagerDaten);
+                } else if (typeof speichereDaten === "function") {
+                    speichereDaten("lager", lagerDaten);
+                }
+
+                if (typeof filterLager === "function") {
+                    filterLager();
+                } else if (typeof renderLagerView === "function") {
+                    renderLagerView();
+                }
+
+                alert(`Lager-Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Artikel hinzugefügt\n- ${aktualisiert} bestehende Artikel aktualisiert`);
+                inputElement.value = "";
+            } catch (err) {
+                alert("Fehler beim Lager-Import:\n" + err.message);
+            }
+        };
+
+        reader.readAsText(file, "UTF-8");
+    } catch (err) {
+        alert("Fehler beim Starten des Lager-Imports:\n" + err.message);
     }
 }
+
+window.exportLagerCSV = exportLagerCSV;
+window.importLagerCSV = importLagerCSV;
 
 // 2. Import-Funktion
 function importLagerCSV(inputElement) {
