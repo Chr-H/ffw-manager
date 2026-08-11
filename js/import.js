@@ -167,13 +167,14 @@ function exportPSACSV() {
         return;
     }
 
-    const headers = ["Spind", "Name", "Bekleidung / Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
+    // Genau die Spaltenüberschriften, die deine App zeigt
+    const headers = ["Spind", "Träger", "Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
     let csvContent = "\uFEFF" + headers.join(";") + "\n";
 
     psaDaten.forEach(item => {
         const spind = String(item.spind || "").replace(/"/g, '""');
         const traeger = String(item.traeger || item.name || item.traegerName || "").replace(/"/g, '""');
-        const bekleidung = String(item.bekleidung || item.ausruestung || "").replace(/"/g, '""');
+        const ausruestung = String(item.bekleidung || item.ausruestung || "").replace(/"/g, '""');
         const groesse = String(item.groesse || "").replace(/"/g, '""');
         const seriennummer = String(item.seriennummer || item.sn || "").replace(/"/g, '""');
         const ausgabedatum = String(item.ausgabedatum || item.datum || "").replace(/"/g, '""');
@@ -183,7 +184,7 @@ function exportPSACSV() {
         const zeile = [
             `"${spind}"`,
             `"${traeger}"`,
-            `"${bekleidung}"`,
+            `"${ausruestung}"`,
             `"${groesse}"`,
             `"${seriennummer}"`,
             `"${ausgabedatum}"`,
@@ -203,7 +204,6 @@ function exportPSACSV() {
     link.click();
     document.body.removeChild(link);
 }
-
 
 // ==========================================
 // 2. GERÄTE IMPORT
