@@ -10,7 +10,7 @@ function getBenutzerListe() {
         const defaultAdmin = [{
             id: "USR-ADMIN-1",
             name: "Administrator",
-            email: "admin@feuerwehr.de",
+            email: "christian.holmer@online.de",
             rolle: "admin",
             status: "active",
             beantragtAm: new Date().toLocaleDateString("de-DE")
