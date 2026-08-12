@@ -33,6 +33,8 @@
                     <li onclick="zeigeSeite('lager')">📦 Lager</li>
                     <li onclick="zeigeSeite('personal')">👥 Personal</li>
                     <li onclick="zeigeSeite('auswertungen')">📊 Auswertungen</li>
+                    <!-- STELE 1: Menüpunkt hinzugefügt -->
+                    <li onclick="zeigeSeite('benutzer')">🔐 Rechte & Benutzer</li>
                     <li onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</li>
                 </ul>
             </nav>
@@ -96,6 +98,11 @@
                     <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
                         <h2>👥 Personal</h2>
                         <p>0 Mitglieder</p>
+                    </div>
+                    <!-- STELE 1b: Kachel im Dashboard ergänzt -->
+                    <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
+                        <h2>🔐 Rechte & Benutzer</h2>
+                        <p>Zugang & Rollen</p>
                     </div>
                 </div>
 
@@ -268,20 +275,20 @@
                 <div id="pruefungen-container" class="liste-container"></div>
             </section>
 
-<!-- ========================================= -->
-<!-- 6. LAGER BEREICH                          -->
-<!-- ========================================= -->
-<section id="seite-lager" class="seite-ansicht" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h2>📦 Lagerverwaltung</h2>
-        <div style="display: flex; gap: 10px;" class="no-print">
-            <button class="btn btn-secondary" onclick="exportLagerCSV()">📥 CSV Export</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📤 CSV Import</button>
-            <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
-        </div>
-    </div>
-    <div id="lager-container"></div>
-</section>
+            <!-- ========================================= -->
+            <!-- 6. LAGER BEREICH                          -->
+            <!-- ========================================= -->
+            <section id="seite-lager" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>📦 Lagerverwaltung</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button class="btn btn-secondary" onclick="exportLagerCSV()">📥 CSV Export</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📤 CSV Import</button>
+                        <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
+                    </div>
+                </div>
+                <div id="lager-container"></div>
+            </section>
 
             <!-- ========================================= -->
             <!-- 7. VERBLEIBENDE MODULE                    -->
@@ -294,6 +301,40 @@
                 <h2>📊 Auswertungen</h2>
                 <p>In Entwicklung...</p>
             </section>
+
+            <!-- STELLE 2: Modul-Sektion für Benutzer & Rechte hinzugefügt -->
+            <!-- ========================================= -->
+            <!-- 8. RECHTE & BENUTZER BEREICH              -->
+            <!-- ========================================= -->
+            <section id="seite-benutzer" class="seite-ansicht" style="display: none;">
+                <h2>🔐 Benutzer- & Rechteverwaltung</h2>
+                
+                <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
+                    <h3>Zugang zur Lagerverwaltung beantragen</h3>
+                    <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
+                            <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
+                            <input type="email" id="reqEmail" class="form-control" required placeholder="max@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
+                            <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
+                                <option value="viewer">Leserechte (z.B. Mannschaft)</option>
+                                <option value="editor">Schreibrechte (z.B. Gerätewart / Kleidungswart)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">Zugang beantragen</button>
+                    </form>
+                    <div id="requestStatusMessage" style="margin-top: 15px;"></div>
+                </div>
+
+                <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
+            </section>
+
             <section id="seite-einstellungen" class="seite-ansicht" style="display: none;">
                 <h2>⚙️ Einstellungen</h2>
                 <p>In Entwicklung...</p>
@@ -333,6 +374,8 @@
     <script src="js/psa.js?v=5"></script>
     <script src="js/lager.js?v=5"></script>
     <script src="js/pruefungen.js?v=5"></script>
+    <!-- STELLE 3: benutzer.js verlinkt -->
+    <script src="js/benutzer.js?v=5"></script>
     <script src="js/import.js?v=5"></script>
     <script src="js/app.js?v=5"></script>
 
@@ -372,6 +415,9 @@
             // Prüfungen
             if (typeof renderPruefungenView === "function") renderPruefungenView();
             else if (typeof ladePruefungen === "function") ladePruefungen();
+
+            // Benutzer & Rechte
+            if (typeof renderBenutzerVerwaltung === "function") renderBenutzerVerwaltung();
         });
     </script>
 </body>
