@@ -4,19 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFW Manager</title>
+    <title>FFW Manager - Albertsried</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#B71C1C">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑‍🚒</text></svg>">
+    <!-- STELE 1: PNG als Favicon -->
+    <link rel="icon" type="image/png" href="FFW Emblem_192_192 .png">
 </head>
 
 <body>
 
     <!-- Kopfbereich -->
     <header class="header">
-        <div class="logo">🚒 FFW Manager</div>
-        <div class="feuerwehr">Freiwillige Feuerwehr Musterstadt</div>
+        <!-- STELE 2: Logo und Ortsfeuerwehr angepasst -->
+        <div class="logo" style="display: flex; align-items: center; gap: 10px;">
+            <img src="FFW Emblem_192_192 .png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
+            <span>FFW Manager</span>
+        </div>
+        <div class="feuerwehr">Freiwillige Feuerwehr Albertsried</div>
     </header>
 
     <div class="container">
@@ -33,7 +38,6 @@
                     <li onclick="zeigeSeite('lager')">📦 Lager</li>
                     <li onclick="zeigeSeite('personal')">👥 Personal</li>
                     <li onclick="zeigeSeite('auswertungen')">📊 Auswertungen</li>
-                    <!-- STELE 1: Menüpunkt hinzugefügt -->
                     <li onclick="zeigeSeite('benutzer')">🔐 Rechte & Benutzer</li>
                     <li onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</li>
                 </ul>
@@ -99,7 +103,6 @@
                         <h2>👥 Personal</h2>
                         <p>0 Mitglieder</p>
                     </div>
-                    <!-- STELE 1b: Kachel im Dashboard ergänzt -->
                     <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
                         <h2>🔐 Rechte & Benutzer</h2>
                         <p>Zugang & Rollen</p>
@@ -201,7 +204,6 @@
                     </div>
                 </div>
 
-                <!-- Formular: Fahrzeug anlegen -->
                 <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                     <h3>➕ Neues Fahrzeug anlegen</h3>
                     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
@@ -220,7 +222,6 @@
                     </div>
                 </div>
 
-                <!-- Split-Layout -->
                 <div style="display:grid; grid-template-columns: 1fr 450px; gap:20px; align-items:start;">
                     <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                         <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
@@ -302,7 +303,6 @@
                 <p>In Entwicklung...</p>
             </section>
 
-            <!-- STELLE 2: Modul-Sektion für Benutzer & Rechte hinzugefügt -->
             <!-- ========================================= -->
             <!-- 8. RECHTE & BENUTZER BEREICH              -->
             <!-- ========================================= -->
@@ -310,7 +310,7 @@
                 <h2>🔐 Benutzer- & Rechteverwaltung</h2>
                 
                 <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
-                    <h3>Zugang zur Lagerverwaltung beantragen</h3>
+                    <h3>Zugang beantragen</h3>
                     <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
@@ -344,11 +344,10 @@
 
     </div>
 
-    <!-- 1. Firebase SDKs -->
+    <!-- Firebase SDKs & Konfiguration -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- 2. Firebase Konfiguration -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
@@ -366,7 +365,7 @@
         window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
     </script>
 
-    <!-- 3. Anwendungsskripte -->
+    <!-- Anwendungsskripte -->
     <script src="js/storage.js?v=5"></script>
     <script src="js/kategorien.js?v=5"></script>
     <script src="js/geraete.js?v=5"></script>
@@ -374,12 +373,11 @@
     <script src="js/psa.js?v=5"></script>
     <script src="js/lager.js?v=5"></script>
     <script src="js/pruefungen.js?v=5"></script>
-    <!-- STELLE 3: benutzer.js verlinkt -->
     <script src="js/benutzer.js?v=5"></script>
     <script src="js/import.js?v=5"></script>
     <script src="js/app.js?v=5"></script>
 
-    <!-- 4. Service Worker & Initialisierung -->
+    <!-- Service Worker & Initialisierung -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -403,20 +401,12 @@
             if (typeof starteCloudSync === "function") starteCloudSync();
             if (typeof filterGeraete === "function") filterGeraete();
             if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
-            
-            // PSA
             if (typeof renderPSAView === "function") renderPSAView();
             else if (typeof ladePSA === "function") ladePSA();
-
-            // Lager
             if (typeof renderLagerView === "function") renderLagerView();
             else if (typeof ladeLager === "function") ladeLager();
-
-            // Prüfungen
             if (typeof renderPruefungenView === "function") renderPruefungenView();
             else if (typeof ladePruefungen === "function") ladePruefungen();
-
-            // Benutzer & Rechte
             if (typeof renderBenutzerVerwaltung === "function") renderBenutzerVerwaltung();
         });
     </script>
