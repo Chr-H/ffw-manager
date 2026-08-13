@@ -2,13 +2,13 @@
 // RECHTE- & BENUTZERSTEUERUNG (Variante 2)
 // ==========================================
 
-// Master-Admin E-Mail festlegen (Sicherheits-Fallback)
+// Master-Admin E-Mail festlegen
 const MASTER_ADMIN_EMAIL = "deine-echte-admin-email@feuerwehr.de"; 
 
-// Aktueller Status in der Sitzung
-let aktuellerBenutzer = JSON.parse(localStorage.getItem('ffw_user')) || {
+// Aktueller Status in der Sitzung (sessionStorage gelöscht beim Schließen der App)
+let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
     email: "",
-    rolle: "gast", // gast, editor, admin
+    rolle: "gast",
     pin: ""
 };
 
@@ -22,12 +22,10 @@ function istEditor() {
 }
 
 function hatZugriffAufSensibleDaten() {
-    return istEditor(); // Nur Editoren & Admins sehen PSA & Personal
+    return istEditor();
 }
 
-// ------------------------------------------
-// UI ANPASSEN (Module sperren / freischalten)
-// ------------------------------------------
+// UI ANPASSEN
 function aktualisiereModulSichtbarkeit() {
     const sensibleModule = ['psa', 'personal', 'benutzer'];
     
@@ -36,7 +34,6 @@ function aktualisiereModulSichtbarkeit() {
         const dashboardCard = document.querySelector(`.card[onclick*="'${modulId}'"]`);
         
         if (!hatZugriffAufSensibleDaten()) {
-            // Für Gäste / Unangemeldete ausblenden oder sperren
             if (navEintrag) navEintrag.style.opacity = "0.4";
             if (dashboardCard) dashboardCard.style.opacity = "0.4";
         } else {
@@ -45,54 +42,59 @@ function aktualisiereModulSichtbarkeit() {
         }
     });
 
-    // Login/Status-Anzeige im Header aktualisieren
     renderLoginStatusHeader();
 }
 
-// ------------------------------------------
-// SEITEN-ZUGRIFFS-SCHUTZ (In zeigeSeite einbinden)
-// ------------------------------------------
+// SEITEN-ZUGRIFFS-SCHUTZ
 function pruefeSeitenZugriff(seiteId) {
     const geschuetzteSeiten = ['psa', 'personal', 'benutzer'];
     
     if (geschuetzteSeiten.includes(seiteId) && !hatZugriffAufSensibleDaten()) {
         zeigePinModal(seiteId);
-        return false; // Zugriff vorerst verweigern
+        return false;
     }
-    return true; // Zugriff erlaubt
+    return true;
 }
 
-// ------------------------------------------
 // PIN / PASSWORT ABFRAGE (MODAL)
-// ------------------------------------------
 function zeigePinModal(zielSeite) {
     const pin = prompt("🔐 Geschützter Bereich! Bitte PIN oder Passwort eingeben:");
     if (!pin) return;
 
-    // In Firestore nach passendem User mit dieser PIN/Passwort suchen
-    db.collection('benutzer').where('pin', '==', pin).get()
-        .then(snapshot => {
-            if (!snapshot.empty) {
-                const userData = snapshot.docs[0].data();
-                aktuellerBenutzer = {
-                    email: userData.email,
-                    rolle: userData.rolle,
-                    name: userData.name
-                };
-                localStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-                alert(`Willkommen, ${userData.name}!`);
-                aktualisiereModulSichtbarkeit();
-                zeigeSeite(zielSeite);
-            } else if (pin === "1122") { // Standard-Admin-Emergency PIN
-                aktuellerBenutzer = { email: MASTER_ADMIN_EMAIL, rolle: 'admin', name: 'Admin' };
-                localStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-                aktualisiereModulSichtbarkeit();
-                zeigeSeite(zielSeite);
-            } else {
-                alert("❌ Falsche PIN / Passwort!");
-            }
-        })
-        .catch(err => alert("Fehler bei der PIN-Prüfung: " + err.message));
+    if (window.db) {
+        db.collection('benutzer').where('pin', '==', pin).get()
+            .then(snapshot => {
+                if (!snapshot.empty) {
+                    const userData = snapshot.docs[0].data();
+                    aktuellerBenutzer = {
+                        email: userData.email,
+                        rolle: userData.rolle,
+                        name: userData.name
+                    };
+                    sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
+                    alert(`Willkommen, ${userData.name}!`);
+                    aktualisiereModulSichtbarkeit();
+                    if (zielSeite && zielSeite !== 'dashboard') zeigeSeite(zielSeite);
+                } else if (pin === "1122") { // Notfall-PIN für Haupt-Admin
+                    aktuellerBenutzer = { email: MASTER_ADMIN_EMAIL, rolle: 'admin', name: 'Admin' };
+                    sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
+                    aktualisiereModulSichtbarkeit();
+                    if (zielSeite && zielSeite !== 'dashboard') zeigeSeite(zielSeite);
+                } else {
+                    alert("❌ Falsche PIN / Passwort!");
+                }
+            })
+            .catch(err => alert("Fehler bei der PIN-Prüfung: " + err.message));
+    } else {
+        if (pin === "1122") {
+            aktuellerBenutzer = { email: MASTER_ADMIN_EMAIL, rolle: 'admin', name: 'Admin' };
+            sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
+            aktualisiereModulSichtbarkeit();
+            if (zielSeite && zielSeite !== 'dashboard') zeigeSeite(zielSeite);
+        } else {
+            alert("❌ Falsche PIN / Passwort!");
+        }
+    }
 }
 
 // Header-Statusanzeige
@@ -108,9 +110,54 @@ function renderLoginStatusHeader() {
 }
 
 function abmelden() {
-    localStorage.removeItem('ffw_user');
+    sessionStorage.removeItem('ffw_user');
     aktuellerBenutzer = { email: "", rolle: "gast", pin: "" };
     aktualisiereModulSichtbarkeit();
     zeigeSeite('dashboard');
-    alert("Erfolgreich abgemeldet. Das Tablet ist wieder im geschützten Gast-Modus.");
+}
+
+// ------------------------------------------
+// AUTOMATISCHE SPERRE BEI INAKTIVITÄT (5 MIN)
+// ------------------------------------------
+let inaktivitaetsTimer;
+
+function starteInaktivitaetsTimer() {
+    clearTimeout(inaktivitaetsTimer);
+    // 5 Minuten = 300.000 ms
+    inaktivitaetsTimer = setTimeout(() => {
+        if (istEditor()) {
+            abmelden();
+            alert("⏱️ Das Tablet wurde wegen Inaktivität automatisch gesperrt.");
+        }
+    }, 5 * 60 * 1000);
+}
+
+// Timer bei jeder Bildschirm-Interaktion zurücksetzen
+['click', 'touchstart', 'mousemove', 'keydown'].forEach(event => {
+    document.addEventListener(event, starteInaktivitaetsTimer);
+});
+
+function beantrageZugang(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('reqName').value;
+    const email = document.getElementById('reqEmail').value;
+    const wunschRolle = document.getElementById('reqWunschRolle').value;
+
+    if (window.db) {
+        db.collection('zugangsanfragen').add({
+            name: name,
+            email: email,
+            wunschRolle: wunschRolle,
+            status: 'ausstehend',
+            datum: new Date().toISOString()
+        }).then(() => {
+            document.getElementById('requestStatusMessage').innerText = "Antrag erfolgreich gesendet!";
+        }).catch(err => {
+            alert("Fehler beim Absenden: " + err.message);
+        });
+    }
+}
+
+function renderBenutzerVerwaltung() {
+    aktualisiereModulSichtbarkeit();
 }
