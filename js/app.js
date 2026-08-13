@@ -27,7 +27,7 @@ function zeigeSeite(seiteId) {
         console.warn(`Seite mit ID 'seite-${modul}' wurde nicht gefunden.`);
         return;
     }
-}
+
 
     // 4. Modul-spezifisches Rendern / Aktualisieren ausführen
     switch (modul) {
