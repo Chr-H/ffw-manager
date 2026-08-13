@@ -7,12 +7,19 @@ function zeigeSeite(seiteId) {
     // 1. Parameter bereinigen (falls 'seite-dashboard' statt 'dashboard' übergeben wurde)
     const modul = seiteId.replace('seite-', '');
 
-    // 2. Alle Seiten ausblenden
+    // 2. Rechte-Prüfung vorschalten (Sperrt PSA, Personal, Rechte & Benutzer für unangemeldete Gäste)
+    if (typeof pruefeSeitenZugriff === "function") {
+        if (!pruefeSeitenZugriff(modul)) {
+            return; // bricht ab, wenn PIN/Passwort fehlt oder falsch war
+        }
+    }
+
+    // 3. Alle Seiten ausblenden
     document.querySelectorAll('.seite-ansicht').forEach(s => {
         s.style.display = 'none';
     });
 
-    // 3. Zielseite einblenden
+    // 4. Zielseite einblenden
     const ziel = document.getElementById('seite-' + modul);
     if (ziel) {
         ziel.style.display = 'block';
@@ -20,6 +27,7 @@ function zeigeSeite(seiteId) {
         console.warn(`Seite mit ID 'seite-${modul}' wurde nicht gefunden.`);
         return;
     }
+}
 
     // 4. Modul-spezifisches Rendern / Aktualisieren ausführen
     switch (modul) {
