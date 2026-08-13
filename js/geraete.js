@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.2)
+// FFW Manager - Geräteverwaltung (v0.6.3)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -22,6 +22,15 @@ function formatiereDatum(datumStr) {
     const teile = datumStr.split('-');
     if (teile.length !== 3) return datumStr;
     return `${teile[2]}.${teile[1]}.${teile[0]}`;
+}
+
+// Hilfsfunktion: Aktuellen Benutzer-String für Protokollierung abrufen
+function hohleBenutzerProtokollText() {
+    if (typeof aktuellerBenutzer !== "undefined" && aktuellerBenutzer && aktuellerBenutzer.rolle !== "gast") {
+        const name = aktuellerBenutzer.name || aktuellerBenutzer.email || "Benutzer";
+        return `${name} (${aktuellerBenutzer.rolle.toUpperCase()})`;
+    }
+    return "Unbekannt / Admin";
 }
 
 function ladeGeraete() {
@@ -57,6 +66,12 @@ function berechneNaechstePruefung(datumStr, intervallMonate) {
 }
 
 function neuesGeraet() {
+    // 1. SCHREIBSCHUTZ-PRÜFUNG
+    if (typeof istEditor === "function" && !istEditor()) {
+        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Geräte anzulegen oder zu bearbeiten.");
+        return;
+    }
+
     const elInv = document.getElementById("inventar");
     const elBez = document.getElementById("bezeichnung");
     const elKat = document.getElementById("kategorie");
@@ -95,6 +110,8 @@ function neuesGeraet() {
     }
 
     const naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
+    const protokollUser = hohleBenutzerProtokollText();
+    const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
 
     if (bearbeitungsId !== null) {
         const index = geraete.findIndex(g => g.id === bearbeitungsId);
@@ -110,7 +127,8 @@ function neuesGeraet() {
                 erstinbetriebnahme: erstinbetriebnahme,
                 letztePruefung: letztePruefung,
                 pruefintervall: parseInt(pruefintervall),
-                naechstePruefung: naechstePruefung
+                naechstePruefung: naechstePruefung,
+                bearbeitetVon: `${protokollUser} (am ${jetztZeitstempel})`
             };
         }
     } else {
@@ -126,8 +144,10 @@ function neuesGeraet() {
             letztePruefung: letztePruefung,
             pruefintervall: parseInt(pruefintervall),
             naechstePruefung: naechstePruefung,
-            historie: letztePruefung ? [{ datum: letztePruefung, ergebnis: "Initialprüfung", pruefer: "System" }] : [],
-            erstellt: new Date().toLocaleDateString("de-DE")
+            historie: letztePruefung ? [{ datum: letztePruefung, ergebnis: "Initialprüfung", pruefer: protokollUser }] : [],
+            erstellt: jetztZeitstempel,
+            erstelltVon: `${protokollUser} (am ${jetztZeitstempel})`,
+            bearbeitetVon: `${protokollUser} (am ${jetztZeitstempel})`
         };
         geraete.push(neuesG);
     }
@@ -268,6 +288,12 @@ function zeigeGeraeteDetails(id) {
         <p><strong>Status:</strong> ${escapeHtml(g.status)}</p>
         <p><strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span></p>
         
+        <!-- AUDIT LOG (WER HAT ERSTELLT / BEARBEITET) -->
+        <div style="font-size: 0.8rem; color: #555; background: #f8f9fa; border-left: 3px solid #007bff; padding: 6px 8px; margin: 10px 0;">
+            <div><strong>Erstellt von:</strong> ${escapeHtml(g.erstelltVon || 'Unbekannt (Altbestand)')}</div>
+            <div><strong>Zuletzt bearbeitet:</strong> ${escapeHtml(g.bearbeitetVon || ' Keine Änderungen')}</div>
+        </div>
+
         <hr style="margin:15px 0;">
         <h4>📜 Prüfhistorie</h4>
         <ul style="list-style:none; padding-left:0; margin:10px 0; max-height: 180px; overflow-y: auto;">
@@ -284,11 +310,21 @@ function zeigeGeraeteDetails(id) {
 }
 
 function fuegePruefungHinzu(id) {
+    // SCHREIBSCHUTZ-PRÜFUNG
+    if (typeof istEditor === "function" && !istEditor()) {
+        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Prüfungen zu protokollieren.");
+        return;
+    }
+
     const elDatum = document.getElementById("neuesPruefDatum");
     const elPruefer = document.getElementById("prueferName");
 
     const datum = elDatum ? elDatum.value : "";
-    const pruefer = elPruefer ? elPruefer.value.trim() : "Unbekannt";
+    let pruefer = elPruefer ? elPruefer.value.trim() : "";
+    
+    if (!pruefer) {
+        pruefer = hohleBenutzerProtokollText();
+    }
 
     if (!datum) {
         alert("Bitte ein Prüfdatum angeben.");
@@ -308,8 +344,12 @@ function fuegePruefungHinzu(id) {
             pruefer: pruefer
         });
 
+        const protokollUser = hohleBenutzerProtokollText();
+        const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
+
         g.letztePruefung = datum;
         g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
+        g.bearbeitetVon = `${protokollUser} (Prüfung am ${jetztZeitstempel})`;
 
         speichereGeraete();
         filterGeraete();
@@ -318,6 +358,12 @@ function fuegePruefungHinzu(id) {
 }
 
 function bearbeiteGeraet(id) {
+    // SCHREIBSCHUTZ-PRÜFUNG
+    if (typeof istEditor === "function" && !istEditor()) {
+        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Geräte zu bearbeiten.");
+        return;
+    }
+
     const g = geraete.find(item => item.id === id);
     if (!g) return;
 
@@ -340,6 +386,12 @@ function bearbeiteGeraet(id) {
 }
 
 function loescheGeraet(id) {
+    // SCHREIBSCHUTZ-PRÜFUNG
+    if (typeof istEditor === "function" && !istEditor()) {
+        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Geräte zu löschen.");
+        return;
+    }
+
     if (!confirm("Soll dieses Gerät wirklich gelöscht werden?")) return;
 
     geraete = geraete.filter(g => g.id !== id);
@@ -352,7 +404,6 @@ function loescheGeraet(id) {
     }
 }
 
-// Direct CSV Export direkt im Modul
 function exportGeraeteCSV() {
     const daten = getGeraete();
 
@@ -361,7 +412,7 @@ function exportGeraeteCSV() {
         return;
     }
 
-    const headers = ["ID", "Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Status", "Letzte Prüfung", "Nächste Prüfung"];
+    const headers = ["ID", "Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Status", "Letzte Prüfung", "Nächste Prüfung", "Erstellt Von", "Bearbeitet Von"];
     const rows = daten.map(g => [
         g.id || '',
         g.inventarnummer || '',
@@ -371,7 +422,9 @@ function exportGeraeteCSV() {
         g.standort || '',
         g.status || '',
         g.letztePruefung || '',
-        g.naechstePruefung || ''
+        g.naechstePruefung || '',
+        g.erstelltVon || '',
+        g.bearbeitetVon || ''
     ]);
 
     const heute = new Date().toISOString().split('T')[0];
@@ -379,7 +432,6 @@ function exportGeraeteCSV() {
     if (typeof window.downloadCSV === "function") {
         window.downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
     } else {
-        // Fallback falls downloadCSV nicht global vorhanden ist
         const csvLines = [headers.join(";")];
         rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
         const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
@@ -442,42 +494,3 @@ window.loescheGeraet = loescheGeraet;
 window.exportGeraeteCSV = exportGeraeteCSV;
 window.renderGeraeteView = renderGeraeteView;
 window.filtereGeraeteNachDashboard = filtereGeraeteNachDashboard;
-
-// CSV Export der Geräteliste
-function exportGeraeteCSV() {
-    const daten = typeof getGeraete === "function" ? getGeraete() : (ladeDaten("geraete") || []);
-
-    if (!Array.isArray(daten) || daten.length === 0) {
-        alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
-        return;
-    }
-
-    const headers = ["Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Erstinbetriebnahme", "Letzte Prüfung", "Nächste Prüfung", "Status"];
-    const rows = daten.map(g => [
-        g.inventarnummer || '',
-        g.bezeichnung || '',
-        g.kategorie || '',
-        g.hersteller || '',
-        g.standort || '',
-        g.erstinbetriebnahme || '',
-        g.letztePruefung || '',
-        g.naechstePruefung || '',
-        g.status || ''
-    ]);
-
-    const heute = new Date().toISOString().split('T')[0];
-
-    if (typeof window.downloadCSV === "function") {
-        window.downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
-    } else {
-        const csvLines = [headers.join(";")];
-        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
-        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Geraeteliste_FFW_${heute}.csv`;
-        link.click();
-    }
-}
-
-window.exportGeraeteCSV = exportGeraeteCSV;
