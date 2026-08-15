@@ -1,5 +1,5 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (Variante 2)
+// RECHTE- & BENUTZERSTEUERUNG (v0.7.0)
 // ==========================================
 
 // Master-Admin E-Mail festlegen
@@ -7,9 +7,9 @@ const MASTER_ADMIN_EMAIL = "deine-echte-admin-email@feuerwehr.de";
 
 // Aktueller Status in der Sitzung (sessionStorage gelöscht beim Schließen der App)
 let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
+    name: "",
     email: "",
-    rolle: "gast",
-    pin: ""
+    rolle: "gast"
 };
 
 // Prüffunktionen für Berechtigungen
@@ -56,48 +56,186 @@ function pruefeSeitenZugriff(seiteId) {
     return true;
 }
 
-// PIN / PASSWORT ABFRAGE (MODAL)
+// ANMELDUNG MIT INDIVIDUELLER PIN / BENUTZERNAME
 function zeigePinModal(zielSeite) {
-    const pin = prompt("🔐 Geschützter Bereich! Bitte PIN oder Passwort eingeben:");
+    const emailOderName = prompt("👤 Bitte Benutzername oder E-Mail-Adresse eingeben:");
+    if (!emailOderName) return;
+
+    const pin = prompt("🔐 Bitte deine persönliche PIN eingeben:");
     if (!pin) return;
 
     if (window.db) {
-        db.collection('benutzer').where('pin', '==', pin).get()
+        db.collection('benutzer')
+            .get()
             .then(snapshot => {
-                if (!snapshot.empty) {
-                    const userData = snapshot.docs[0].data();
+                let treffer = null;
+                const eingabeKennung = emailOderName.trim().toLowerCase();
+                const eingabePin = pin.trim();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const userEmail = (d.email || "").trim().toLowerCase();
+                    const userName = (d.name || "").trim().toLowerCase();
+                    const userPin = String(d.pin || "").trim();
+
+                    if ((userEmail === eingabeKennung || userName === eingabeKennung) && userPin === eingabePin) {
+                        treffer = { id: doc.id, ...d };
+                    }
+                });
+
+                if (treffer) {
                     aktuellerBenutzer = {
-                        email: userData.email,
-                        rolle: userData.rolle,
-                        name: userData.name
+                        name: treffer.name,
+                        email: treffer.email,
+                        rolle: treffer.rolle || 'viewer'
                     };
+                    
                     sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-                    alert(`Willkommen, ${userData.name}!`);
+                    alert(`Willkommen, ${treffer.name}!\nErfolgreich angemeldet als ${treffer.rolle.toUpperCase()}.`);
+                    
                     aktualisiereModulSichtbarkeit();
-                    if (zielSeite && zielSeite !== 'dashboard') zeigeSeite(zielSeite);
-                } else if (pin === "1122") { // Notfall-PIN für Haupt-Admin
-                    aktuellerBenutzer = { email: MASTER_ADMIN_EMAIL, rolle: 'admin', name: 'Admin' };
-                    sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-                    aktualisiereModulSichtbarkeit();
-                    if (zielSeite && zielSeite !== 'dashboard') zeigeSeite(zielSeite);
+                    if (zielSeite && zielSeite !== 'dashboard') {
+                        zeigeSeite(zielSeite);
+                    } else {
+                        zeigeSeite('dashboard');
+                    }
                 } else {
-                    alert("❌ Falsche PIN / Passwort!");
+                    alert("❌ Ungültige Kombination aus Benutzername/E-Mail und PIN oder Konto noch nicht freigeschaltet!");
                 }
             })
-            .catch(err => alert("Fehler bei der PIN-Prüfung: " + err.message));
+            .catch(err => alert("Fehler beim Login: " + err.message));
     } else {
-        if (pin === "1122") {
-            aktuellerBenutzer = { email: MASTER_ADMIN_EMAIL, rolle: 'admin', name: 'Admin' };
-            sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-            aktualisiereModulSichtbarkeit();
-            if (zielSeite && zielSeite !== 'dashboard') zeigeSeite(zielSeite);
-        } else {
-            alert("❌ Falsche PIN / Passwort!");
-        }
+        alert("⚠️ Keine Datenbankverbindung verfügbar!");
     }
 }
 
-// Header-Statusanzeige
+// ZUGANGS-ANTRAG SENDEN
+function beantrageZugang(e) {
+    if (e) e.preventDefault();
+    
+    const name = document.getElementById('reqName').value.trim();
+    const email = document.getElementById('reqEmail').value.trim();
+    const pin = document.getElementById('reqPin').value.trim();
+    const wunschRolle = document.getElementById('reqWunschRolle').value;
+
+    if (!name || !email || !pin) {
+        alert("Bitte Name, E-Mail und PIN vollständig ausfüllen!");
+        return;
+    }
+
+    if (window.db) {
+        db.collection('zugangsanfragen').add({
+            name: name,
+            email: email,
+            pin: pin,
+            wunschRolle: wunschRolle,
+            status: 'ausstehend',
+            datum: new Date().toISOString()
+        }).then(() => {
+            const statusMsg = document.getElementById('requestStatusMessage');
+            if (statusMsg) {
+                statusMsg.style.color = "green";
+                statusMsg.innerText = "Antrag erfolgreich gesendet! Der Admin muss deinen Zugang freischalten.";
+            }
+            
+            document.getElementById('reqName').value = "";
+            document.getElementById('reqEmail').value = "";
+            document.getElementById('reqPin').value = "";
+        }).catch(err => {
+            alert("Fehler beim Absenden: " + err.message);
+        });
+    }
+}
+
+// RENDER-FUNKTION FÜR DEN BENUTZERBEREICH
+function renderBenutzerVerwaltung() {
+    aktualisiereModulSichtbarkeit();
+    if (istAdmin()) {
+        ladeZugangsanfragen();
+    }
+}
+
+// ANTRÄGE IM ADMIN-PANEL ANZEIGEN & VERWALTEN
+function ladeZugangsanfragen() {
+    const container = document.getElementById("benutzer-verwaltung-container");
+    if (!container || !window.db) return;
+
+    db.collection('zugangsanfragen').where('status', '==', 'ausstehend').get()
+        .then(snapshot => {
+            if (snapshot.empty) {
+                container.innerHTML = "<h3>Offene Zugangsanträge</h3><p>Keine offenen Anträge vorhanden.</p>";
+                return;
+            }
+
+            let html = `<h3>Offene Zugangsanträge (${snapshot.size})</h3>
+            <table class="table" style="width:100%; border-collapse: collapse; margin-top:10px;">
+                <thead>
+                    <tr style="background:#f2f2f2; text-align:left;">
+                        <th style="padding:8px;">Name</th>
+                        <th style="padding:8px;">E-Mail</th>
+                        <th style="padding:8px;">Gewünschte Rolle</th>
+                        <th style="padding:8px;">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                html += `
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding:8px;"><strong>${d.name || '-'}</strong></td>
+                    <td style="padding:8px;">${d.email || '-'}</td>
+                    <td style="padding:8px;">${d.wunschRolle || 'viewer'}</td>
+                    <td style="padding:8px;">
+                        <button class="btn btn-primary" style="background:#28a745; border:none; padding:5px 10px; color:#fff; border-radius:3px; cursor:pointer;" onclick="genehmigeAntrag('${doc.id}', '${d.name}', '${d.email}', '${d.pin}', '${d.wunschRolle}')">✅ Freischalten</button>
+                        <button class="btn btn-danger" style="background:#dc3545; border:none; padding:5px 10px; color:#fff; border-radius:3px; cursor:pointer;" onclick="lehneAntragAb('${doc.id}')">❌ Ablehnen</button>
+                    </td>
+                </tr>`;
+            });
+
+            html += "tbody></table>";
+            container.innerHTML = html;
+        })
+        .catch(err => {
+            console.error("Fehler beim Laden der Anträge: ", err);
+        });
+}
+
+function genehmigeAntrag(requestId, name, email, pin, rolle) {
+    if (!confirm(`Soll der Zugang für ${name} als ${rolle.toUpperCase()} freigeschaltet werden?`)) return;
+
+    if (window.db) {
+        // 1. Benutzerkonto in 'benutzer' anlegen
+        db.collection('benutzer').add({
+            name: name,
+            email: email,
+            pin: pin,
+            rolle: rolle,
+            erstelltAm: new Date().toISOString()
+        }).then(() => {
+            // 2. Status der Anfrage auf 'genehmigt' setzen
+            return db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
+        }).then(() => {
+            alert(`Zugang für ${name} wurde erfolgreich aktiviert!`);
+            ladeZugangsanfragen();
+        }).catch(err => alert("Fehler bei der Freischaltung: " + err.message));
+    }
+}
+
+function lehneAntragAb(requestId) {
+    if (!confirm("Soll dieser Antrag wirklich abgelehnt werden?")) return;
+
+    if (window.db) {
+        db.collection('zugangsanfragen').doc(requestId).update({ status: 'abgelehnt' })
+            .then(() => {
+                alert("Antrag wurde abgelehnt.");
+                ladeZugangsanfragen();
+            })
+            .catch(err => alert("Fehler beim Ablehnen: " + err.message));
+    }
+}
+
+// HEADER STATUSZEILE RENDEREN
 function renderLoginStatusHeader() {
     let headerRight = document.querySelector('.feuerwehr');
     if (!headerRight) return;
@@ -111,7 +249,7 @@ function renderLoginStatusHeader() {
 
 function abmelden() {
     sessionStorage.removeItem('ffw_user');
-    aktuellerBenutzer = { email: "", rolle: "gast", pin: "" };
+    aktuellerBenutzer = { name: "", email: "", rolle: "gast" };
     aktualisiereModulSichtbarkeit();
     zeigeSeite('dashboard');
 }
@@ -137,27 +275,15 @@ function starteInaktivitaetsTimer() {
     document.addEventListener(event, starteInaktivitaetsTimer);
 });
 
-function beantrageZugang(e) {
-    if (e) e.preventDefault();
-    const name = document.getElementById('reqName').value;
-    const email = document.getElementById('reqEmail').value;
-    const wunschRolle = document.getElementById('reqWunschRolle').value;
-
-    if (window.db) {
-        db.collection('zugangsanfragen').add({
-            name: name,
-            email: email,
-            wunschRolle: wunschRolle,
-            status: 'ausstehend',
-            datum: new Date().toISOString()
-        }).then(() => {
-            document.getElementById('requestStatusMessage').innerText = "Antrag erfolgreich gesendet!";
-        }).catch(err => {
-            alert("Fehler beim Absenden: " + err.message);
-        });
-    }
-}
-
-function renderBenutzerVerwaltung() {
-    aktualisiereModulSichtbarkeit();
-}
+// Globale Freigaben für HTML-Events
+window.istAdmin = istAdmin;
+window.istEditor = istEditor;
+window.hatZugriffAufSensibleDaten = hatZugriffAufSensibleDaten;
+window.aktualisiereModulSichtbarkeit = aktualisiereModulSichtbarkeit;
+window.pruefeSeitenZugriff = pruefeSeitenZugriff;
+window.zeigePinModal = zeigePinModal;
+window.beantrageZugang = beantrageZugang;
+window.renderBenutzerVerwaltung = renderBenutzerVerwaltung;
+window.abmelden = abmelden;
+window.genehmigeAntrag = genehmigeAntrag;
+window.lehneAntragAb = lehneAntragAb;
