@@ -1,8 +1,7 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (v0.7.2)
+// RECHTE- & BENUTZERSTEUERUNG (v0.7.3)
 // ==========================================
 
-// Master-Admin E-Mail festlegen
 const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
 
 // Aktueller Status in der Sitzung
@@ -12,22 +11,26 @@ let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
     rolle: "gast"
 };
 
-// Prüffunktionen für Berechtigungen
+// Prüffunktionen für Berechtigungen (Tolerant gegenüber Groß-/Kleinschreibung)
 function istAdmin() {
-    return aktuellerBenutzer.rolle === 'admin' || aktuellerBenutzer.email === MASTER_ADMIN_EMAIL;
+    if (!aktuellerBenutzer) return false;
+    const r = (aktuellerBenutzer.rolle || "").toLowerCase();
+    const e = (aktuellerBenutzer.email || "").toLowerCase();
+    return r === 'admin' || e === MASTER_ADMIN_EMAIL.toLowerCase();
 }
 
 function istEditor() {
-    return istAdmin() || aktuellerBenutzer.rolle === 'editor';
+    if (!aktuellerBenutzer) return false;
+    const r = (aktuellerBenutzer.rolle || "").toLowerCase();
+    return istAdmin() || r === 'editor';
 }
 
 function hatZugriffAufSensibleDaten() {
     return istEditor();
 }
 
-// UI ANPASSEN (Modul-Sichtbarkeiten in Nav & Dashboard)
+// UI ANPASSEN
 function aktualisiereModulSichtbarkeit() {
-    // Nur geschützte Module ausgrauen – 'benutzer' bleibt für Zugangsanträge frei zugänglich
     const sensibleModule = ['psa', 'personal']; 
     
     sensibleModule.forEach(modulId => {
@@ -57,7 +60,7 @@ function pruefeSeitenZugriff(seiteId) {
     return true;
 }
 
-// ANMELDUNG MIT INDIVIDUELLER PIN / BENUTZERNAME
+// ANMELDUNG MIT PIN / BENUTZERNAME
 function zeigePinModal(zielSeite) {
     const emailOderName = prompt("👤 Bitte Benutzername oder E-Mail-Adresse eingeben:");
     if (!emailOderName) return;
@@ -88,11 +91,11 @@ function zeigePinModal(zielSeite) {
                     aktuellerBenutzer = {
                         name: treffer.name,
                         email: treffer.email,
-                        rolle: treffer.rolle || 'viewer'
+                        rolle: (treffer.rolle || 'viewer').toLowerCase()
                     };
                     
                     sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-                    alert(`Willkommen, ${treffer.name}!\nErfolgreich angemeldet als ${treffer.rolle.toUpperCase()}.`);
+                    alert(`Willkommen, ${treffer.name}!\nErfolgreich angemeldet als ${aktuellerBenutzer.rolle.toUpperCase()}.`);
                     
                     aktualisiereModulSichtbarkeit();
                     if (zielSeite && zielSeite !== 'dashboard') {
@@ -117,7 +120,7 @@ function beantrageZugang(e) {
     const name = document.getElementById('reqName').value.trim();
     const email = document.getElementById('reqEmail').value.trim();
     const pin = document.getElementById('reqPin').value.trim();
-    const wunschRolle = document.getElementById('reqWunschRolle').value;
+    const wunschRolle = document.getElementById('reqWunschRolle').value.toLowerCase();
 
     if (!name || !email || !pin) {
         alert("Bitte Name, E-Mail und PIN vollständig ausfüllen!");
@@ -170,7 +173,7 @@ function renderBenutzerVerwaltung() {
     }
 }
 
-// LÄDT SOWOHL OFFENE ANTRÄGE ALS AUCH AKTIVE BENUTZER
+// LÄDT ANTRÄGE & KAMERADEN
 function ladeAdminAnsicht() {
     const container = document.getElementById("benutzer-verwaltung-container");
     if (!container || !window.db) return;
@@ -219,7 +222,7 @@ function ladeZugangsanfragen() {
                     <tr style="border-bottom: 1px solid #ddd;">
                         <td style="padding:8px;"><strong>${d.name || '-'}</strong></td>
                         <td style="padding:8px;">${d.email || '-'}</td>
-                        <td style="padding:8px;">${d.wunschRolle || 'viewer'}</td>
+                        <td style="padding:8px;">${(d.wunschRolle || 'viewer').toUpperCase()}</td>
                         <td style="padding:8px;">
                             <button style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="genehmigeAntrag('${doc.id}', '${d.name}', '${d.email}', '${d.pin}', '${d.wunschRolle}')">✅ Freischalten</button>
                             <button style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="lehneAntragAb('${doc.id}')">❌ Ablehnen</button>
@@ -238,14 +241,14 @@ function ladeZugangsanfragen() {
 
 // FREISCHALTEN
 function genehmigeAntrag(requestId, name, email, pin, rolle) {
-    if (!confirm(`Soll der Zugang für ${name} als ${rolle.toUpperCase()} freigeschaltet werden?`)) return;
+    if (!confirm(`Soll der Zugang für ${name} als ${(rolle || 'viewer').toUpperCase()} freigeschaltet werden?`)) return;
 
     if (window.db) {
         db.collection('benutzer').add({
             name: name,
             email: email,
             pin: pin,
-            rolle: rolle,
+            rolle: (rolle || 'viewer').toLowerCase(),
             erstelltAm: new Date().toISOString()
         }).then(() => {
             return db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
@@ -280,7 +283,7 @@ function ladeAktiveBenutzer() {
             let html = `<h3>Freigeschaltete Kameraden (${snapshot.size})</h3>`;
             
             if (snapshot.empty) {
-                html += "<p style='color:#666;'>Keine aktiven Benutzer in der Datenbank gefunden.</p>";
+                html += "<p style='color:#666;'>Keine aktiven Benutzer in der Datenbank vorhanden.</p>";
             } else {
                 html += `
                 <table class="table" style="width:100%; border-collapse: collapse; margin-top:10px;">
@@ -296,15 +299,17 @@ function ladeAktiveBenutzer() {
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    const currentRole = (d.rolle || 'viewer').toLowerCase();
+
                     html += `
                     <tr style="border-bottom: 1px solid #ddd;">
                         <td style="padding:8px;"><strong>${d.name || '-'}</strong></td>
                         <td style="padding:8px;">${d.email || '-'}</td>
                         <td style="padding:8px;">
                             <select onchange="aendereBenutzerRolle('${doc.id}', this.value)" style="padding:5px; border-radius:3px; font-weight:bold;">
-                                <option value="admin" ${d.rolle === 'admin' ? 'selected' : ''}>Admin</option>
-                                <option value="editor" ${d.rolle === 'editor' ? 'selected' : ''}>Editor</option>
-                                <option value="viewer" ${d.rolle === 'viewer' ? 'selected' : ''}>Viewer (Gast)</option>
+                                <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>Admin</option>
+                                <option value="editor" ${currentRole === 'editor' ? 'selected' : ''}>Editor</option>
+                                <option value="viewer" ${currentRole === 'viewer' ? 'selected' : ''}>Viewer (Gast)</option>
                             </select>
                         </td>
                         <td style="padding:8px;">
@@ -325,8 +330,12 @@ function ladeAktiveBenutzer() {
 // ROLLE BEARBEITEN / ÄNDERN
 function aendereBenutzerRolle(userId, neueRolle) {
     if (!window.db) return;
-    db.collection('benutzer').doc(userId).update({ rolle: neueRolle })
-        .then(() => alert("✅ Rolle erfolgreich aktualisiert!"))
+
+    db.collection('benutzer').doc(userId).update({ rolle: neueRolle.toLowerCase() })
+        .then(() => {
+            alert("✅ Rolle erfolgreich aktualisiert!");
+            ladeAktiveBenutzer();
+        })
         .catch(err => alert("Fehler beim Aktualisieren: " + err.message));
 }
 
@@ -349,7 +358,7 @@ function renderLoginStatusHeader() {
     if (!headerRight) return;
     
     const statusText = istEditor() 
-        ? `👤 ${aktuellerBenutzer.name || 'Angemeldet'} (${aktuellerBenutzer.rolle.toUpperCase()}) <a href="javascript:void(0)" onclick="abmelden()" style="color:#fff; margin-left:10px; font-size:12px;">[Abmelden]</a>`
+        ? `👤 ${aktuellerBenutzer.name || 'Angemeldet'} (${(aktuellerBenutzer.rolle || 'admin').toUpperCase()}) <a href="javascript:void(0)" onclick="abmelden()" style="color:#fff; margin-left:10px; font-size:12px;">[Abmelden]</a>`
         : `🔒 Tablet-Modus (Gast) <a href="javascript:void(0)" onclick="zeigePinModal('dashboard')" style="color:#fff; margin-left:10px; font-size:12px;">[Anmelden]</a>`;
         
     headerRight.innerHTML = `Freiwillige Feuerwehr Albertsried <br><small style="font-size:12px; opacity:0.9;">${statusText}</small>`;
@@ -364,9 +373,7 @@ function abmelden() {
     }
 }
 
-// ------------------------------------------
 // AUTOMATISCHE SPERRE BEI INAKTIVITÄT (5 MIN)
-// ------------------------------------------
 let inaktivitaetsTimer;
 
 function starteInaktivitaetsTimer() {
@@ -379,12 +386,11 @@ function starteInaktivitaetsTimer() {
     }, 5 * 60 * 1000);
 }
 
-// Timer bei jeder Bildschirm-Interaktion zurücksetzen
 ['click', 'touchstart', 'mousemove', 'keydown'].forEach(event => {
     document.addEventListener(event, starteInaktivitaetsTimer);
 });
 
-// Globale Freigaben für HTML-Events
+// Globale Freigaben
 window.istAdmin = istAdmin;
 window.istEditor = istEditor;
 window.hatZugriffAufSensibleDaten = hatZugriffAufSensibleDaten;
