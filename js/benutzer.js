@@ -1,5 +1,5 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (v0.7.3)
+// RECHTE- & BENUTZERSTEUERUNG (v0.7.4)
 // ==========================================
 
 const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
@@ -113,7 +113,7 @@ function zeigePinModal(zielSeite) {
     }
 }
 
-// ZUGANGS-ANTRAG SENDEN
+// ZUGANGS-ANTRAG SENDEN (Variante 2)
 function beantrageZugang(e) {
     if (e) e.preventDefault();
     
@@ -159,15 +159,13 @@ function renderBenutzerVerwaltung() {
     const adminContainer = document.getElementById("benutzer-verwaltung-container");
 
     if (istAdmin()) {
-        // Admin-Ansicht: Formular ausblenden (oder "block" lassen, falls gewünscht)
         if (regForm) regForm.style.display = "none"; 
         
         if (adminContainer) {
             adminContainer.style.display = "block";
-            ladeAdminAnsicht(); // Lädt Anträge und freigeschaltete Kameraden
+            ladeAdminAnsicht();
         }
     } else {
-        // Gast/Viewer-Ansicht: Nur Antragsformular zeigen, Admin-Tabellen ausblenden
         if (regForm) regForm.style.display = "block";
         
         if (adminContainer) {
@@ -243,23 +241,49 @@ function ladeZugangsanfragen() {
         });
 }
 
-// FREISCHALTEN
+// FREISCHALTEN (Prüft ob Nutzer bereits existiert & aktualisiert ihn in dem Fall)
 function genehmigeAntrag(requestId, name, email, pin, rolle) {
     if (!confirm(`Soll der Zugang für ${name} als ${(rolle || 'viewer').toUpperCase()} freigeschaltet werden?`)) return;
 
     if (window.db) {
-        db.collection('benutzer').add({
-            name: name,
-            email: email,
-            pin: pin,
-            rolle: (rolle || 'viewer').toLowerCase(),
-            erstelltAm: new Date().toISOString()
-        }).then(() => {
+        const cleanEmail = email.trim().toLowerCase();
+
+        db.collection('benutzer').get().then(snapshot => {
+            let bestehenderUserDoc = null;
+
+            snapshot.forEach(doc => {
+                if ((doc.data().email || "").trim().toLowerCase() === cleanEmail) {
+                    bestehenderUserDoc = doc;
+                }
+            });
+
+            if (bestehenderUserDoc) {
+                // Nutzer existiert bereits -> PIN & Rolle aktualisieren (Reset via Antrag)
+                return db.collection('benutzer').doc(bestehenderUserDoc.id).update({
+                    name: name,
+                    pin: pin,
+                    rolle: (rolle || 'viewer').toLowerCase(),
+                    aktualisiertAm: new Date().toISOString()
+                });
+            } else {
+                // Neuer Nutzer -> Neu anlegen
+                return db.collection('benutzer').add({
+                    name: name,
+                    email: email,
+                    pin: pin,
+                    rolle: (rolle || 'viewer').toLowerCase(),
+                    erstelltAm: new Date().toISOString()
+                });
+            }
+        })
+        .then(() => {
             return db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
-        }).then(() => {
+        })
+        .then(() => {
             alert(`Zugang für ${name} wurde erfolgreich aktiviert!`);
             ladeAdminAnsicht();
-        }).catch(err => alert("Fehler bei der Freischaltung: " + err.message));
+        })
+        .catch(err => alert("Fehler bei der Freischaltung: " + err.message));
     }
 }
 
@@ -317,7 +341,14 @@ function ladeAktiveBenutzer() {
                             </select>
                         </td>
                         <td style="padding:8px;">
-                            <button style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="loescheBenutzer('${doc.id}', '${d.name}')">🗑️ Rechte entziehen</button>
+                            <button style="background:#ffc107; color:#000; border:none; padding:5px 10px; border-radius:3px; cursor:pointer; margin-right:5px; font-weight:bold;" 
+                                    onclick="pinZuruecksetzen('${doc.id}', '${d.name}')">
+                                🔑 PIN ändern
+                            </button>
+                            <button style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" 
+                                    onclick="loescheBenutzer('${doc.id}', '${d.name}')">
+                                🗑️ Rechte entziehen
+                            </button>
                         </td>
                     </tr>`;
                 });
@@ -329,6 +360,27 @@ function ladeAktiveBenutzer() {
         .catch(err => {
             if (ziel) ziel.innerHTML = `<p style="color:red;">Fehler beim Laden der Kameraden: ${err.message}</p>`;
         });
+}
+
+// PIN DURCH ADMIN ZURÜCKSETZEN (Variante 1)
+function pinZuruecksetzen(userId, benutzerName) {
+    const neuePin = prompt(`🔑 Neue 4- bis 6-stellige PIN für ${benutzerName} eingeben:`);
+    
+    if (neuePin === null) return; // Abbruch geklickt
+
+    const sauberePin = neuePin.trim();
+    if (sauberePin.length < 4 || sauberePin.length > 6 || isNaN(sauberePin)) {
+        alert("⚠️ Die PIN muss eine Zahl mit 4 bis 6 Ziffern sein!");
+        return;
+    }
+
+    if (window.db) {
+        db.collection('benutzer').doc(userId).update({ pin: sauberePin })
+            .then(() => {
+                alert(`✅ PIN für ${benutzerName} erfolgreich auf "${sauberePin}" geändert!`);
+            })
+            .catch(err => alert("Fehler beim Ändern der PIN: " + err.message));
+    }
 }
 
 // ROLLE BEARBEITEN / ÄNDERN
@@ -407,6 +459,7 @@ window.ladeAdminAnsicht = ladeAdminAnsicht;
 window.genehmigeAntrag = genehmigeAntrag;
 window.lehneAntragAb = lehneAntragAb;
 window.ladeAktiveBenutzer = ladeAktiveBenutzer;
+window.pinZuruecksetzen = pinZuruecksetzen;
 window.aendereBenutzerRolle = aendereBenutzerRolle;
 window.loescheBenutzer = loescheBenutzer;
 window.abmelden = abmelden;

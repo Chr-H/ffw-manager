@@ -1,8 +1,8 @@
 // ==========================================
-// FFW Manager - Service Worker (v4.2.1)
+// FFW Manager - Service Worker (v4.2.2)
 // ==========================================
 
-const CACHE_NAME = 'ffw-manager-v4.2.1'; // Erhöht für Bugfix Firestore-Bypass
+const CACHE_NAME = 'ffw-manager-v4.2.2'; // Erhöht für Bugfix Firestore-Bypass
 
 const ASSETS_TO_CACHE = [
   './',
