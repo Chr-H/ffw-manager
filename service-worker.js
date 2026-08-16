@@ -1,8 +1,8 @@
 // ==========================================
-// FFW Manager - Service Worker (v4.2.2)
+// FFW Manager - Service Worker (v4.2.3)
 // ==========================================
 
-const CACHE_NAME = 'ffw-manager-v4.2.2'; // Erhöht für Bugfix Firestore-Bypass
+const CACHE_NAME = 'ffw-manager-v4.2.3'; // Version erhöht für Icon-Caching
 
 const ASSETS_TO_CACHE = [
   './',
@@ -16,7 +16,10 @@ const ASSETS_TO_CACHE = [
   './js/psa.js',
   './js/lager.js',
   './js/pruefungen.js',
-  './js/app.js'
+  './js/app.js',
+  // 🖼️ App-Icons für Homescreen & PWA-Installation
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png'
 ];
 
 // 1. Installation: Erzwingt frischen Download vom Server
