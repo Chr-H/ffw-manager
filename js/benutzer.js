@@ -3,7 +3,7 @@
 // ==========================================
 
 // Master-Admin E-Mail festlegen
-const MASTER_ADMIN_EMAIL = "deine-echte-admin-email@feuerwehr.de"; 
+const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
 
 // Aktueller Status in der Sitzung (sessionStorage gelöscht beim Schließen der App)
 let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
