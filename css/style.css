@@ -64,66 +64,48 @@ body{
 
 
 /* ===========================================
-   Navigation
+   Navigation / Sidebar
 =========================================== */
-
-.sidebar{
-
-    width:240px;
-
-    background:#2c2c2c;
-
-    color:white;
-
+.sidebar {
+    width: 240px;
+    background-color: #1a1a1a; /* Durchgehend dunkler Hintergrund beim Scrollen */
+    color: #ffffff;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;          /* Scrollbar innerhalb der Sidebar falls nötig */
 }
 
-.sidebar ul{
-
-    list-style:none;
-
-}
-
-.sidebar li{
-
-    padding:18px;
-
-    cursor:pointer;
-
-    border-bottom:1px solid #444;
-
-    transition:.3s;
-
-}
-
-.sidebar li:hover{
-
-    background:#444;
-
-}
-/* Sidebar-Buttons zurücksetzen & anpassen */
+.sidebar ul,
 .sidebar nav ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.sidebar nav ul li button {
+.sidebar li {
+    padding: 0;                /* Abstände liegen komplett auf den Buttons */
+    border-bottom: 1px solid #333;
+}
+
+.sidebar nav ul li button,
+.sidebar ul li button {
     background: transparent;
     border: none;
     color: #ffffff;
     font: inherit;
+    font-size: 0.95rem;
     width: 100%;
     text-align: left;
-    padding: 12px 15px;
+    padding: 14px 18px;
     cursor: pointer;
-    border-radius: 4px;
     transition: background 0.2s ease;
 }
 
-.sidebar nav ul li button:hover {
+.sidebar nav ul li button:hover,
+.sidebar ul li button:hover {
     background: rgba(255, 255, 255, 0.1);
 }
-
 /* ===========================================
    Inhalt
 =========================================== */

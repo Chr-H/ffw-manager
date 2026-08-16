@@ -158,10 +158,12 @@ function renderBenutzerVerwaltung() {
 
     if (istAdmin()) {
         if (regForm) regForm.style.display = "block";
-        if (adminContainer) adminContainer.style.display = "block";
-        ladeZugangsanfragen();
+        if (adminContainer) {
+            adminContainer.style.display = "block";
+            ladeZugangsanfragen();
+            ladeAktiveBenutzer(); // Lädt zusätzlich alle freigeschalteten Kameraden
+        }
     } else {
-        // Unangemeldete/normale Nutzer sehen nur das Antragsformular
         if (regForm) regForm.style.display = "block";
         if (adminContainer) {
             adminContainer.style.display = "none";
@@ -169,6 +171,121 @@ function renderBenutzerVerwaltung() {
         }
     }
 }
+
+// ANTRÄGE IM ADMIN-PANEL ANZEIGEN
+function ladeZugangsanfragen() {
+    const container = document.getElementById("benutzer-verwaltung-container");
+    if (!container || !window.db) return;
+
+    db.collection('zugangsanfragen').where('status', '==', 'ausstehend').get()
+        .then(snapshot => {
+            let html = `<h3>Offene Zugangsanträge (${snapshot.size})</h3>`;
+            
+            if (snapshot.empty) {
+                html += "<p>Keine offenen Anträge vorhanden.</p>";
+            } else {
+                html += `
+                <table class="table" style="width:100%; border-collapse: collapse; margin-top:10px; margin-bottom:25px;">
+                    <thead>
+                        <tr style="background:#f2f2f2; text-align:left;">
+                            <th style="padding:8px;">Name</th>
+                            <th style="padding:8px;">E-Mail</th>
+                            <th style="padding:8px;">Gewünschte Rolle</th>
+                            <th style="padding:8px;">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    html += `
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding:8px;"><strong>${d.name || '-'}</strong></td>
+                        <td style="padding:8px;">${d.email || '-'}</td>
+                        <td style="padding:8px;">${d.wunschRolle || 'viewer'}</td>
+                        <td style="padding:8px;">
+                            <button style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="genehmigeAntrag('${doc.id}', '${d.name}', '${d.email}', '${d.pin}', '${d.wunschRolle}')">✅ Freischalten</button>
+                            <button style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="lehneAntragAb('${doc.id}')">❌ Ablehnen</button>
+                        </td>
+                    </tr>`;
+                });
+
+                html += "</tbody></table>";
+            }
+            
+            container.innerHTML = html + `<div id="aktive-benutzer-liste"></div>`;
+        })
+        .catch(err => console.error("Fehler beim Laden der Anträge: ", err));
+}
+
+// FREIGESCHALTETE KAMERADEN VERWALTEN (Rechte ändern / Entziehen)
+function ladeAktiveBenutzer() {
+    const target = document.getElementById("aktive-benutzer-liste");
+    if (!target || !window.db) return;
+
+    db.collection('benutzer').get()
+        .then(snapshot => {
+            let html = `<h3>Freigeschaltete Kameraden (${snapshot.size})</h3>
+            <table class="table" style="width:100%; border-collapse: collapse; margin-top:10px;">
+                <thead>
+                    <tr style="background:#f2f2f2; text-align:left;">
+                        <th style="padding:8px;">Name</th>
+                        <th style="padding:8px;">E-Mail</th>
+                        <th style="padding:8px;">Aktuelle Rolle</th>
+                        <th style="padding:8px;">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                html += `
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding:8px;"><strong>${d.name || '-'}</strong></td>
+                    <td style="padding:8px;">${d.email || '-'}</td>
+                    <td style="padding:8px;">
+                        <select onchange="aendereBenutzerRolle('${doc.id}', this.value)" style="padding:4px; border-radius:3px;">
+                            <option value="admin" ${d.rolle === 'admin' ? 'selected' : ''}>Admin</option>
+                            <option value="editor" ${d.rolle === 'editor' ? 'selected' : ''}>Editor</option>
+                            <option value="viewer" ${d.rolle === 'viewer' ? 'selected' : ''}>Viewer (Gast)</option>
+                        </select>
+                    </td>
+                    <td style="padding:8px;">
+                        <button style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="loescheBenutzer('${doc.id}', '${d.name}')">🗑️ Rechte entziehen</button>
+                    </td>
+                </tr>`;
+            });
+
+            html += "</tbody></table>";
+            target.innerHTML = html;
+        })
+        .catch(err => console.error("Fehler beim Laden der Benutzer: ", err));
+}
+
+// ROLLE ÄNDERN
+function aendereBenutzerRolle(userId, neueRolle) {
+    if (!window.db) return;
+    db.collection('benutzer').doc(userId).update({ rolle: neueRolle })
+        .then(() => alert("✅ Rolle erfolgreich aktualisiert!"))
+        .catch(err => alert("Fehler beim Aktualisieren: " + err.message));
+}
+
+// BENUTZER LÖSCHEN / RECHTE ENTZIEHEN
+function loescheBenutzer(userId, name) {
+    if (!confirm(`Möchtest du dem Kameraden ${name} wirklich alle Rechte entziehen?`)) return;
+    if (!window.db) return;
+
+    db.collection('benutzer').doc(userId).delete()
+        .then(() => {
+            alert(`Zugang für ${name} wurde gelöscht.`);
+            renderBenutzerVerwaltung();
+        })
+        .catch(err => alert("Fehler beim Löschen: " + err.message));
+}
+
+// Globale Freigaben
+window.aendereBenutzerRolle = aendereBenutzerRolle;
+window.loescheBenutzer = loescheBenutzer;
 
 // ANTRÄGE IM ADMIN-PANEL ANZEIGEN & VERWALTEN
 function ladeZugangsanfragen() {
