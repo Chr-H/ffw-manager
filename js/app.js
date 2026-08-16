@@ -246,7 +246,7 @@ function druckeListe(titel, elementId) {
             </style>
         </head>
         <body>
-            <h1>Feuerwehr Musterstadt - ${titel}</h1>
+            <h1>Freiwillige Feuerwehr Albertsried - ${titel}</h1>
             <p>Erstellt am: ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')} Uhr</p>
             ${druckKopie.outerHTML}
         </body>
@@ -260,3 +260,56 @@ function druckeListe(titel, elementId) {
         druckFenster.close();
     }, 300);
 }
+
+
+// ==========================================
+// PWA Installations-Prompt Handling (Android / Chrome)
+// ==========================================
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Verhindert das automatische Standard-Banner des Browsers
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Blendet den Installations-Button im Header ein
+    const installBtn = document.getElementById('pwaInstallBtn');
+    if (installBtn) {
+        installBtn.style.display = 'inline-block';
+    }
+});
+
+/**
+ * Funktion zum Auslösen der PWA-Installation auf Nutzerklick
+ */
+function installiereApp() {
+    if (!deferredPrompt) return;
+
+    // Zeigt den nativen Installationsdialog
+    deferredPrompt.prompt();
+
+    deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('App wurde vom Nutzer erfolgreich installiert.');
+        } else {
+            console.log('App-Installation wurde vom Nutzer abgelehnt.');
+        }
+        deferredPrompt = null;
+
+        // Button nach Entscheidung wieder ausblenden
+        const installBtn = document.getElementById('pwaInstallBtn');
+        if (installBtn) installBtn.style.display = 'none';
+    });
+}
+
+// Blendet den Button aus, wenn die App bereits installiert ist/wurde
+window.addEventListener('appinstalled', () => {
+    console.log('PWA wurde erfolgreich installiert.');
+    deferredPrompt = null;
+    const installBtn = document.getElementById('pwaInstallBtn');
+    if (installBtn) installBtn.style.display = 'none';
+});
+
+// Global verfügbar machen für inline onclick
+window.installiereApp = installiereApp;

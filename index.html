@@ -16,13 +16,19 @@
 <body>
 
     <!-- Kopfbereich -->
-    <header class="header">
-        <div class="logo" style="display: flex; align-items: center; gap: 10px;">
-            <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
-            <span>FFW Manager</span>
-        </div>
-        <div class="feuerwehr">Freiwillige Feuerwehr Albertsried</div>
-    </header>
+<header class="header">
+    <div class="logo" style="display: flex; align-items: center; gap: 10px;">
+        <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
+        <span>FFW Manager</span>
+    </div>
+
+    <!-- PWA Install Button (standardmäßig ausgeblendet) -->
+    <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none; margin-left: auto;" onclick="installiereApp()">
+        📲 App installieren
+    </button>
+
+    <div class="feuerwehr" style="margin-left: 15px;">Freiwillige Feuerwehr Albertsried</div>
+</header>
 
     <div class="container">
 
