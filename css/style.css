@@ -100,7 +100,29 @@ body{
     background:#444;
 
 }
+/* Sidebar-Buttons zurücksetzen & anpassen */
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
 
+.sidebar nav ul li button {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font: inherit;
+    width: 100%;
+    text-align: left;
+    padding: 12px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.sidebar nav ul li button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
 /* ===========================================
    Inhalt

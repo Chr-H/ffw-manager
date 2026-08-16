@@ -310,26 +310,40 @@ function exportPruefungenCSV() {
     downloadCSV(`Pruefungen_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
 }
 function zeigeSeite(seiteId) {
-    // Zugriffsrechte prüfen
+    // 1. Zugriffsrechte prüfen
     if (typeof window.pruefeSeitenZugriff === 'function') {
         if (!window.pruefeSeitenZugriff(seiteId)) {
             return; // Abbrechen, falls keine Berechtigung besteht
         }
     }
 
-    // Alle Seiten ausblenden
+    // 2. Alle Seiten ausblenden
     document.querySelectorAll('.seite-ansicht').forEach(seite => {
         seite.style.display = 'none';
     });
 
-    // Gewählte Seite anzeigen
+    // 3. Gewählte Seite anzeigen
     const zielSeite = document.getElementById(`seite-${seiteId}`);
     if (zielSeite) {
         zielSeite.style.display = 'block';
     }
 
-    // Spezifische Render-Funktionen beim Aufruf ausführen
-    if (seiteId === 'benutzer' && typeof renderBenutzerVerwaltung === 'function') {
-        renderBenutzerVerwaltung();
+    // 4. Modulspezifische Render- / Ladefunktionen aufrufen
+    switch (seiteId) {
+        case 'benutzer':
+            if (typeof renderBenutzerVerwaltung === 'function') renderBenutzerVerwaltung();
+            break;
+        case 'fahrzeuge':
+            if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
+            break;
+        case 'psa':
+            if (typeof renderPSAView === 'function') renderPSAView();
+            break;
+        case 'pruefungen':
+            if (typeof renderPruefungenView === 'function') renderPruefungenView();
+            break;
+        case 'lager':
+            if (typeof renderLagerView === 'function') renderLagerView();
+            break;
     }
 }

@@ -47,13 +47,35 @@ function aktualisiereModulSichtbarkeit() {
 
 // SEITEN-ZUGRIFFS-SCHUTZ
 function pruefeSeitenZugriff(seiteId) {
-    const geschuetzteSeiten = ['psa', 'personal', 'benutzer'];
+    // 'benutzer' hier NICHT mehr sperren, damit Gäste Zugang beantragen können!
+    const geschuetzteSeiten = ['psa', 'personal']; 
     
     if (geschuetzteSeiten.includes(seiteId) && !hatZugriffAufSensibleDaten()) {
         zeigePinModal(seiteId);
         return false;
     }
     return true;
+}
+
+// RENDER-FUNKTION FÜR DEN BENUTZERBEREICH
+function renderBenutzerVerwaltung() {
+    aktualisiereModulSichtbarkeit();
+    
+    const regForm = document.getElementById("registration-form-container");
+    const adminContainer = document.getElementById("benutzer-verwaltung-container");
+
+    if (istAdmin()) {
+        if (regForm) regForm.style.display = "block";
+        if (adminContainer) adminContainer.style.display = "block";
+        ladeZugangsanfragen();
+    } else {
+        // Gäste sehen nur das Antragsformular
+        if (regForm) regForm.style.display = "block";
+        if (adminContainer) {
+            adminContainer.style.display = "none";
+            adminContainer.innerHTML = "";
+        }
+    }
 }
 
 // ANMELDUNG MIT INDIVIDUELLER PIN / BENUTZERNAME
