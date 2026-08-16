@@ -1,8 +1,8 @@
 // ==========================================
-// FFW Manager - Service Worker (v3.7.2)
+// FFW Manager - Service Worker (v4.2.1)
 // ==========================================
 
-const CACHE_NAME = 'ffw-manager-v4.2.0'; // Erhöht für Lager-Update
+const CACHE_NAME = 'ffw-manager-v4.2.1'; // Erhöht für Bugfix Firestore-Bypass
 
 const ASSETS_TO_CACHE = [
   './',
@@ -19,7 +19,7 @@ const ASSETS_TO_CACHE = [
   './js/app.js'
 ];
 
-// 1. Installation: Erzwingt frischen Download vom Server (kein HTTP-Browser-Cache)
+// 1. Installation: Erzwingt frischen Download vom Server
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -57,29 +57,46 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Fetch-Abfangung: Nur GET-Requests verarbeiten & Offline-Fallback
+// 3. Fetch-Abfangung mit Firestore-Bypass & sicherem Network-Fallback
 self.addEventListener('fetch', (event) => {
-  // Nur HTTP(S) GET-Anfragen cachen (ignoriert POST, Browser-Extensions etc.)
-  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
+  const url = event.request.url;
+
+  // 🛑 1. Nur GET-Anfragen bearbeiten
+  if (event.request.method !== 'GET' || !url.startsWith('http')) {
     return;
   }
 
+  // 🛑 2. Firebase, Firestore, Google APIs und externe Dienste komplett bypassen!
+  if (
+    url.includes('firestore.googleapis.com') ||
+    url.includes('googleapis.com') ||
+    url.includes('firebase')
+  ) {
+    return; // Überlässt das Fetching direkt dem Browser
+  }
+
+  // 🟢 3. Lokale Assets abfangen
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      return fetch(event.request)
-        .then((networkResponse) => {
-          return networkResponse;
-        })
-        .catch(() => {
-          // Fallback für Seitennavigationen im Offline-Modus
-          if (event.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
+      return fetch(event.request).catch((err) => {
+        console.warn(`[SW] Netzwerkfehler bei ${url}:`, err);
+
+        // Fallback für Navigationen im Offline-Modus
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+
+        // Fängt den "Failed to convert value to 'Response'" ab
+        return new Response('Netzwerkfehler', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({ 'Content-Type': 'text/plain' })
         });
+      });
     })
   );
 });
