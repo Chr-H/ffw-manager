@@ -2,15 +2,19 @@
 // FFW Manager - Hauptanwendung & Navigation
 // ==========================================
 
-// Navigationsfunktion zum Umschalten der Seiten
+/**
+ * Navigationsfunktion zum Umschalten der Seiten
+ */
 function zeigeSeite(seiteId) {
-    // 1. Parameter bereinigen (falls 'seite-dashboard' statt 'dashboard' übergeben wurde)
+    if (!seiteId) return;
+
+    // 1. Parameter bereinigen (falls 'seite-benutzer' statt 'benutzer' übergeben wurde)
     const modul = seiteId.replace('seite-', '');
 
-    // 2. Rechte-Prüfung vorschalten (Sperrt PSA, Personal, Rechte & Benutzer für unangemeldete Gäste)
-    if (typeof pruefeSeitenZugriff === "function") {
-        if (!pruefeSeitenZugriff(modul)) {
-            return; // bricht ab, wenn PIN/Passwort fehlt oder falsch war
+    // 2. Rechte-Prüfung vorschalten
+    if (typeof window.pruefeSeitenZugriff === "function") {
+        if (!window.pruefeSeitenZugriff(modul)) {
+            return; // bricht ab, wenn keine Berechtigung vorliegt
         }
     }
 
@@ -28,8 +32,7 @@ function zeigeSeite(seiteId) {
         return;
     }
 
-
-    // 4. Modul-spezifisches Rendern / Aktualisieren ausführen
+    // 5. Modul-spezifisches Rendern / Aktualisieren ausführen
     switch (modul) {
         case 'dashboard':
             if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
@@ -60,6 +63,10 @@ function zeigeSeite(seiteId) {
             else if (typeof ladePruefungen === 'function') ladePruefungen();
             break;
 
+        case 'benutzer':
+            if (typeof renderBenutzerVerwaltung === 'function') renderBenutzerVerwaltung();
+            break;
+
         default:
             console.log(`Navigation zu '${modul}' ausgeführt.`);
             break;
@@ -68,6 +75,7 @@ function zeigeSeite(seiteId) {
 
 // Explizit global verfügbar machen für HTML inline onclicks
 window.zeigeSeite = zeigeSeite;
+
 
 // ==========================================
 // Universelle Export- & Hilfsfunktionen (CSV / Excel)
@@ -106,47 +114,7 @@ function downloadCSV(filename, headers, rows) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
-
-/**
- * Export-Funktion für Prüfungen
- */
-function exportPruefungenCSV() {
-    let daten = [];
-    
-    if (typeof getPruefungen === "function") {
-        daten = getPruefungen();
-    } 
-    if ((!daten || daten.length === 0) && typeof ladeDaten === "function") {
-        daten = ladeDaten("pruefungen") || ladeDaten("ffw_pruefungen") || [];
-    }
-    if (!daten || daten.length === 0) {
-        try {
-            const raw = localStorage.getItem("pruefungen") || localStorage.getItem("ffw_pruefungen");
-            if (raw) daten = JSON.parse(raw);
-        } catch (e) {
-            console.error("Fehler beim Lesen aus localStorage:", e);
-        }
-    }
-
-    if (!Array.isArray(daten) || daten.length === 0) {
-        alert("⚠️ Es wurden keine Prüfungsdaten zum Exportieren gefunden.");
-        return;
-    }
-
-    const headers = ["ID", "Gegenstand / Objekt", "Prüfart", "Prüfdatum", "Nächste Prüfung", "Prüfer", "Ergebnis"];
-    const rows = daten.map(item => [
-        item.id || '',
-        item.objekt || item.bezeichnung || '',
-        item.art || '',
-        item.datum || '',
-        item.naechstePruefung || '',
-        item.pruefer || '',
-        item.ergebnis || 'Bestanden'
-    ]);
-
-    const heute = new Date().toISOString().split('T')[0];
-    downloadCSV(`Pruefungen_FFW_${heute}.csv`, headers, rows);
+    URL.revokeObjectURL(url);
 }
 
 /**
@@ -180,11 +148,59 @@ function exportGeraeteCSV() {
     downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
 }
 
+/**
+ * Export-Funktion für PSA
+ */
+function exportPSACSV() {
+    const daten = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
+    if (!daten || daten.length === 0) {
+        alert("⚠️ Keine PSA-Daten zum Exportieren vorhanden!");
+        return;
+    }
+
+    const headers = ["Spind", "Träger", "Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
+    
+    const rows = daten.map(p => [
+        p.spind || "",
+        p.traeger || p.name || "",
+        p.bezeichnung || p.ausruestung || p.teil || "",
+        p.groesse || "",
+        p.seriennummer || "",
+        p.ausgabeDatum || p.ausgabedatum || "",
+        p.naechstePruefung || "",
+        p.status || "Einsatzbereit"
+    ]);
+
+    downloadCSV(`PSA_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+}
+
+/**
+ * Export-Funktion für Prüfungen
+ */
+function exportPruefungenCSV() {
+    const geraete = typeof ladeDaten === "function" ? ladeDaten("geraete") : [];
+    const psa = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
+    
+    const allePruefungen = [
+        ...geraete.map(g => ({ typ: 'Gerät', bez: g.bezeichnung, id: g.inventarnummer || g.seriennummer, datum: g.naechstePruefung, status: g.status })),
+        ...psa.map(p => ({ typ: 'PSA', bez: `${p.traeger || p.person || 'Unbekannt'} - ${p.bezeichnung || p.teil}`, id: p.seriennummer, datum: p.naechstePruefung, status: p.status }))
+    ];
+
+    if (allePruefungen.length === 0) {
+        alert("⚠️ Keine Prüfdaten zum Exportieren vorhanden!");
+        return;
+    }
+
+    const headers = ["Typ", "Bezeichnung / Inhaber", "ID / Kennung", "Nächste Prüfung", "Status"];
+    const rows = allePruefungen.map(p => [p.typ, p.bez, p.id, p.datum, p.status]);
+    downloadCSV(`Pruefungen_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+}
+
+
 // ==========================================
 // Druck- & PDF-Exportfunktionen
 // ==========================================
 
-// Universelle Druckfunktion für Tabellen und Container
 function druckeListe(titel, elementId) {
     const el = document.getElementById(elementId);
     if (!el) {
@@ -192,7 +208,6 @@ function druckeListe(titel, elementId) {
         return;
     }
 
-    // Falls Element keine direkte Tabelle ist, suche nach einer Tabelle innerhalb des Containers
     let tabelle = el.tagName === "TABLE" ? el : el.querySelector("table");
 
     if (!tabelle || tabelle.rows.length <= 1) {
@@ -200,10 +215,9 @@ function druckeListe(titel, elementId) {
         return;
     }
 
-    // Kopie für den Druck erstellen
     const druckKopie = tabelle.cloneNode(true);
 
-    // 1. Alle Aktions-Spalten/Buttons automatisch aus der Druckkopie entfernen
+    // Aktions-Spalten & no-print aus Druckkopie entfernen
     druckKopie.querySelectorAll('tr').forEach(row => {
         Array.from(row.cells).forEach(cell => {
             if (cell.querySelector('button') || cell.classList.contains('no-print')) {
@@ -212,7 +226,6 @@ function druckeListe(titel, elementId) {
         });
     });
 
-    // 2. Verbliebene no-print Elemente löschen
     druckKopie.querySelectorAll('.no-print').forEach(node => node.remove());
 
     const druckFenster = window.open('', '_blank', 'width=900,height=650');
@@ -246,104 +259,4 @@ function druckeListe(titel, elementId) {
         druckFenster.print();
         druckFenster.close();
     }, 300);
-}
-
-// Hilfsfunktion zum Erstellen und Herunterladen von CSV-Dateien
-function downloadCSV(dateiname, headers, datenZeilen) {
-    const csvContent = [
-        headers.join(";"),
-        ...datenZeilen.map(row => row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(";"))
-    ].join("\n");
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = dateiname;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-// CSV Export für PSA
-function exportPSACSV() {
-    const daten = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
-    if (!daten || daten.length === 0) {
-        alert("Keine PSA-Daten zum Exportieren vorhanden!");
-        return;
-    }
-
-    const headers = ["Spind", "Träger", "Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
-    
-    // Mappt alle 8 Spalten exakt passend zur psa.js v2.1.4
-    const rows = daten.map(p => [
-        p.spind || "",
-        p.traeger || p.name || "",
-        p.bezeichnung || p.ausruestung || p.teil || "",
-        p.groesse || "",
-        p.seriennummer || "",
-        p.ausgabeDatum || p.ausgabedatum || "",
-        p.naechstePruefung || "",
-        p.status || "Einsatzbereit"
-    ]);
-
-    downloadCSV(`PSA_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
-}
-// CSV Export für Prüfungen
-function exportPruefungenCSV() {
-    const geraete = typeof ladeDaten === "function" ? ladeDaten("geraete") : [];
-    const psa = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
-    
-    const allePruefungen = [
-        ...geraete.map(g => ({ typ: 'Gerät', bez: g.bezeichnung, id: g.inventarnummer, datum: g.naechstePruefung, status: g.status })),
-        ...psa.map(p => ({ typ: 'PSA', bez: `${p.person} - ${p.teil}`, id: p.seriennummer, datum: p.naechstePruefung, status: p.status }))
-    ];
-
-    if (allePruefungen.length === 0) {
-        alert("Keine Prüfdaten zum Exportieren vorhanden!");
-        return;
-    }
-
-    const headers = ["Typ", "Bezeichnung / Inhaber", "ID / Kennung", "Nächste Prüfung", "Status"];
-    const rows = allePruefungen.map(p => [p.typ, p.bez, p.id, p.datum, p.status]);
-    downloadCSV(`Pruefungen_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
-}
-function zeigeSeite(seiteId) {
-    // 1. Zugriffsrechte prüfen
-    if (typeof window.pruefeSeitenZugriff === 'function') {
-        if (!window.pruefeSeitenZugriff(seiteId)) {
-            return; // Abbrechen, falls keine Berechtigung besteht
-        }
-    }
-
-    // 2. Alle Seiten ausblenden
-    document.querySelectorAll('.seite-ansicht').forEach(seite => {
-        seite.style.display = 'none';
-    });
-
-    // 3. Gewählte Seite anzeigen
-    const zielSeite = document.getElementById(`seite-${seiteId}`);
-    if (zielSeite) {
-        zielSeite.style.display = 'block';
-    }
-
-    // 4. Modulspezifische Render- / Ladefunktionen aufrufen
-    switch (seiteId) {
-        case 'benutzer':
-            if (typeof renderBenutzerVerwaltung === 'function') renderBenutzerVerwaltung();
-            break;
-        case 'fahrzeuge':
-            if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
-            break;
-        case 'psa':
-            if (typeof renderPSAView === 'function') renderPSAView();
-            break;
-        case 'pruefungen':
-            if (typeof renderPruefungenView === 'function') renderPruefungenView();
-            break;
-        case 'lager':
-            if (typeof renderLagerView === 'function') renderLagerView();
-            break;
-    }
 }

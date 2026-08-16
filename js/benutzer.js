@@ -159,13 +159,17 @@ function renderBenutzerVerwaltung() {
     const adminContainer = document.getElementById("benutzer-verwaltung-container");
 
     if (istAdmin()) {
-        if (regForm) regForm.style.display = "block";
+        // Admin-Ansicht: Formular ausblenden (oder "block" lassen, falls gewünscht)
+        if (regForm) regForm.style.display = "none"; 
+        
         if (adminContainer) {
             adminContainer.style.display = "block";
-            ladeAdminAnsicht();
+            ladeAdminAnsicht(); // Lädt Anträge und freigeschaltete Kameraden
         }
     } else {
+        // Gast/Viewer-Ansicht: Nur Antragsformular zeigen, Admin-Tabellen ausblenden
         if (regForm) regForm.style.display = "block";
+        
         if (adminContainer) {
             adminContainer.style.display = "none";
             adminContainer.innerHTML = "";
