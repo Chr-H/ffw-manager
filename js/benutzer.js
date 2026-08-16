@@ -1,5 +1,5 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (v0.7.0)
+// RECHTE- & BENUTZERSTEUERUNG (v0.7.1)
 // ==========================================
 
 // Master-Admin E-Mail festlegen
@@ -27,17 +27,18 @@ function hatZugriffAufSensibleDaten() {
 
 // UI ANPASSEN
 function aktualisiereModulSichtbarkeit() {
-    const sensibleModule = ['psa', 'personal', 'benutzer'];
+    // Nur geschützte Module ausgrauen – 'benutzer' ist HIER NICHT MEHR ENTHALTEN!
+    const sensibleModule = ['psa', 'personal']; 
     
     sensibleModule.forEach(modulId => {
-        const navEintrag = document.querySelector(`button[onclick*="'${modulId}'"]`)?.parentElement || document.querySelector(`li[onclick*="'${modulId}'"]`);
+        const navBtn = document.querySelector(`button[onclick*="'${modulId}'"]`);
         const dashboardCard = document.querySelector(`.card[onclick*="'${modulId}'"]`);
         
         if (!hatZugriffAufSensibleDaten()) {
-            if (navEintrag) navEintrag.style.opacity = "0.4";
+            if (navBtn) navBtn.style.opacity = "0.4";
             if (dashboardCard) dashboardCard.style.opacity = "0.4";
         } else {
-            if (navEintrag) navEintrag.style.opacity = "1";
+            if (navBtn) navBtn.style.opacity = "1";
             if (dashboardCard) dashboardCard.style.opacity = "1";
         }
     });
@@ -47,7 +48,7 @@ function aktualisiereModulSichtbarkeit() {
 
 // SEITEN-ZUGRIFFS-SCHUTZ
 function pruefeSeitenZugriff(seiteId) {
-    // 'benutzer' hier NICHT mehr sperren, damit Gäste Zugang beantragen können!
+    // Nur PSA und Personal sperren – 'benutzer' bleibt für Zugangsanträge frei zugänglich
     const geschuetzteSeiten = ['psa', 'personal']; 
     
     if (geschuetzteSeiten.includes(seiteId) && !hatZugriffAufSensibleDaten()) {
@@ -55,27 +56,6 @@ function pruefeSeitenZugriff(seiteId) {
         return false;
     }
     return true;
-}
-
-// RENDER-FUNKTION FÜR DEN BENUTZERBEREICH
-function renderBenutzerVerwaltung() {
-    aktualisiereModulSichtbarkeit();
-    
-    const regForm = document.getElementById("registration-form-container");
-    const adminContainer = document.getElementById("benutzer-verwaltung-container");
-
-    if (istAdmin()) {
-        if (regForm) regForm.style.display = "block";
-        if (adminContainer) adminContainer.style.display = "block";
-        ladeZugangsanfragen();
-    } else {
-        // Gäste sehen nur das Antragsformular
-        if (regForm) regForm.style.display = "block";
-        if (adminContainer) {
-            adminContainer.style.display = "none";
-            adminContainer.innerHTML = "";
-        }
-    }
 }
 
 // ANMELDUNG MIT INDIVIDUELLER PIN / BENUTZERNAME
@@ -172,8 +152,21 @@ function beantrageZugang(e) {
 // RENDER-FUNKTION FÜR DEN BENUTZERBEREICH
 function renderBenutzerVerwaltung() {
     aktualisiereModulSichtbarkeit();
+    
+    const regForm = document.getElementById("registration-form-container");
+    const adminContainer = document.getElementById("benutzer-verwaltung-container");
+
     if (istAdmin()) {
+        if (regForm) regForm.style.display = "block";
+        if (adminContainer) adminContainer.style.display = "block";
         ladeZugangsanfragen();
+    } else {
+        // Unangemeldete/normale Nutzer sehen nur das Antragsformular
+        if (regForm) regForm.style.display = "block";
+        if (adminContainer) {
+            adminContainer.style.display = "none";
+            adminContainer.innerHTML = "";
+        }
     }
 }
 
