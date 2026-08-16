@@ -5,7 +5,7 @@
 // Master-Admin E-Mail festlegen
 const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
 
-// Aktueller Status in der Sitzung (sessionStorage gelöscht beim Schließen der App)
+// Aktueller Status in der Sitzung
 let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
     name: "",
     email: "",
@@ -193,7 +193,7 @@ function ladeZugangsanfragen() {
                 </tr>`;
             });
 
-            html += "tbody></table>";
+            html += "</tbody></table>";
             container.innerHTML = html;
         })
         .catch(err => {
@@ -205,7 +205,6 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
     if (!confirm(`Soll der Zugang für ${name} als ${rolle.toUpperCase()} freigeschaltet werden?`)) return;
 
     if (window.db) {
-        // 1. Benutzerkonto in 'benutzer' anlegen
         db.collection('benutzer').add({
             name: name,
             email: email,
@@ -213,7 +212,6 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
             rolle: rolle,
             erstelltAm: new Date().toISOString()
         }).then(() => {
-            // 2. Status der Anfrage auf 'genehmigt' setzen
             return db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
         }).then(() => {
             alert(`Zugang für ${name} wurde erfolgreich aktiviert!`);
@@ -261,7 +259,6 @@ let inaktivitaetsTimer;
 
 function starteInaktivitaetsTimer() {
     clearTimeout(inaktivitaetsTimer);
-    // 5 Minuten = 300.000 ms
     inaktivitaetsTimer = setTimeout(() => {
         if (istEditor()) {
             abmelden();

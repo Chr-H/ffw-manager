@@ -304,53 +304,56 @@
             </section>
 
             <!-- ========================================= -->
-           <!-- ========================================= -->
-            <!-- 8. RECHTE & BENUTZER BEREICH              -->
-            <!-- ========================================= -->
-            <section id="seite-benutzer" class="seite-ansicht" style="display: none;">
-                <h2>🔐 Benutzer- & Rechteverwaltung</h2>
-                
-                <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
-                    <h3>Zugang beantragen</h3>
-                    <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
-                            <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
-                            <input type="email" id="reqEmail" class="form-control" required placeholder="max@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
-                        </div>
-                        
-                        <!-- NEU: PIN-Eingabe für persönliche Zuordnung -->
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label>
-                            <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl (z. B. 4711)" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
-                        </div>
+   <!-- ========================================= -->
+<!-- 8. RECHTE & BENUTZER BEREICH              -->
+<!-- ========================================= -->
+<section id="seite-benutzer" class="seite-ansicht" style="display: none;">
+    <h2>🔐 Benutzer- & Rechteverwaltung</h2>
+    
+    <!-- Antragsformular für neue Benutzer -->
+    <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
+        <h3>🔑 Zugang / Rolle beantragen</h3>
+        <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
+                <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
+                <input type="email" id="reqEmail" class="form-control" required placeholder="max.mustermann@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label>
+                <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl (z. B. 4711)" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            </div>
 
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
-                            <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
-                                <option value="viewer">Leserechte (z.B. Mannschaft)</option>
-                                <option value="editor">Schreibrechte (z.B. Gerätewart / Kleidungswart)</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">Zugang beantragen</button>
-                    </form>
-                    <div id="requestStatusMessage" style="margin-top: 15px;"></div>
-                </div>
-
-                <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
-            </section>
-
-            <section id="seite-einstellungen" class="seite-ansicht" style="display: none;">
-                <h2>⚙️ Einstellungen</h2>
-                <p>In Entwicklung...</p>
-            </section>
-
-        </main>
-
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
+                <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
+                    <option value="viewer">Leserechte (z. B. Mannschaft)</option>
+                    <option value="editor">Schreibrechte (z. B. Gerätewart / Kleidungswart)</option>
+                    <option value="admin">Administrator</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+                Zugang beantragen
+            </button>
+        </form>
+        
+        <div id="requestStatusMessage" style="margin-top: 15px; font-weight: bold;"></div>
     </div>
+
+    <!-- Container für die Admin-Verwaltung der Anträge -->
+    <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
+</section>
+
+<section id="seite-einstellungen" class="seite-ansicht" style="display: none;">
+    <h2>⚙️ Einstellungen</h2>
+    <p>In Entwicklung...</p>
+</section>
 
     <!-- Firebase SDKs & Konfiguration -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
