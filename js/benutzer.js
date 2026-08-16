@@ -30,7 +30,7 @@ function aktualisiereModulSichtbarkeit() {
     const sensibleModule = ['psa', 'personal', 'benutzer'];
     
     sensibleModule.forEach(modulId => {
-        const navEintrag = document.querySelector(`li[onclick*="'${modulId}'"]`);
+        const navEintrag = document.querySelector(`button[onclick*="'${modulId}'"]`)?.parentElement || document.querySelector(`li[onclick*="'${modulId}'"]`);
         const dashboardCard = document.querySelector(`.card[onclick*="'${modulId}'"]`);
         
         if (!hatZugriffAufSensibleDaten()) {

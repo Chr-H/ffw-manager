@@ -309,3 +309,27 @@ function exportPruefungenCSV() {
     const rows = allePruefungen.map(p => [p.typ, p.bez, p.id, p.datum, p.status]);
     downloadCSV(`Pruefungen_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
 }
+function zeigeSeite(seiteId) {
+    // Zugriffsrechte prüfen
+    if (typeof window.pruefeSeitenZugriff === 'function') {
+        if (!window.pruefeSeitenZugriff(seiteId)) {
+            return; // Abbrechen, falls keine Berechtigung besteht
+        }
+    }
+
+    // Alle Seiten ausblenden
+    document.querySelectorAll('.seite-ansicht').forEach(seite => {
+        seite.style.display = 'none';
+    });
+
+    // Gewählte Seite anzeigen
+    const zielSeite = document.getElementById(`seite-${seiteId}`);
+    if (zielSeite) {
+        zielSeite.style.display = 'block';
+    }
+
+    // Spezifische Render-Funktionen beim Aufruf ausführen
+    if (seiteId === 'benutzer' && typeof renderBenutzerVerwaltung === 'function') {
+        renderBenutzerVerwaltung();
+    }
+}
