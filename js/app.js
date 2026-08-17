@@ -72,6 +72,16 @@ function zeigeSeite(seiteId) {
             if (typeof renderBenutzerVerwaltung === 'function') renderBenutzerVerwaltung();
             break;
 
+        case 'einstellungen':
+            if (typeof initEinstellungenLayout === 'function') initEinstellungenLayout();
+            if (typeof ladeEinstellungen === 'function') ladeEinstellungen();
+            break;
+
+        case 'auswertungen':
+            if (typeof initAuswertungenLayout === 'function') initAuswertungenLayout();
+            if (typeof rendereAuswertungen === 'function') rendereAuswertungen();
+            break;
+
         default:
             console.log(`Navigation zu '${modul}' ausgeführt.`);
             break;
