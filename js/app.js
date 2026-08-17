@@ -73,13 +73,11 @@ function zeigeSeite(seiteId) {
             break;
 
         case 'einstellungen':
-            if (typeof initEinstellungenLayout === 'function') initEinstellungenLayout();
-            if (typeof ladeEinstellungen === 'function') ladeEinstellungen();
+            zeigInEntwicklung('⚙️ Einstellungen');
             break;
 
         case 'auswertungen':
-            if (typeof initAuswertungenLayout === 'function') initAuswertungenLayout();
-            if (typeof rendereAuswertungen === 'function') rendereAuswertungen();
+            zeigInEntwicklung('📊 Auswertungen');
             break;
 
         default:
@@ -90,6 +88,25 @@ function zeigeSeite(seiteId) {
 
 // Explizit global verfügbar machen für HTML inline onclicks
 window.zeigeSeite = zeigeSeite;
+
+/**
+ * Platzhalter für Module, die sich noch in Entwicklung befinden
+ */
+function zeigInEntwicklung(modulName) {
+    const zielId = 'seite-' + modulName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const el = document.getElementById(zielId);
+
+    if (el && !el.querySelector('.dev-notice')) {
+        el.innerHTML = `
+            <div class="dev-notice" style="text-align: center; padding: 50px 20px; background: #fff; border-radius: 8px; border: 1px dashed #ccc; margin-top: 20px;">
+                <span style="font-size: 3rem;">🚧</span>
+                <h2 style="margin-top: 10px;">${modulName}</h2>
+                <p style="color: #666; font-size: 1.1em;">Dieses Modul befindet sich aktuell in Entwicklung und steht in Kürze zur Verfügung.</p>
+            </div>
+        `;
+    }
+}
+window.zeigInEntwicklung = zeigInEntwicklung;
 
 
 // ==========================================
