@@ -263,53 +263,28 @@ function druckeListe(titel, elementId) {
 
 
 // ==========================================
-// PWA Installations-Prompt Handling
+// Automatischer PWA Installations-Prompt
 // ==========================================
 
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Verhindert das automatische Einblenden des Standard-Banners durch den Browser
+    // Standard-Verhalten des Browsers verhindern
     e.preventDefault();
     deferredPrompt = e;
 
-    // Blendet deinen eigenen Button im Header ein
-    const installBtn = document.getElementById('pwaInstallBtn');
-    if (installBtn) {
-        installBtn.style.display = 'inline-block';
-    }
-});
+    // Kurze Verzögerung, damit die Seite sauber geladen ist
+    setTimeout(() => {
+        if (deferredPrompt) {
+            // Nativen Installations-Dialog direkt aufrufen
+            deferredPrompt.prompt();
 
-/**
- * Funktion zum Auslösen des Installationsdialogs auf Nutzerklick
- */
-function installiereApp() {
-    if (!deferredPrompt) return;
-
-    // Zeigt den nativen Installationsdialog des Browsers
-    deferredPrompt.prompt();
-
-    deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-            console.log('PWA-Installation vom Nutzer akzeptiert.');
-        } else {
-            console.log('PWA-Installation vom Nutzer abgelehnt.');
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('App-Installation akzeptiert.');
+                }
+                deferredPrompt = null;
+            });
         }
-        deferredPrompt = null;
-
-        // Button nach der Entscheidung ausblenden
-        const installBtn = document.getElementById('pwaInstallBtn');
-        if (installBtn) installBtn.style.display = 'none';
-    });
-}
-
-// Blendet den Button aus, sobald die App erfolgreich installiert wurde
-window.addEventListener('appinstalled', () => {
-    console.log('PWA wurde erfolgreich installiert.');
-    deferredPrompt = null;
-    const installBtn = document.getElementById('pwaInstallBtn');
-    if (installBtn) installBtn.style.display = 'none';
+    }, 1000); // 1 Sekunde nach Seitenaufruf
 });
-
-// Global verfügbar machen für das inline-onclick-Event
-window.installiereApp = installiereApp;
