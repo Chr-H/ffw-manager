@@ -388,33 +388,76 @@ document.addEventListener('DOMContentLoaded', () => {
     aktualisiereDashboard();
 });
 // ==========================================
-// Modul: Einstellungen Render-Logik
+// Modul: Einstellungen Render-Logik & Speicher
 // ==========================================
+
 function initEinstellungenLayout() {
     const ziel = document.getElementById('seite-einstellungen');
     if (!ziel) return;
+
+    // 1. Berechtigungen prüfen (Schreibrecht für Einstellungen)
+    const darfBearbeiten = typeof window.pruefeSeitenZugriff === "function" 
+        ? window.pruefeSeitenZugriff('einstellungen_schreiben') 
+        : true; // Standard-Fallback, falls keine granularen Rechte konfiguriert sind
+
+    // 2. Gespeicherte Einstellungen aus localStorage laden (oder Standardwerte nutzen)
+    const e = JSON.parse(localStorage.getItem('ffw_einstellungen')) || {
+        wehrName: 'Freiwillige Feuerwehr Albertsried',
+        wachenNummer: '101',
+        adresse: 'Feuerwehrstraße 1, 12345 Albertsried',
+        ansprechpartner: 'Kommandant Max Mustermann',
+        vorlaufTagePruefung: 30,
+        vorlaufTageWartung: 14
+    };
+
+    const readonlyAttr = darfBearbeiten ? '' : 'disabled';
+    const speicherButtonHTML = darfBearbeiten 
+        ? `<button onclick="speichereEinstellungen()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">💾 Einstellungen speichern</button>`
+        : `<p style="color: #c00; font-weight: bold; margin-top: 10px;">⚠️ Sie besitzen keine Berechtigung, die Stammdaten zu verändern.</p>`;
 
     ziel.innerHTML = `
         <h2>⚙️ Einstellungen</h2>
         <div style="display: grid; gap: 20px; max-width: 800px; margin-top: 20px;">
             
-            <!-- Stammdaten -->
+            <!-- Erweiterte Feuerwehr-Stammdaten -->
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
                 <h3>🏢 Feuerwehr Stammdaten</h3>
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-                    <label>Bezeichnung: 
-                        <input type="text" id="cfg-wehr-name" value="Freiwillige Feuerwehr Albertsried" style="width: 100%; padding: 8px; margin-top: 4px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                    <label style="grid-column: span 2;">Name der Wehr:
+                        <input type="text" id="cfg-wehr-name" value="${e.wehrName}" ${readonlyAttr} style="width: 100%; padding: 8px; margin-top: 4px;">
                     </label>
-                    <button onclick="alert('Stammdaten gespeichert!')" style="padding: 8px 15px; width: fit-content;">Speichern</button>
+                    <label>Wachen-Nummer:
+                        <input type="text" id="cfg-wachen-nummer" value="${e.wachenNummer}" ${readonlyAttr} style="width: 100%; padding: 8px; margin-top: 4px;">
+                    </label>
+                    <label>Ansprechpartner:
+                        <input type="text" id="cfg-ansprechpartner" value="${e.ansprechpartner}" ${readonlyAttr} style="width: 100%; padding: 8px; margin-top: 4px;">
+                    </label>
+                    <label style="grid-column: span 2;">Adresse / Standort:
+                        <input type="text" id="cfg-adresse" value="${e.adresse}" ${readonlyAttr} style="width: 100%; padding: 8px; margin-top: 4px;">
+                    </label>
                 </div>
             </div>
 
-            <!-- Daten-Backup -->
+            <!-- Vorlaufzeiten für Prüfungs- & Wartungserinnerungen -->
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                <h3>💾 Daten-Sicherung & Export</h3>
-                <p style="color: #666; font-size: 0.9em;">Sichere alle Anwendungsdaten lokal als JSON-Datei.</p>
+                <h3>🔔 Vorlaufzeiten & Erinnerungen</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                    <label>Erinnerung Prüfungen (Tage vorher):
+                        <input type="number" id="cfg-vorlauf-pruefung" value="${e.vorlaufTagePruefung}" ${readonlyAttr} style="width: 100%; padding: 8px; margin-top: 4px;">
+                    </label>
+                    <label>Erinnerung Wartungen (Tage vorher):
+                        <input type="number" id="cfg-vorlauf-wartung" value="${e.vorlaufTageWartung}" ${readonlyAttr} style="width: 100%; padding: 8px; margin-top: 4px;">
+                    </label>
+                </div>
+                ${speicherButtonHTML}
+            </div>
+
+            <!-- Gesicherter Daten-Export -->
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>💾 System-Backup (JSON)</h3>
+                <p style="color: #666; font-size: 0.9em;">Exportiert die Systemdaten basierend auf Ihren aktuellen Benutzerrechten.</p>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button onclick="exportiereSystemBackup()" style="padding: 8px 15px;">Backup herunterladen (JSON)</button>
+                    <button onclick="exportiereSystemBackupGesichert()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Backup herunterladen (JSON)</button>
                 </div>
             </div>
 
@@ -422,15 +465,62 @@ function initEinstellungenLayout() {
     `;
 }
 
-function exportiereSystemBackup() {
-    const backupData = {
-        geraete: JSON.parse(localStorage.getItem('ffw_geraete')) || [],
-        mitglieder: JSON.parse(localStorage.getItem('ffw_mitglieder')) || [],
-        fahrzeuge: JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [],
-        lager: JSON.parse(localStorage.getItem('ffw_lager')) || [],
-        psa: JSON.parse(localStorage.getItem('ffw_psa')) || [],
-        pruefungen: JSON.parse(localStorage.getItem('ffw_pruefungen')) || []
+/**
+ * Speichert die geänderten Einstellungen im localStorage
+ */
+function speichereEinstellungen() {
+    if (typeof window.pruefeSeitenZugriff === "function" && !window.pruefeSeitenZugriff('einstellungen_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Speichern vorhanden.");
+        return;
+    }
+
+    const neueEinstellungen = {
+        wehrName: document.getElementById('cfg-wehr-name').value,
+        wachenNummer: document.getElementById('cfg-wachen-nummer').value,
+        ansprechpartner: document.getElementById('cfg-ansprechpartner').value,
+        adresse: document.getElementById('cfg-adresse').value,
+        vorlaufTagePruefung: parseInt(document.getElementById('cfg-vorlauf-pruefung').value, 10) || 30,
+        vorlaufTageWartung: parseInt(document.getElementById('cfg-vorlauf-wartung').value, 10) || 14
     };
+
+    localStorage.setItem('ffw_einstellungen', JSON.stringify(neueEinstellungen));
+    alert("✅ Einstellungen erfolgreich gespeichert!");
+}
+
+/**
+ * Exportiert Daten unter Einhaltung des Lese-Schutzes
+ */
+function exportiereSystemBackupGesichert() {
+    const darfLesen = (modul) => {
+        if (typeof window.pruefeSeitenZugriff === "function") {
+            return window.pruefeSeitenZugriff(modul);
+        }
+        return true; // Fallback
+    };
+
+    const backupData = {
+        exportiertAm: new Date().toISOString(),
+        einstellungen: JSON.parse(localStorage.getItem('ffw_einstellungen')) || {}
+    };
+
+    // Daten nur anhängen, wenn Leseberechtigung vorliegt
+    if (darfLesen('geraete')) backupData.geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
+    if (darfLesen('fahrzeuge')) backupData.fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
+    if (darfLesen('lager')) backupData.lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
+    if (darfLesen('pruefungen')) backupData.pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
+    
+    // Schutz vertraulicher personenbezogener Daten
+    if (darfLesen('personal')) {
+        backupData.mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+    } else {
+        console.warn("Personal-Export übersprungen (keine Lese-Berechtigung).");
+    }
+
+    if (darfLesen('psa')) {
+        backupData.psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
+    } else {
+        console.warn("PSA-Export übersprungen (keine Lese-Berechtigung).");
+    }
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const dlAnchor = document.createElement('a');
@@ -439,45 +529,4 @@ function exportiereSystemBackup() {
     document.body.appendChild(dlAnchor);
     dlAnchor.click();
     dlAnchor.remove();
-}
-
-
-// ==========================================
-// Modul: Auswertungen Render-Logik
-// ==========================================
-function initAuswertungenLayout() {
-    const ziel = document.getElementById('seite-auswertungen');
-    if (!ziel) return;
-
-    const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
-    const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
-    const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
-
-    const einsatzbereit = geraete.filter(g => g.status === 'einsatzbereit').length;
-    const defekt = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
-
-    ziel.innerHTML = `
-        <h2>📊 Auswertungen & Kennzahlen</h2>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
-            
-            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                <h3>🚒 Geräte-Status</h3>
-                <p><strong>Einsatzbereit:</strong> ${einsatzbereit}</p>
-                <p><strong>Defekt / Inaktiv:</strong> ${defekt}</p>
-                <p><strong>Gesamt:</strong> ${geraete.length}</p>
-            </div>
-
-            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                <h3>🥾 PSA & Ausrüstung</h3>
-                <p><strong>Zugewiesene PSA-Teile:</strong> ${psa.length}</p>
-            </div>
-
-            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                <h3>👥 Personal</h3>
-                <p><strong>Erfasste Mitglieder:</strong> ${mitglieder.length}</p>
-            </div>
-
-        </div>
-    `;
 }
