@@ -38,6 +38,11 @@ function zeigeSeite(seiteId) {
             if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
             break;
 
+        case 'personal':
+            if (typeof initPersonalLayout === 'function') initPersonalLayout();
+            if (typeof renderePersonalTabelle === 'function') renderePersonalTabelle();
+            break;
+
         case 'geraete':
             if (typeof renderGeraeteView === 'function') renderGeraeteView();
             else if (typeof filterGeraete === 'function') filterGeraete();
@@ -288,9 +293,17 @@ window.addEventListener('beforeinstallprompt', (e) => {
         }
     }, 1000); // 1 Sekunde nach Seitenaufruf
 });
-// Dashboard-Zahlen aktualisieren
-function updateDashboard() {
-    // 1. Daten aus localStorage laden (oder leere Arrays initialisieren)
+
+
+// ==========================================
+// Dashboard-Logik & Kennzahlen
+// ==========================================
+
+/**
+ * Aktualisiert die Statuszahlen auf dem Dashboard
+ */
+function aktualisiereDashboard() {
+    // 1. Daten aus localStorage laden
     const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
     const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
     const fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
@@ -298,13 +311,13 @@ function updateDashboard() {
     const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
     const pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
 
-    // 2. Status-Berechnungen (Beispiel-Logik)
+    // 2. Status-Berechnungen
     const heute = new Date();
     
     // Prüfungen überfällig
     const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
     
-    // Wartung fällig (z.B. in den nächsten 30 Tagen)
+    // Wartung fällig (nächste 30 Tage)
     const in30Tagen = new Date();
     in30Tagen.setDate(heute.getDate() + 30);
     const faellig = pruefungen.filter(p => {
@@ -316,7 +329,7 @@ function updateDashboard() {
     const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit').length;
     const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
 
-    // 3. Werte in die HTML-Kacheln schreiben (IDs im HTML anpassen!)
+    // 3. Werte in die HTML-Kacheln schreiben
     setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
     setTileValue('stat-wartung-faellig', `${faellig} fällig`);
     setTileValue('stat-einsatzbereit', `${einsatzbereitCount} Geräte einsatzbereit`);
@@ -331,11 +344,19 @@ function updateDashboard() {
     setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
 }
 
-// Hilfsfunktion zum sicheren Setzen von Text
+// Alias zur Abwärtskompatibilität bereithalten
+window.updateDashboard = aktualisiereDashboard;
+window.aktualisiereDashboard = aktualisiereDashboard;
+
+/**
+ * Hilfsfunktion zum sicheren Setzen von Text
+ */
 function setTileValue(elementId, text) {
     const el = document.getElementById(elementId);
     if (el) el.textContent = text;
 }
 
 // Beim App-Start ausführen
-document.addEventListener('DOMContentLoaded', updateDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+    aktualisiereDashboard();
+});
