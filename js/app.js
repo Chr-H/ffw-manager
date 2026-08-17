@@ -72,12 +72,12 @@ function zeigeSeite(seiteId) {
             if (typeof renderBenutzerVerwaltung === 'function') renderBenutzerVerwaltung();
             break;
 
-        case 'einstellungen':
-            zeigInEntwicklung('⚙️ Einstellungen');
+         case 'einstellungen':
+            if (typeof initEinstellungenLayout === 'function') initEinstellungenLayout();
             break;
 
         case 'auswertungen':
-            zeigInEntwicklung('📊 Auswertungen');
+            if (typeof initAuswertungenLayout === 'function') initAuswertungenLayout();
             break;
 
         default:
@@ -387,3 +387,97 @@ function setTileValue(elementId, text) {
 document.addEventListener('DOMContentLoaded', () => {
     aktualisiereDashboard();
 });
+// ==========================================
+// Modul: Einstellungen Render-Logik
+// ==========================================
+function initEinstellungenLayout() {
+    const ziel = document.getElementById('seite-einstellungen');
+    if (!ziel) return;
+
+    ziel.innerHTML = `
+        <h2>⚙️ Einstellungen</h2>
+        <div style="display: grid; gap: 20px; max-width: 800px; margin-top: 20px;">
+            
+            <!-- Stammdaten -->
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>🏢 Feuerwehr Stammdaten</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                    <label>Bezeichnung: 
+                        <input type="text" id="cfg-wehr-name" value="Freiwillige Feuerwehr Albertsried" style="width: 100%; padding: 8px; margin-top: 4px;">
+                    </label>
+                    <button onclick="alert('Stammdaten gespeichert!')" style="padding: 8px 15px; width: fit-content;">Speichern</button>
+                </div>
+            </div>
+
+            <!-- Daten-Backup -->
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>💾 Daten-Sicherung & Export</h3>
+                <p style="color: #666; font-size: 0.9em;">Sichere alle Anwendungsdaten lokal als JSON-Datei.</p>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button onclick="exportiereSystemBackup()" style="padding: 8px 15px;">Backup herunterladen (JSON)</button>
+                </div>
+            </div>
+
+        </div>
+    `;
+}
+
+function exportiereSystemBackup() {
+    const backupData = {
+        geraete: JSON.parse(localStorage.getItem('ffw_geraete')) || [],
+        mitglieder: JSON.parse(localStorage.getItem('ffw_mitglieder')) || [],
+        fahrzeuge: JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [],
+        lager: JSON.parse(localStorage.getItem('ffw_lager')) || [],
+        psa: JSON.parse(localStorage.getItem('ffw_psa')) || [],
+        pruefungen: JSON.parse(localStorage.getItem('ffw_pruefungen')) || []
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `FFW_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+}
+
+
+// ==========================================
+// Modul: Auswertungen Render-Logik
+// ==========================================
+function initAuswertungenLayout() {
+    const ziel = document.getElementById('seite-auswertungen');
+    if (!ziel) return;
+
+    const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
+    const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+    const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
+
+    const einsatzbereit = geraete.filter(g => g.status === 'einsatzbereit').length;
+    const defekt = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
+
+    ziel.innerHTML = `
+        <h2>📊 Auswertungen & Kennzahlen</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
+            
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>🚒 Geräte-Status</h3>
+                <p><strong>Einsatzbereit:</strong> ${einsatzbereit}</p>
+                <p><strong>Defekt / Inaktiv:</strong> ${defekt}</p>
+                <p><strong>Gesamt:</strong> ${geraete.length}</p>
+            </div>
+
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>🥾 PSA & Ausrüstung</h3>
+                <p><strong>Zugewiesene PSA-Teile:</strong> ${psa.length}</p>
+            </div>
+
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>👥 Personal</h3>
+                <p><strong>Erfasste Mitglieder:</strong> ${mitglieder.length}</p>
+            </div>
+
+        </div>
+    `;
+}
