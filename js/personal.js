@@ -3,25 +3,29 @@
 // ==========================================
 
 /**
- * Erzeugt das HTML-Grundgerüst im Container #seite-personal,
- * falls dieses noch nicht injiziert wurde.
+ * Erzeugt das HTML-Grundgerüst im Container #seite-personal
  */
 function initPersonalLayout() {
     const container = document.getElementById('seite-personal');
     if (!container) return;
 
-    // Nur aufbauen, wenn der Container noch leer ist oder den Platzhalter-Text enthält
     if (container.querySelector('.table-container')) return;
 
     container.innerHTML = `
         <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
             <h2>👥 Personalverwaltung</h2>
-            <button class="btn btn-primary" onclick="oeffneMitgliedModal()">➕ Neues Mitglied</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="exportPersonalCSV()" title="Als CSV für Excel exportieren">📊 CSV Export</button>
+                <button class="btn btn-secondary" onclick="exportPersonalJSON()" title="Als JSON-Datei sichern">💾 Backup (JSON)</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('import-personal-file').click()" title="JSON-Sicherung wiederherstellen">📂 Import</button>
+                <input type="file" id="import-personal-file" accept=".json" style="display: none;" onchange="importPersonalJSON(event)">
+                <button class="btn btn-primary" onclick="oeffneMitgliedModal()">➕ Neues Mitglied</button>
+            </div>
         </div>
 
         <!-- Such- und Filterleiste -->
         <div class="filter-bar" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-            <input type="text" id="personal-suche" placeholder="🔍 Name, Dienstgrad..." oninput="renderePersonalTabelle()" style="flex: 1; min-width: 200px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+            <input type="text" id="personal-suche" placeholder="🔍 Name, Dienstgrad, Bemerkung..." oninput="renderePersonalTabelle()" style="flex: 1; min-width: 200px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
             <select id="personal-filter-funktion" onchange="renderePersonalTabelle()" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                 <option value="">Alle Funktionen</option>
                 <option value="Kommandant">Kommandant/in</option>
@@ -48,6 +52,7 @@ function initPersonalLayout() {
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">Funktionen</th>
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">G26.3 (Atemschutz)</th>
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">Lehrgänge</th>
+                        <th style="padding: 10px; border-bottom: 2px solid #ddd;">Bemerkung</th>
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">Aktionen</th>
                     </tr>
                 </thead>
@@ -130,6 +135,12 @@ function initPersonalLayout() {
                         <input type="text" id="mitglied-lehrgaenge" placeholder="z. B. MTA, AGT, Maschinist, GF" style="width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box;">
                     </div>
 
+                    <!-- Kommentarfeld / Notizen -->
+                    <div style="margin-top: 15px;">
+                        <label><strong>Kommentar / Bemerkungen:</strong></label>
+                        <textarea id="mitglied-kommentar" rows="3" placeholder="Führerscheinklassen, Notizen, Besondere Ausbildungen etc." style="width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; font-family: inherit;"></textarea>
+                    </div>
+
                     <div style="margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
                         <button type="button" class="btn btn-secondary" onclick="schliesseMitgliedModal()">Abbrechen</button>
                         <button type="submit" class="btn btn-primary">Speichern</button>
@@ -144,7 +155,7 @@ function initPersonalLayout() {
  * Rendert die Mitglieder in die HTML-Tabelle
  */
 function renderePersonalTabelle() {
-    initPersonalLayout(); // Stellt sicher, dass das Layout existiert
+    initPersonalLayout();
 
     const tbody = document.getElementById('personal-tabelle-body');
     if (!tbody) return;
@@ -157,8 +168,8 @@ function renderePersonalTabelle() {
     const heute = new Date();
 
     const gefiltert = mitglieder.filter(m => {
-        const fullName = `${m.vorname} ${m.nachname} ${m.dienstgrad}`.toLowerCase();
-        const matchesSuche = fullName.includes(suche);
+        const fullText = `${m.vorname} ${m.nachname} ${m.dienstgrad} ${m.kommentar || ''}`.toLowerCase();
+        const matchesSuche = fullText.includes(suche);
         const matchesFunktion = filterFunktion === '' || (m.funktionen && m.funktionen.includes(filterFunktion));
 
         let matchesG26 = true;
@@ -172,7 +183,7 @@ function renderePersonalTabelle() {
     });
 
     if (gefiltert.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 15px; color: #777;">Keine Mitglieder gefunden.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 15px; color: #777;">Keine Mitglieder gefunden.</td></tr>`;
         return;
     }
 
@@ -198,6 +209,7 @@ function renderePersonalTabelle() {
         ).join('') || '<span style="color:#aaa;">Keine</span>';
 
         const lehrgaengeStr = m.lehrgaenge ? m.lehrgaenge : '-';
+        const kommentarStr = m.kommentar ? `<span title="${m.kommentar}">💬 ${m.kommentar.length > 25 ? m.kommentar.substring(0, 25) + '...' : m.kommentar}</span>` : '-';
 
         return `
             <tr style="border-bottom: 1px solid #eee;">
@@ -206,6 +218,7 @@ function renderePersonalTabelle() {
                 <td style="padding: 10px;">${funktionenBadges}</td>
                 <td style="padding: 10px;">${g26Badge}</td>
                 <td style="padding: 10px; font-size: 0.9em; color: #444;">${lehrgaengeStr}</td>
+                <td style="padding: 10px; font-size: 0.85em; color: #666;">${kommentarStr}</td>
                 <td style="padding: 10px;">
                     <button class="btn btn-sm" onclick="bearbeiteMitglied('${m.id}')" title="Bearbeiten">✏️</button>
                     <button class="btn btn-sm" onclick="loescheMitglied('${m.id}')" title="Löschen" style="color: red;">🗑️</button>
@@ -216,7 +229,7 @@ function renderePersonalTabelle() {
 }
 
 /**
- * Öffnet das Modal zum Erstellen oder Bearbeiten
+ * Öffnet das Modal
  */
 function oeffneMitgliedModal(mitgliedId = null) {
     initPersonalLayout();
@@ -241,6 +254,7 @@ function oeffneMitgliedModal(mitgliedId = null) {
             document.getElementById('mitglied-g26datum').value = m.g26datum || '';
             document.getElementById('mitglied-atemschutzuebung').value = m.atemschutzuebung || '';
             document.getElementById('mitglied-lehrgaenge').value = m.lehrgaenge || '';
+            document.getElementById('mitglied-kommentar').value = m.kommentar || '';
 
             if (m.funktionen && Array.isArray(m.funktionen)) {
                 document.querySelectorAll('.cb-funktion').forEach(cb => {
@@ -262,7 +276,7 @@ function schliesseMitgliedModal() {
 }
 
 /**
- * Speichert das Mitglied im localStorage
+ * Speichert das Mitglied
  */
 function speichereMitglied(event) {
     event.preventDefault();
@@ -275,6 +289,7 @@ function speichereMitglied(event) {
     const g26datum = document.getElementById('mitglied-g26datum').value;
     const atemschutzuebung = document.getElementById('mitglied-atemschutzuebung').value;
     const lehrgaenge = document.getElementById('mitglied-lehrgaenge').value;
+    const kommentar = document.getElementById('mitglied-kommentar').value;
 
     const funktionen = [];
     document.querySelectorAll('.cb-funktion:checked').forEach(cb => {
@@ -283,7 +298,7 @@ function speichereMitglied(event) {
 
     const neuesMitglied = {
         id, vorname, nachname, dienstgrad, eintritt,
-        g26datum, atemschutzuebung, lehrgaenge, funktionen
+        g26datum, atemschutzuebung, lehrgaenge, kommentar, funktionen
     };
 
     let mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
@@ -302,7 +317,7 @@ function speichereMitglied(event) {
 }
 
 /**
- * Löscht ein Mitglied nach Bestätigung
+ * Löscht ein Mitglied
  */
 function loescheMitglied(id) {
     if (!confirm('Möchtest du dieses Mitglied wirklich löschen?')) return;
@@ -319,6 +334,91 @@ function bearbeiteMitglied(id) {
     oeffneMitgliedModal(id);
 }
 
+// ==========================================
+// Export & Import Funktionen
+// ==========================================
+
+/**
+ * Exportiert die Personalakte als CSV (mit UTF-8 BOM für Excel)
+ */
+function exportPersonalCSV() {
+    const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+
+    if (mitglieder.length === 0) {
+        alert("⚠️ Keine Personaldaten zum Exportieren vorhanden.");
+        return;
+    }
+
+    const headers = ["ID", "Nachname", "Vorname", "Dienstgrad", "Eintritt", "Funktionen", "G26.3 Datum", "Atemschutz Übung", "Lehrgänge", "Kommentar"];
+    
+    const rows = mitglieder.map(m => [
+        m.id || '',
+        m.nachname || '',
+        m.vorname || '',
+        m.dienstgrad || '',
+        m.eintritt || '',
+        (m.funktionen || []).join(', '),
+        m.g26datum || '',
+        m.atemschutzuebung || '',
+        m.lehrgaenge || '',
+        m.kommentar || ''
+    ]);
+
+    if (typeof downloadCSV === 'function') {
+        downloadCSV(`Personalakte_FFW_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    } else {
+        const csvLines = [headers.join(";")];
+        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Personalakte_FFW_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+}
+
+/**
+ * Exportiert Personaldaten als JSON-Sicherungsdatei
+ */
+function exportPersonalJSON() {
+    const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(mitglieder, null, 2));
+    const link = document.createElement("a");
+    link.href = dataStr;
+    link.download = `Personal_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+}
+
+/**
+ * Importiert Personaldaten aus einer JSON-Sicherungsdatei
+ */
+function importPersonalJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importDaten = JSON.parse(e.target.result);
+            if (!Array.isArray(importDaten)) {
+                alert("⚠️ Ungültiges Dateiformat. Es wird eine JSON-Liste erwartet.");
+                return;
+            }
+
+            if (confirm(`Möchtest du ${importDaten.length} Mitglieder importieren und bestehende Daten ersetzen?`)) {
+                localStorage.setItem('ffw_mitglieder', JSON.stringify(importDaten));
+                renderePersonalTabelle();
+                if (typeof updateDashboard === 'function') updateDashboard();
+                alert("✅ Personaldaten erfolgreich importiert!");
+            }
+        } catch (err) {
+            alert("❌ Fehler beim Einlesen der Datei: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset input
+}
+
 // Global verfügbar machen
 window.initPersonalLayout = initPersonalLayout;
 window.renderePersonalTabelle = renderePersonalTabelle;
@@ -327,3 +427,6 @@ window.schliesseMitgliedModal = schliesseMitgliedModal;
 window.speichereMitglied = speichereMitglied;
 window.loescheMitglied = loescheMitglied;
 window.bearbeiteMitglied = bearbeiteMitglied;
+window.exportPersonalCSV = exportPersonalCSV;
+window.exportPersonalJSON = exportPersonalJSON;
+window.importPersonalJSON = importPersonalJSON;
