@@ -1,13 +1,17 @@
 // ==========================================
-// FFW Manager - Lagerverwaltung (v1.2.0)
+// FFW Manager - Lagerverwaltung (v1.3.0 Gesichert)
 // ==========================================
 
 function getLager() {
-    return ladeDaten("lager") || [];
+    return (typeof ladeDaten === "function" ? ladeDaten("lager") : JSON.parse(localStorage.getItem("ffw_lager"))) || [];
 }
 
 function speichereLager(lagerListe) {
-    speichereDaten('lager', lagerListe);
+    if (typeof speichereDaten === "function") {
+        speichereDaten('lager', lagerListe);
+    } else {
+        localStorage.setItem('ffw_lager', JSON.stringify(lagerListe));
+    }
     document.dispatchEvent(new Event("lagerGeaendert"));
 }
 
@@ -30,15 +34,22 @@ function formatiereDatum(datumStr) {
     return d.toLocaleDateString("de-DE");
 }
 
-// 1. Tabellenansicht mit Such- & Filterleiste
+// 1. Tabellenansicht mit Rechteprüfung & Filterleiste
 function renderLagerView() {
-    const container = document.getElementById('lager-container') || document.getElementById('lagerContainer') || document.getElementById('lagerListe');
+    const container = document.getElementById('seite-lager') || document.getElementById('lager-container') || document.getElementById('lagerListe');
     if (!container) return;
+
+    // Rechteprüfung für Schreibaktionen
+    const darfSchreiben = typeof window.hatRecht === "function" ? window.hatRecht('lager_schreiben') : true;
+
+    const buttonHTML = darfSchreiben 
+        ? `<button class="btn btn-primary" onclick="openLagerModal()">➕ Material anlegen</button>`
+        : `<p style="color:#666; font-style:italic; margin:0;">ℹ️ Sie haben nur Lesezugriff (Schreibgeschützt).</p>`;
 
     let html = `
         <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>📦 Lagerverwaltung</h2>
-            <button class="btn btn-primary" onclick="openLagerModal()">+ Material anlegen</button>
+            ${buttonHTML}
         </div>
 
         <!-- Filter- & Suchleiste -->
@@ -88,6 +99,7 @@ function filterLager() {
     const lagerListe = getLager();
     const SuchText = (document.getElementById('lager-filter-suche')?.value || '').toLowerCase().trim();
     const bestandFilter = document.getElementById('lager-filter-bestand')?.value || '';
+    const darfSchreiben = typeof window.hatRecht === "function" ? window.hatRecht('lager_schreiben') : true;
 
     const gefiltert = lagerListe.filter(item => {
         const bezeichnung = (item.bezeichnung || item.name || '').toLowerCase();
@@ -132,12 +144,16 @@ function filterLager() {
 
         const bestandStyle = istKritisch ? 'color:#c62828; font-weight:bold;' : 'font-weight:bold;';
 
+        const aktionsButtons = darfSchreiben 
+            ? `<button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openLagerAkteModal('${item.id}')">📂 Akte</button>
+               <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openLagerModal('${item.id}')">✏️</button>
+               <button class="btn btn-loeschen" title="Löschen" onclick="loescheLagerItem('${item.id}')">🗑️</button>`
+            : `<button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openLagerAkteModal('${item.id}')">📂 Akte</button>`;
+
         rowsHtml += `
             <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openLagerAkteModal('${item.id}')">
                 <td style="padding:8px 10px;" onclick="event.stopPropagation();">
-                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openLagerAkteModal('${item.id}')">📂 Akte</button>
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openLagerModal('${item.id}')">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loescheLagerItem('${item.id}')">🗑️</button>
+                    ${aktionsButtons}
                 </td>
                 <td style="padding:10px; font-weight:bold;">${escapeHtml(item.bezeichnung || item.name || 'Unbekannt')}</td>
                 <td style="padding:10px;">${escapeHtml(item.kategorie || '-')}</td>
@@ -158,6 +174,7 @@ function openLagerAkteModal(id) {
     const item = getLager().find(l => l.id === id);
     if (!item) return;
 
+    const darfSchreiben = typeof window.hatRecht === "function" ? window.hatRecht('lager_schreiben') : true;
     item.historie = item.historie || [];
     const einheit = escapeHtml(item.einheit || 'Stk.');
     const groesse = escapeHtml(item.groesse || item.größe || 'keine');
@@ -183,6 +200,24 @@ function openLagerAkteModal(id) {
         historieHtml += '</ul>';
     }
 
+    const schnellbuchungHTML = darfSchreiben ? `
+        <div style="margin-bottom:20px; background:#eef2f5; padding:12px; border-radius:6px;">
+            <label><strong>⚡ Schnellbuchung (Bestand ändern):</strong></label>
+            <form onsubmit="bucheLagerBestand(event, '${item.id}')" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                <div style="display:flex; gap:10px;">
+                    <select id="buchung-art" style="width:120px; padding:6px;">
+                        <option value="abgang">➖ Entnahme</option>
+                        <option value="zugang">➕ Zugang</option>
+                    </select>
+                    <input type="number" id="buchung-menge" placeholder="Menge" min="0.01" step="any" required style="width:100px; padding:6px;">
+                    <input type="text" id="buchung-bearbeiter" placeholder="Name / Handzeichen" style="flex:1; padding:6px;">
+                </div>
+                <input type="text" id="buchung-bemerkung" placeholder="Grund / Verwendungszweck (z. B. Übung, Einsatz)" style="width:100%; padding:6px;">
+                <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Buchung durchführen</button>
+            </form>
+        </div>` 
+        : `<p style="color:#666; font-style:italic;">ℹ️ Keine Berechtigung für Bestandsumbuchungen vorhanden.</p>`;
+
     const modalHtml = `
         <div id="lager-akte-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
             <div style="background:#fff; padding:20px; border-radius:8px; width:92%; max-width:650px; max-height:90vh; overflow-y:auto;">
@@ -202,22 +237,7 @@ function openLagerAkteModal(id) {
                     <div><strong>Artikel- / EAN-Nr.:</strong> ${escapeHtml(item.artikelnr || '-')}</div>
                 </div>
 
-                <!-- Schnellbuchung (Zugang / Abgang) -->
-                <div style="margin-bottom:20px; background:#eef2f5; padding:12px; border-radius:6px;">
-                    <label><strong>⚡ Schnellbuchung (Bestand ändern):</strong></label>
-                    <form onsubmit="bucheLagerBestand(event, '${item.id}')" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-                        <div style="display:flex; gap:10px;">
-                            <select id="buchung-art" style="width:120px; padding:6px;">
-                                <option value="abgang">➖ Entnahme</option>
-                                <option value="zugang">➕ Zugang</option>
-                            </select>
-                            <input type="number" id="buchung-menge" placeholder="Menge" min="0.01" step="any" required style="width:100px; padding:6px;">
-                            <input type="text" id="buchung-bearbeiter" placeholder="Name / Handzeichen" style="flex:1; padding:6px;">
-                        </div>
-                        <input type="text" id="buchung-bemerkung" placeholder="Grund / Verwendungszweck (z. B. Übung, Einsatz 12)" style="width:100%; padding:6px;">
-                        <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Buchung durchführen</button>
-                    </form>
-                </div>
+                ${schnellbuchungHTML}
 
                 <!-- Historie Liste -->
                 <h3>📜 Buchungshistorie</h3>
@@ -241,9 +261,14 @@ function closeLagerAkteModal() {
     if (existing) existing.remove();
 }
 
-// Bestand buchen
+// Bestand buchen mit Rechteprüfung
 function bucheLagerBestand(event, id) {
     event.preventDefault();
+    if (typeof window.hatRecht === "function" && !window.hatRecht('lager_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Buchen von Beständen.");
+        return;
+    }
+
     const lagerListe = getLager();
     const item = lagerListe.find(l => l.id === id);
     if (!item) return;
@@ -274,8 +299,13 @@ function bucheLagerBestand(event, id) {
     openLagerAkteModal(id);
 }
 
-// 3. Modal zum Anlegen/Bearbeiten von Lagerartikeln
+// Modal zum Anlegen/Bearbeiten von Lagerartikeln
 function openLagerModal(id = null) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('lager_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Bearbeiten.");
+        return;
+    }
+
     let item = { id: '', bezeichnung: '', kategorie: '', groesse: '', lagerort: '', bestand: 0, mindestbestand: 0, einheit: 'Stk.', lieferant: '', artikelnr: '' };
 
     if (id) {
@@ -378,6 +408,10 @@ function closeLagerModal() {
 
 function saveLagerFromModal(event, existingId) {
     event.preventDefault();
+    if (typeof window.hatRecht === "function" && !window.hatRecht('lager_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Speichern.");
+        return;
+    }
 
     const lagerListe = getLager();
     const existingItem = lagerListe.find(l => l.id === existingId) || {};
@@ -418,6 +452,11 @@ function saveLagerFromModal(event, existingId) {
 }
 
 function loescheLagerItem(id) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('lager_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Löschen.");
+        return;
+    }
+
     if (!confirm("Möchtest du diesen Lagerartikel wirklich löschen?")) return;
 
     const lagerListe = getLager().filter(l => l.id !== id);
@@ -425,13 +464,10 @@ function loescheLagerItem(id) {
     filterLager();
 }
 
-// ==========================================
-// ALIASE & KOMPATIBILITÄT
-// ==========================================
+// Kompatibilitäts-Aliase
 function ladeLager() {
     renderLagerView();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    renderLagerView();
-});
+window.renderLagerView = renderLagerView;
+window.ladeLager = ladeLager;

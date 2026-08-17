@@ -72,7 +72,7 @@ function zeigeSeite(seiteId) {
             if (typeof renderBenutzerVerwaltung === 'function') renderBenutzerVerwaltung();
             break;
 
-         case 'einstellungen':
+        case 'einstellungen':
             if (typeof initEinstellungenLayout === 'function') initEinstellungenLayout();
             break;
 
@@ -129,7 +129,7 @@ function downloadCSV(filename, headers, rows) {
         const escapedRow = row.map(val => {
             if (val === null || val === undefined) return '""';
             const str = String(val).replace(/"/g, '""');
-            return `"${str}"`;
+            return '"' + str + '"';
         });
         csvLines.push(escapedRow.join(";"));
     });
@@ -301,14 +301,11 @@ function druckeListe(titel, elementId) {
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Standard-Verhalten des Browsers verhindern
     e.preventDefault();
     deferredPrompt = e;
 
-    // Kurze Verzögerung, damit die Seite sauber geladen ist
     setTimeout(() => {
         if (deferredPrompt) {
-            // Nativen Installations-Dialog direkt aufrufen
             deferredPrompt.prompt();
 
             deferredPrompt.userChoice.then((choiceResult) => {
@@ -318,7 +315,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
                 deferredPrompt = null;
             });
         }
-    }, 1000); // 1 Sekunde nach Seitenaufruf
+    }, 1000);
 });
 
 
@@ -330,7 +327,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
  * Aktualisiert die Statuszahlen auf dem Dashboard
  */
 function aktualisiereDashboard() {
-    // 1. Daten aus localStorage laden
     const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
     const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
     const fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
@@ -338,13 +334,10 @@ function aktualisiereDashboard() {
     const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
     const pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
 
-    // 2. Status-Berechnungen
     const heute = new Date();
     
-    // Prüfungen überfällig
     const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
     
-    // Wartung fällig (nächste 30 Tage)
     const in30Tagen = new Date();
     in30Tagen.setDate(heute.getDate() + 30);
     const faellig = pruefungen.filter(p => {
@@ -352,17 +345,14 @@ function aktualisiereDashboard() {
         return d >= heute && d <= in30Tagen && p.status !== 'erledigt';
     }).length;
 
-    // Einsatzbereit vs Defekt
     const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit').length;
     const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
 
-    // 3. Werte in die HTML-Kacheln schreiben
     setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
     setTileValue('stat-wartung-faellig', `${faellig} fällig`);
     setTileValue('stat-einsatzbereit', `${einsatzbereitCount} Geräte einsatzbereit`);
     setTileValue('stat-defekt', `${defektCount} inaktiv`);
 
-    // Modul-Zahlen
     setTileValue('stat-modul-geraete', `${geraete.length} Geräte`);
     setTileValue('stat-modul-fahrzeuge', `${fahrzeuge.length} Fahrzeuge`);
     setTileValue('stat-modul-psa', `${psa.length} Personen`);
@@ -371,22 +361,19 @@ function aktualisiereDashboard() {
     setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
 }
 
-// Alias zur Abwärtskompatibilität bereithalten
 window.updateDashboard = aktualisiereDashboard;
 window.aktualisiereDashboard = aktualisiereDashboard;
 
-/**
- * Hilfsfunktion zum sicheren Setzen von Text
- */
 function setTileValue(elementId, text) {
     const el = document.getElementById(elementId);
     if (el) el.textContent = text;
 }
 
-// Beim App-Start ausführen
 document.addEventListener('DOMContentLoaded', () => {
     aktualisiereDashboard();
 });
+
+
 // ==========================================
 // Modul: Einstellungen Render-Logik & Speicher
 // ==========================================
@@ -395,12 +382,10 @@ function initEinstellungenLayout() {
     const ziel = document.getElementById('seite-einstellungen');
     if (!ziel) return;
 
-    // 1. Berechtigungen prüfen (Schreibrecht für Einstellungen)
     const darfBearbeiten = typeof window.pruefeSeitenZugriff === "function" 
         ? window.pruefeSeitenZugriff('einstellungen_schreiben') 
-        : true; // Standard-Fallback, falls keine granularen Rechte konfiguriert sind
+        : true;
 
-    // 2. Gespeicherte Einstellungen aus localStorage laden (oder Standardwerte nutzen)
     const e = JSON.parse(localStorage.getItem('ffw_einstellungen')) || {
         wehrName: 'Freiwillige Feuerwehr Albertsried',
         wachenNummer: '101',
@@ -419,7 +404,6 @@ function initEinstellungenLayout() {
         <h2>⚙️ Einstellungen</h2>
         <div style="display: grid; gap: 20px; max-width: 800px; margin-top: 20px;">
             
-            <!-- Erweiterte Feuerwehr-Stammdaten -->
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
                 <h3>🏢 Feuerwehr Stammdaten</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
@@ -438,7 +422,6 @@ function initEinstellungenLayout() {
                 </div>
             </div>
 
-            <!-- Vorlaufzeiten für Prüfungs- & Wartungserinnerungen -->
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
                 <h3>🔔 Vorlaufzeiten & Erinnerungen</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
@@ -452,7 +435,6 @@ function initEinstellungenLayout() {
                 ${speicherButtonHTML}
             </div>
 
-            <!-- Gesicherter Daten-Export -->
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
                 <h3>💾 System-Backup (JSON)</h3>
                 <p style="color: #666; font-size: 0.9em;">Exportiert die Systemdaten basierend auf Ihren aktuellen Benutzerrechten.</p>
@@ -464,6 +446,8 @@ function initEinstellungenLayout() {
         </div>
     `;
 }
+
+
 // ==========================================
 // Modul: Auswertungen Render-Logik
 // ==========================================
@@ -472,7 +456,6 @@ function initAuswertungenLayout() {
     const ziel = document.getElementById('seite-auswertungen');
     if (!ziel) return;
 
-    // Hilfsfunktion zur Berechtigungsprüfung
     const darfLesen = (modul) => {
         if (typeof window.pruefeSeitenZugriff === "function") {
             return window.pruefeSeitenZugriff(modul);
@@ -480,14 +463,12 @@ function initAuswertungenLayout() {
         return true;
     };
 
-    // Daten aus localStorage laden (unter Einhaltung des Leseschutzes)
     const geraete = darfLesen('geraete') ? (JSON.parse(localStorage.getItem('ffw_geraete')) || []) : [];
     const mitglieder = darfLesen('personal') ? (JSON.parse(localStorage.getItem('ffw_mitglieder')) || []) : [];
     const psa = darfLesen('psa') ? (JSON.parse(localStorage.getItem('ffw_psa')) || []) : [];
     const fahrzeuge = darfLesen('fahrzeuge') ? (JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || []) : [];
     const pruefungen = darfLesen('pruefungen') ? (JSON.parse(localStorage.getItem('ffw_pruefungen')) || []) : [];
 
-    // Kennzahlen berechnen
     const heute = new Date();
     const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
     const einsatzbereit = geraete.filter(g => g.status === 'einsatzbereit').length;
@@ -527,9 +508,6 @@ function initAuswertungenLayout() {
     `;
 }
 
-/**
- * Speichert die geänderten Einstellungen im localStorage
- */
 function speichereEinstellungen() {
     if (typeof window.pruefeSeitenZugriff === "function" && !window.pruefeSeitenZugriff('einstellungen_schreiben')) {
         alert("⚠️ Keine Berechtigung zum Speichern vorhanden.");
@@ -549,15 +527,12 @@ function speichereEinstellungen() {
     alert("✅ Einstellungen erfolgreich gespeichert!");
 }
 
-/**
- * Exportiert Daten unter Einhaltung des Lese-Schutzes
- */
 function exportiereSystemBackupGesichert() {
     const darfLesen = (modul) => {
         if (typeof window.pruefeSeitenZugriff === "function") {
             return window.pruefeSeitenZugriff(modul);
         }
-        return true; // Fallback
+        return true;
     };
 
     const backupData = {
@@ -565,13 +540,11 @@ function exportiereSystemBackupGesichert() {
         einstellungen: JSON.parse(localStorage.getItem('ffw_einstellungen')) || {}
     };
 
-    // Daten nur anhängen, wenn Leseberechtigung vorliegt
     if (darfLesen('geraete')) backupData.geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
     if (darfLesen('fahrzeuge')) backupData.fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
     if (darfLesen('lager')) backupData.lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
     if (darfLesen('pruefungen')) backupData.pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
     
-    // Schutz vertraulicher personenbezogener Daten
     if (darfLesen('personal')) {
         backupData.mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
     } else {
@@ -592,3 +565,44 @@ function exportiereSystemBackupGesichert() {
     dlAnchor.click();
     dlAnchor.remove();
 }
+
+
+// ==========================================
+// Rollen- & Rechte-System
+// ==========================================
+
+const ROLLEN_CONFIG = {
+    admin: {
+        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'benutzer', 'einstellungen', 'auswertungen'],
+        schreibrechte: ['*']
+    },
+    editor: {
+        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen'],
+        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben']
+    },
+    viewer: {
+        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen'],
+        schreibrechte: []
+    },
+    gast: {
+        seiten: ['dashboard', 'geraete'],
+        schreibrechte: []
+    }
+};
+
+function hohleAktuelleRolle() {
+    const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer')) || {};
+    return (user.rolle || 'gast').toLowerCase();
+}
+
+function hatRecht(recht) {
+    const rolle = hohleAktuelleRolle();
+    const rechteDef = ROLLEN_CONFIG[rolle] || ROLLEN_CONFIG.gast;
+
+    if (rechteDef.schreibrechte.includes('*')) return true;
+
+    return rechteDef.seiten.includes(recht) || rechteDef.schreibrechte.includes(recht);
+}
+
+window.pruefeSeitenZugriff = hatRecht;
+window.hatRecht = hatRecht;
