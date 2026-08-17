@@ -288,3 +288,54 @@ window.addEventListener('beforeinstallprompt', (e) => {
         }
     }, 1000); // 1 Sekunde nach Seitenaufruf
 });
+// Dashboard-Zahlen aktualisieren
+function updateDashboard() {
+    // 1. Daten aus localStorage laden (oder leere Arrays initialisieren)
+    const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
+    const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+    const fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
+    const lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
+    const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
+    const pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
+
+    // 2. Status-Berechnungen (Beispiel-Logik)
+    const heute = new Date();
+    
+    // Prüfungen überfällig
+    const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
+    
+    // Wartung fällig (z.B. in den nächsten 30 Tagen)
+    const in30Tagen = new Date();
+    in30Tagen.setDate(heute.getDate() + 30);
+    const faellig = pruefungen.filter(p => {
+        const d = new Date(p.datum);
+        return d >= heute && d <= in30Tagen && p.status !== 'erledigt';
+    }).length;
+
+    // Einsatzbereit vs Defekt
+    const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit').length;
+    const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
+
+    // 3. Werte in die HTML-Kacheln schreiben (IDs im HTML anpassen!)
+    setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
+    setTileValue('stat-wartung-faellig', `${faellig} fällig`);
+    setTileValue('stat-einsatzbereit', `${einsatzbereitCount} Geräte einsatzbereit`);
+    setTileValue('stat-defekt', `${defektCount} inaktiv`);
+
+    // Modul-Zahlen
+    setTileValue('stat-modul-geraete', `${geraete.length} Geräte`);
+    setTileValue('stat-modul-fahrzeuge', `${fahrzeuge.length} Fahrzeuge`);
+    setTileValue('stat-modul-psa', `${psa.length} Personen`);
+    setTileValue('stat-modul-pruefungen', `${faellig + ueberfaellig} fällig`);
+    setTileValue('stat-modul-lager', `${lager.length} Artikel`);
+    setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
+}
+
+// Hilfsfunktion zum sicheren Setzen von Text
+function setTileValue(elementId, text) {
+    const el = document.getElementById(elementId);
+    if (el) el.textContent = text;
+}
+
+// Beim App-Start ausführen
+document.addEventListener('DOMContentLoaded', updateDashboard);
