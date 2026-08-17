@@ -245,31 +245,58 @@ body{
 
 }
 /* ===========================================
-   Responsive
+   Responsive (Anpassung für Smartphones)
 =========================================== */
 
-@media(max-width:900px){
-
-.sidebar{
-
-    width:180px;
-
+@media(max-width: 900px) {
+    .sidebar {
+        width: 180px;
+    }
 }
 
-}
+@media(max-width: 700px) {
+    .container {
+        flex-direction: column;
+        height: auto; /* Aufhebung der festen Bildschirmlinie */
+    }
 
-@media(max-width:700px){
+    /* Sidebar als fixierte horizontale Navigationsleiste oben */
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        overflow-x: auto; /* Wischen zwischen Buttons ermöglichen */
+        overflow-y: hidden;
+        background-color: #1a1a1a;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
 
-.container{
+    .sidebar ul,
+    .sidebar nav ul {
+        display: flex; /* Buttons nebeneinander anordnen */
+        flex-direction: row;
+        white-space: nowrap;
+    }
 
-    flex-direction:column;
+    .sidebar li {
+        border-bottom: none;
+        border-right: 1px solid #333;
+        flex: 0 0 auto;
+    }
 
-}
+    .sidebar nav ul li button,
+    .sidebar ul li button {
+        padding: 12px 16px;
+        text-align: center;
+        font-size: 0.9rem;
+    }
 
-.sidebar{
-
-    width:100%;
-
+    /* Innenabstand auf Mobilgeräten reduzieren */
+    .content {
+        padding: 15px;
+    }
 }
 
 }/* ===========================================
