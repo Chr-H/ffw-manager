@@ -464,6 +464,68 @@ function initEinstellungenLayout() {
         </div>
     `;
 }
+// ==========================================
+// Modul: Auswertungen Render-Logik
+// ==========================================
+
+function initAuswertungenLayout() {
+    const ziel = document.getElementById('seite-auswertungen');
+    if (!ziel) return;
+
+    // Hilfsfunktion zur Berechtigungsprüfung
+    const darfLesen = (modul) => {
+        if (typeof window.pruefeSeitenZugriff === "function") {
+            return window.pruefeSeitenZugriff(modul);
+        }
+        return true;
+    };
+
+    // Daten aus localStorage laden (unter Einhaltung des Leseschutzes)
+    const geraete = darfLesen('geraete') ? (JSON.parse(localStorage.getItem('ffw_geraete')) || []) : [];
+    const mitglieder = darfLesen('personal') ? (JSON.parse(localStorage.getItem('ffw_mitglieder')) || []) : [];
+    const psa = darfLesen('psa') ? (JSON.parse(localStorage.getItem('ffw_psa')) || []) : [];
+    const fahrzeuge = darfLesen('fahrzeuge') ? (JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || []) : [];
+    const pruefungen = darfLesen('pruefungen') ? (JSON.parse(localStorage.getItem('ffw_pruefungen')) || []) : [];
+
+    // Kennzahlen berechnen
+    const heute = new Date();
+    const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
+    const einsatzbereit = geraete.filter(g => g.status === 'einsatzbereit').length;
+    const defekt = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
+
+    ziel.innerHTML = `
+        <h2>📊 Auswertungen & Kennzahlen</h2>
+        <p style="color: #666; margin-bottom: 20px;">Systemweite Übersicht zum aktuellen Status der Feuerwehr.</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px;">
+            
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>🚒 Geräte-Status</h3>
+                <p><strong>Einsatzbereit:</strong> ${einsatzbereit}</p>
+                <p><strong>Defekt / Inaktiv:</strong> ${defekt}</p>
+                <p><strong>Gesamtanzahl:</strong> ${geraete.length}</p>
+            </div>
+
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>📋 Prüfungs-Status</h3>
+                <p><strong>Überfällige Prüfungen:</strong> <span style="color: ${ueberfaellig > 0 ? '#c00' : '#28a745'}; font-weight: bold;">${ueberfaellig}</span></p>
+                <p><strong>Gesamte Einträge:</strong> ${pruefungen.length}</p>
+            </div>
+
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>🥾 PSA & Ausrüstung</h3>
+                <p><strong>Zugewiesene Ausrüstung:</strong> ${darfLesen('psa') ? psa.length + ' Teile' : '🔒 Keine Berechtigung'}</p>
+            </div>
+
+            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                <h3>👥 Personal & Fahrzeuge</h3>
+                <p><strong>Mitglieder:</strong> ${darfLesen('personal') ? mitglieder.length : '🔒 Keine Berechtigung'}</p>
+                <p><strong>Fahrzeuge:</strong> ${fahrzeuge.length}</p>
+            </div>
+
+        </div>
+    `;
+}
 
 /**
  * Speichert die geänderten Einstellungen im localStorage
