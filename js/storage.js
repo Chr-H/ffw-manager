@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Speicher & Cloud-Sync (v1.1)
+// FFW Manager - Speicher & Cloud-Sync (v1.2)
 // ==========================================
 
 // 1. Daten aus dem Speicher laden
@@ -11,6 +11,15 @@ function ladeDaten(schluessel) {
     } catch (e) {
         return [];
     }
+}
+
+// Spezifische Helper-Funktionen für Personal (für Rückwärtskompatibilität in personal.js)
+function ladePersonalData() {
+    return ladeDaten('personal');
+}
+
+function speicherePersonalData(daten) {
+    speichereDaten('personal', daten);
 }
 
 // 2. Daten lokal & in Firebase Cloud speichern
@@ -46,8 +55,8 @@ function starteCloudSync() {
     if (cloudSyncGestartet) return; // Verhindert doppelte Aufrufe
     cloudSyncGestartet = true;
 
-    // ALLE Module in die Synchronisation aufnehmen!
-    const sammlungen = ['geraete', 'fahrzeuge', 'kategorien', 'psa', 'lager', 'pruefungen'];
+    // 'personal' WURDE HIER ERGÄNZT!
+    const sammlungen = ['geraete', 'fahrzeuge', 'kategorien', 'psa', 'lager', 'pruefungen', 'personal'];
 
     sammlungen.forEach(schluessel => {
         db.collection('ffw_data').doc(schluessel)
@@ -58,7 +67,7 @@ function starteCloudSync() {
                     // 1. Im lokalen Speicher ablegen
                     localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
                     
-                    // 2. Live-Aktualisierung der jeweligen UI-Ansichten
+                    // 2. Live-Aktualisierung der jeweiligen UI-Ansichten
                     switch (schluessel) {
                         case 'geraete':
                             if (typeof filterGeraete === 'function') filterGeraete();
@@ -76,6 +85,9 @@ function starteCloudSync() {
                         case 'pruefungen':
                             if (typeof renderPruefungenView === 'function') renderPruefungenView();
                             else if (typeof filterPruefungen === 'function') filterPruefungen();
+                            break;
+                        case 'personal':
+                            if (typeof renderePersonalTabelle === 'function') renderePersonalTabelle();
                             break;
                     }
 

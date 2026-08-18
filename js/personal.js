@@ -125,13 +125,13 @@ function speichereMitglied(e) {
     e.preventDefault();
 
     const id = document.getElementById('mitglied-id').value || 'pers_' + Date.now();
-    const spind = document.getElementById('mitglied-spind').value.trim();
-    const vorname = document.getElementById('mitglied-vorname').value.trim();
-    const nachname = document.getElementById('mitglied-nachname').value.trim();
-    const dienstgrad = document.getElementById('mitglied-dienstgrad').value.trim();
-    const g26datum = document.getElementById('mitglied-g26datum').value;
-    const lehrgaenge = document.getElementById('mitglied-lehrgaenge').value.trim();
-    const bemerkung = document.getElementById('mitglied-bemerkung').value.trim();
+    const spind = document.getElementById('mitglied-spind')?.value.trim() || '';
+    const vorname = document.getElementById('mitglied-vorname')?.value.trim() || '';
+    const nachname = document.getElementById('mitglied-nachname')?.value.trim() || '';
+    const dienstgrad = document.getElementById('mitglied-dienstgrad')?.value.trim() || '';
+    const g26datum = document.getElementById('mitglied-g26datum')?.value || '';
+    const lehrgaenge = document.getElementById('mitglied-lehrgaenge')?.value.trim() || '';
+    const bemerkung = document.getElementById('mitglied-bemerkung')?.value.trim() || '';
 
     const funktionen = [];
     document.querySelectorAll('.cb-funktion:checked').forEach(cb => {
@@ -151,22 +151,31 @@ function speichereMitglied(e) {
         updatedAt: new Date().toISOString()
     };
 
-    let mitglieder = typeof ladePersonalData === 'function' ? ladePersonalData() : [];
-    const index = mitglieder.findIndex(x => x.id === id);
+    // Daten direkt aus LocalStorage holen zur Vermeidung von Schnittstellen-Fehlern
+    let mitglieder = [];
+    try {
+        const raw = localStorage.getItem('ffw_personal');
+        mitglieder = raw ? JSON.parse(raw) : [];
+    } catch (err) {
+        mitglieder = [];
+    }
 
+    const index = mitglieder.findIndex(x => x.id === id);
     if (index >= 0) {
         mitglieder[index] = mitgliedObj;
     } else {
         mitglieder.push(mitgliedObj);
     }
 
-    // Speichern über Storage
+    // In LocalStorage speichern
+    localStorage.setItem('ffw_personal', JSON.stringify(mitglieder));
+
+    // Falls globale Speicherfunktion existiert, ebenfalls aufrufen
     if (typeof speicherePersonalData === 'function') {
         speicherePersonalData(mitglieder);
-    } else {
-        localStorage.setItem('ffw_personal', JSON.stringify(mitglieder));
     }
 
+    // Modal schließen & Tabelle sofort neu zeichnen
     schliesseMitgliedModal();
     renderePersonalTabelle();
 }
