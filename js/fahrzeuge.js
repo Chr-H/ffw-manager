@@ -112,9 +112,9 @@ function oeffneFahrzeugAkte(id) {
 
     if (!f.abteile) {
         f.abteile = [
-            { name: 'G1', inhalt: '' },
-            { name: 'G2', inhalt: '' },
-            { name: 'GR', inhalt: '' }
+            { name: 'G1 (Geräteraum 1)', inhalt: '' },
+            { name: 'G2 (Geräteraum 2)', inhalt: '' },
+            { name: 'GR (Geräteraum Heck)', inhalt: '' }
         ];
     }
 
@@ -124,31 +124,63 @@ function oeffneFahrzeugAkte(id) {
                 <input type="text" value="${a.name || ''}" onchange="updateAbteilName(${index}, this.value)" style="font-weight:bold; width:60%; padding:4px;" placeholder="Abteil Name (z.B. G1)">
                 <button type="button" onclick="entferneAbteil(${index})" style="background:#dc3545; color:white; border:none; border-radius:3px; padding:2px 6px; cursor:pointer;">✕</button>
             </div>
-            <textarea onchange="updateAbteilInhalt(${index}, this.value)" style="width:100%; height:50px; padding:4px; box-sizing:border-box;" placeholder="Beladung / Geräte in diesem Abteil...">${a.inhalt || ''}</textarea>
+            <textarea onchange="updateAbteilInhalt(${index}, this.value)" style="width:100%; height:50px; padding:4px; box-sizing:border-box;" placeholder="Beladung / Geräte...">${a.inhalt || ''}</textarea>
         </div>
     `).join('');
 
     container.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px;">
-            <h2>📋 ${f.callSign || f.typ || 'Fahrzeugakte'}</h2>
-            <button onclick="speichereAkte()" style="background:#2e7d32; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">💾 Akte Speichern</button>
+            <h2>📋 Fahrzeugakte bearbeiten</h2>
+            <button onclick="speichereAkte()" style="background:#2e7d32; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold;">💾 Alles Speichern</button>
         </div>
 
-        <div style="margin-bottom:15px; font-size:0.9em; color:#555;">
-            <p><strong>Kennzeichen:</strong> ${f.kennzeichen || f.licensePlate || '-'}</p>
-            <p><strong>Typ:</strong> ${f.typ || '-'}</p>
-            <p><strong>Baujahr:</strong> ${f.baujahr || '-'}</p>
-            <p><strong>TÜV/HU:</strong> ${f.tuev || f.nextHU || '-'} | <strong>SP:</strong> ${f.sp || f.nextSP || '-'}</p>
+        <!-- STAMMDATEN BEARBEITEN -->
+        <div style="background:#f0f4f8; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #cbd5e1;">
+            <h3 style="margin-top:0; margin-bottom:10px; font-size:1.05em;">✏️ Stammdaten</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">Funkrufname / Name:</label>
+                    <input type="text" id="akte-callSign" value="${f.callSign || f.name || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">Fahrzeugtyp:</label>
+                    <input type="text" id="akte-typ" value="${f.typ || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">Amtl. Kennzeichen:</label>
+                    <input type="text" id="akte-kennzeichen" value="${f.kennzeichen || f.licensePlate || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">Baujahr:</label>
+                    <input type="number" id="akte-baujahr" value="${f.baujahr || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">TÜV / HU Datum:</label>
+                    <input type="date" id="akte-tuev" value="${f.tuev || f.nextHU || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">SP Datum:</label>
+                    <input type="date" id="akte-sp" value="${f.sp || f.nextSP || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:0.8em; font-weight:bold; display:block;">Status:</label>
+                    <select id="akte-status" style="width:100%; padding:5px; box-sizing:border-box;">
+                        <option value="Einsatzbereit" ${f.status === 'Einsatzbereit' ? 'selected' : ''}>🟢 Einsatzbereit</option>
+                        <option value="Wartung" ${f.status === 'Wartung' ? 'selected' : ''}>🟡 Wartung</option>
+                        <option value="Defekt" ${f.status === 'Defekt' ? 'selected' : ''}>🔴 Defekt</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        <h3>📦 Geräteabteile / Geräteräume</h3>
-        <div id="abteile-liste-container" style="margin-top:10px;">
+        <!-- GERÄTEABTEILE -->
+        <h3 style="margin-bottom:8px; font-size:1.05em;">📦 Geräteabteile / Geräteräume</h3>
+        <div id="abteile-liste-container">
             ${abteileHTML}
         </div>
         <button type="button" onclick="fuegeAbteilHinzu()" style="background:#6c757d; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-top:5px;">+ Abteil hinzufügen</button>
     `;
 }
-
 // 4. Hilfsfunktionen für Geräteabteile
 function updateAbteilName(index, name) {
     const fahrzeuge = ladeDaten('fahrzeuge');
@@ -188,10 +220,37 @@ function entferneAbteil(index) {
 }
 
 function speichereAkte() {
-    const fahrzeuge = ladeDaten('fahrzeuge');
-    if (typeof speichereDaten === 'function') {
-        speichereDaten('fahrzeuge', fahrzeuge);
-        alert('Fahrzeugakte und Geräteabteile erfolgreich gespeichert!');
+    if (!aktuellesFahrzeugId) return;
+
+    let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
+
+    if (f) {
+        // Stammdaten aus den Feldern auslesen und im Objekt aktualisieren
+        f.callSign = document.getElementById('akte-callSign')?.value || f.callSign;
+        f.name = f.callSign;
+        f.typ = document.getElementById('akte-typ')?.value || f.typ;
+        f.kennzeichen = document.getElementById('akte-kennzeichen')?.value || f.kennzeichen;
+        f.licensePlate = f.kennzeichen;
+        f.baujahr = document.getElementById('akte-baujahr')?.value || f.baujahr;
+        f.tuev = document.getElementById('akte-tuev')?.value || f.tuev;
+        f.nextHU = f.tuev;
+        f.sp = document.getElementById('akte-sp')?.value || f.sp;
+        f.nextSP = f.sp;
+        f.status = document.getElementById('akte-status')?.value || f.status;
+
+        // In LocalStorage & Firebase Cloud speichern
+        if (typeof speichereDaten === 'function') {
+            speichereDaten('fahrzeuge', fahrzeuge);
+        }
+
+        // Links die Tabelle und das Dashboard aktualisieren
+        renderFahrzeugeView();
+        if (typeof aktualisiereDashboard === 'function') {
+            aktualisiereDashboard();
+        }
+
+        alert('Stammdaten und Geräteabteile erfolgreich gespeichert!');
     }
 }
 
