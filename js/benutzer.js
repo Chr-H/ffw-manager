@@ -1,5 +1,5 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (v0.7.4)
+// RECHTE- & BENUTZERSTEUERUNG (v0.7.4 - Bereinigt)
 // ==========================================
 
 const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
@@ -11,7 +11,7 @@ let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
     rolle: "gast"
 };
 
-// Prüffunktionen für Berechtigungen (Tolerant gegenüber Groß-/Kleinschreibung)
+// Prüffunktionen für Berechtigungen
 function istAdmin() {
     if (!aktuellerBenutzer) return false;
     const r = (aktuellerBenutzer.rolle || "").toLowerCase();
@@ -69,51 +69,51 @@ function zeigePinModal(zielSeite) {
     if (!pin) return;
 
     if (window.db) {
-        db.collection('benutzer')
-            .get()
-            .then(snapshot => {
-                let treffer = null;
-                const eingabeKennung = emailOderName.trim().toLowerCase();
-                const eingabePin = pin.trim();
+        db.collection('benutzer').get().then(snapshot => {
+            let treffer = null;
+            const eingabeKennung = emailOderName.trim().toLowerCase();
+            const eingabePin = pin.trim();
 
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    const userEmail = (d.email || "").trim().toLowerCase();
-                    const userName = (d.name || "").trim().toLowerCase();
-                    const userPin = String(d.pin || "").trim();
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const userEmail = (d.email || "").trim().toLowerCase();
+                const userName = (d.name || "").trim().toLowerCase();
+                const userPin = String(d.pin || "").trim();
 
-                    if ((userEmail === eingabeKennung || userName === eingabeKennung) && userPin === eingabePin) {
-                        treffer = { id: doc.id, ...d };
-                    }
-                });
-
-                if (treffer) {
-                    aktuellerBenutzer = {
-                        name: treffer.name,
-                        email: treffer.email,
-                        rolle: (treffer.rolle || 'viewer').toLowerCase()
-                    };
-                    
-                    sessionStorage.setItem('ffw_user', JSON.stringify(aktuellerBenutzer));
-                    alert(`Willkommen, ${treffer.name}!\nErfolgreich angemeldet als ${aktuellerBenutzer.rolle.toUpperCase()}.`);
-                    
-                    aktualisiereModulSichtbarkeit();
-                    if (zielSeite && zielSeite !== 'dashboard') {
-                        zeigeSeite(zielSeite);
-                    } else {
-                        zeigeSeite('dashboard');
-                    }
-                } else {
-                    alert("❌ Ungültige Kombination aus Benutzername/E-Mail und PIN oder Konto noch nicht freigeschaltet!");
+                if ((userEmail === eingabeKennung || userName === eingabeKennung) && userPin === eingabePin) {
+                    treffer = { id: doc.id, ...d };
                 }
-            })
-            .catch(err => alert("Fehler beim Login: " + err.message));
+            });
+
+            if (treffer) {
+                aktuellerBenutzer = {
+                    name: treffer.name,
+                    email: treffer.email,
+                    rolle: (treffer.rolle || 'viewer').toLowerCase()
+                };
+                
+                // Sowohl sessionStorage als auch localStorage abdecken
+                const userString = JSON.stringify(aktuellerBenutzer);
+                sessionStorage.setItem('ffw_user', userString);
+                localStorage.setItem('ffw_user', userString);
+                localStorage.setItem('ffw_aktiver_benutzer', userString);
+
+                alert(`Willkommen, ${treffer.name}!\nErfolgreich angemeldet als ${aktuellerBenutzer.rolle.toUpperCase()}.`);
+                
+                aktualisiereModulSichtbarkeit();
+                if (typeof zeigeSeite === 'function') {
+                    zeigeSeite(zielSeite && zielSeite !== 'dashboard' ? zielSeite : 'dashboard');
+                }
+            } else {
+                alert("❌ Ungültige Kombination aus Benutzername/E-Mail und PIN!");
+            }
+        }).catch(err => alert("Fehler beim Login: " + err.message));
     } else {
         alert("⚠️ Keine Datenbankverbindung verfügbar!");
     }
 }
 
-// ZUGANGS-ANTRAG SENDEN (Variante 2)
+// ZUGANGS-ANTRAG SENDEN
 function beantrageZugang(e) {
     if (e) e.preventDefault();
     
@@ -241,7 +241,7 @@ function ladeZugangsanfragen() {
         });
 }
 
-// FREISCHALTEN (Prüft ob Nutzer bereits existiert & aktualisiert ihn in dem Fall)
+// FREISCHALTEN
 function genehmigeAntrag(requestId, name, email, pin, rolle) {
     if (!confirm(`Soll der Zugang für ${name} als ${(rolle || 'viewer').toUpperCase()} freigeschaltet werden?`)) return;
 
@@ -258,7 +258,6 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
             });
 
             if (bestehenderUserDoc) {
-                // Nutzer existiert bereits -> PIN & Rolle aktualisieren (Reset via Antrag)
                 return db.collection('benutzer').doc(bestehenderUserDoc.id).update({
                     name: name,
                     pin: pin,
@@ -266,7 +265,6 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
                     aktualisiertAm: new Date().toISOString()
                 });
             } else {
-                // Neuer Nutzer -> Neu anlegen
                 return db.collection('benutzer').add({
                     name: name,
                     email: email,
@@ -301,7 +299,7 @@ function lehneAntragAb(requestId) {
     }
 }
 
-// 2. FREIGESCHALTETE KAMERADEN & ROLLEN VERWALTEN
+// 2. FREIGESCHALTETE KAMERADEN VERWALTEN
 function ladeAktiveBenutzer() {
     const ziel = document.getElementById("aktive-benutzer-bereich");
     if (!ziel || !window.db) return;
@@ -362,11 +360,10 @@ function ladeAktiveBenutzer() {
         });
 }
 
-// PIN DURCH ADMIN ZURÜCKSETZEN (Variante 1)
+// PIN DURCH ADMIN ZURÜCKSETZEN
 function pinZuruecksetzen(userId, benutzerName) {
     const neuePin = prompt(`🔑 Neue 4- bis 6-stellige PIN für ${benutzerName} eingeben:`);
-    
-    if (neuePin === null) return; // Abbruch geklickt
+    if (neuePin === null) return;
 
     const sauberePin = neuePin.trim();
     if (sauberePin.length < 4 || sauberePin.length > 6 || isNaN(sauberePin)) {
@@ -376,14 +373,12 @@ function pinZuruecksetzen(userId, benutzerName) {
 
     if (window.db) {
         db.collection('benutzer').doc(userId).update({ pin: sauberePin })
-            .then(() => {
-                alert(`✅ PIN für ${benutzerName} erfolgreich auf "${sauberePin}" geändert!`);
-            })
+            .then(() => alert(`✅ PIN für ${benutzerName} erfolgreich geändert!`))
             .catch(err => alert("Fehler beim Ändern der PIN: " + err.message));
     }
 }
 
-// ROLLE BEARBEITEN / ÄNDERN
+// ROLLE BEARBEITEN
 function aendereBenutzerRolle(userId, neueRolle) {
     if (!window.db) return;
 
@@ -395,7 +390,7 @@ function aendereBenutzerRolle(userId, neueRolle) {
         .catch(err => alert("Fehler beim Aktualisieren: " + err.message));
 }
 
-// BENUTZER LÖSCHEN / RECHTE ENTZIEHEN
+// BENUTZER LÖSCHEN
 function loescheBenutzer(userId, name) {
     if (!confirm(`Möchtest du dem Kameraden ${name} wirklich alle Rechte entziehen?`)) return;
     if (!window.db) return;
@@ -408,7 +403,7 @@ function loescheBenutzer(userId, name) {
         .catch(err => alert("Fehler beim Löschen: " + err.message));
 }
 
-// HEADER STATUSZEILE RENDEREN
+// HEADER STATUSZEILE
 function renderLoginStatusHeader() {
     let headerRight = document.querySelector('.feuerwehr');
     if (!headerRight) return;
@@ -420,9 +415,13 @@ function renderLoginStatusHeader() {
     headerRight.innerHTML = `Freiwillige Feuerwehr Albertsried <br><small style="font-size:12px; opacity:0.9;">${statusText}</small>`;
 }
 
+// ABMELDEN
 function abmelden() {
     sessionStorage.removeItem('ffw_user');
+    localStorage.removeItem('ffw_user');
+    localStorage.removeItem('ffw_aktiver_benutzer');
     aktuellerBenutzer = { name: "", email: "", rolle: "gast" };
+    
     aktualisiereModulSichtbarkeit();
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('dashboard');
@@ -446,7 +445,7 @@ function starteInaktivitaetsTimer() {
     document.addEventListener(event, starteInaktivitaetsTimer);
 });
 
-// Globale Freigaben
+// GLOBALE FREIGABEN
 window.istAdmin = istAdmin;
 window.istEditor = istEditor;
 window.hatZugriffAufSensibleDaten = hatZugriffAufSensibleDaten;
