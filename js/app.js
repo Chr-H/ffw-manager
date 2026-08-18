@@ -300,26 +300,21 @@ function druckeListe(titel, elementId) {
 
 
 // ==========================================
-// PWA Installations-Prompt (Sauber per Nutzer-Klick)
+// PWA Installations-Prompt
 // ==========================================
 
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Standard-Banner des Browsers verhindern
     e.preventDefault();
     deferredPrompt = e;
 
-    // Optional: Hier einen eigenen "App installieren"-Button in der UI einblenden
     const installBtn = document.getElementById('btn-app-installieren');
     if (installBtn) {
         installBtn.style.display = 'block';
     }
 });
 
-/**
- * Diese Funktion wird aufgerufen, wenn der Nutzer auf "App installieren" klickt
- */
 function installiereApp() {
     if (!deferredPrompt) {
         alert("Die App ist bereits installiert oder wird von diesem Browser nicht unterstützt.");
@@ -343,9 +338,6 @@ window.installiereApp = installiereApp;
 // Dashboard-Logik & Kennzahlen
 // ==========================================
 
-/**
- * Aktualisiert die Statuszahlen auf dem Dashboard
- */
 function aktualisiereDashboard() {
     const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
     const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
@@ -395,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==========================================
-// Modul: Zulassung beantragen (NEU VORHANDEN)
+// Modul: Zulassung beantragen
 // ==========================================
 
 function initZulassungLayout() {
@@ -466,7 +458,7 @@ function beantrageZulassungForm(event) {
     localStorage.setItem('ffw_antraege', JSON.stringify(antraege));
 
     alert("✅ Antrag erfolgreich eingereicht! Ein Administrator wird Ihre Anfrage prüfen.");
-    initZulassungLayout(); // Formular zurücksetzen
+    initZulassungLayout();
 }
 
 window.initZulassungLayout = initZulassungLayout;
@@ -646,14 +638,10 @@ function exportiereSystemBackupGesichert() {
     
     if (darfLesen('personal')) {
         backupData.mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
-    } else {
-        console.warn("Personal-Export übersprungen (keine Lese-Berechtigung).");
     }
 
     if (darfLesen('psa')) {
         backupData.psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
-    } else {
-        console.warn("PSA-Export übersprungen (keine Lese-Berechtigung).");
     }
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
@@ -667,7 +655,7 @@ function exportiereSystemBackupGesichert() {
 
 
 // ==========================================
-// Rollen- & Rechte-System (Korrigiert)
+// Rollen-, Rechte- & Authentifizierungs-System (KORRIGIERT)
 // ==========================================
 
 const ROLLEN_CONFIG = {
@@ -677,43 +665,100 @@ const ROLLEN_CONFIG = {
     },
     editor: {
         seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen', 'zulassung'],
-        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben', 'zulassung_beantragen']
+        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben', 'zulassung_beantragen', 'personal_schreiben']
     },
     viewer: {
         seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen'],
         schreibrechte: []
     },
     gast: {
-        // Gast hat nun Zugriff auf Dashboard, Geräte, Fahrzeuge und das Zulassungsformular
         seiten: ['dashboard', 'geraete', 'zulassung', 'fahrzeuge'],
-        // Explizites Recht, Anträge einzureichen
         schreibrechte: ['zulassung_beantragen']
     }
 };
 
 /**
- * Robustere Rollenabfrage (prüft sowohl 'rolle' als auch 'role')
+ * Holt den aktiven Benutzer und prüft sicher dessen Rolle
  */
 function holeAktuelleRolle() {
-    const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer')) || {};
-    // Unterstützt sowohl user.rolle als auch user.role (Groß-/Kleinschreibung ignoriert)
-    const rolle = (user.rolle || user.role || 'gast').toLowerCase();
-    
-    // Fallback-Schutz: Falls Rolle ungültig ist, nutze gast
+    let user = null;
+    try {
+        const rawUser = localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user');
+        if (rawUser) {
+            user = JSON.parse(rawUser);
+        }
+    } catch (e) {
+        console.error("Fehler beim Lesen des Benutzers aus dem localStorage:", e);
+    }
+
+    if (!user) {
+        return 'gast';
+    }
+
+    const rolle = String(user.rolle || user.role || 'gast').toLowerCase().trim();
     return ROLLEN_CONFIG[rolle] ? rolle : 'gast';
 }
 
+/**
+ * Zentrale Rechteprüfung
+ */
 function hatRecht(recht) {
     const rolle = holeAktuelleRolle();
     const rechteDef = ROLLEN_CONFIG[rolle];
 
-    // Admin / Vollzugriff
-    if (rechteDef.schreibrechte.includes('*')) return true;
+    if (!rechteDef) return false;
 
-    // Seiten- oder Schreibrecht vorhanden?
-    return rechteDef.seiten.includes(recht) || rechteDef.schreibrechte.includes(recht);
+    // Admin hat Vollzugriff
+    if (rechteDef.schreibrechte && rechteDef.schreibrechte.includes('*')) {
+        return true;
+    }
+
+    // Prüfe Seiten- oder Schreibberechtigung
+    const hatSeitenRecht = rechteDef.seiten && rechteDef.seiten.includes(recht);
+    const hatSchreibRecht = rechteDef.schreibrechte && rechteDef.schreibrechte.includes(recht);
+
+    return hatSeitenRecht || hatSchreibRecht;
 }
 
+/**
+ * Anmelde-Funktion (Speichert den Benutzer im Speicher)
+ */
+function anmeldenBenutzer(benutzerdaten) {
+    if (!benutzerdaten || !benutzerdaten.rolle) {
+        console.error("Ungültige Benutzerdaten übergeben.");
+        return;
+    }
+    
+    // Einheitlichen Key für aktiven Benutzer schreiben
+    localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify(benutzerdaten));
+    
+    // Veraltete Keys aufräumen
+    localStorage.removeItem('ffw_user');
+    
+    location.reload();
+}
+
+/**
+ * Abmelde-Funktion (Setzt den Status sicher auf Gast zurück)
+ */
+function abmelden() {
+    // Entfernt bestehende Logins
+    localStorage.removeItem('ffw_aktiver_benutzer');
+    localStorage.removeItem('ffw_user');
+    sessionStorage.clear();
+
+    // Definierten Gast-Status setzen
+    localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify({
+        benutzername: 'Gast',
+        rolle: 'gast'
+    }));
+
+    location.reload();
+}
+
+// Global verfügbar machen
 window.holeAktuelleRolle = holeAktuelleRolle;
 window.pruefeSeitenZugriff = hatRecht;
 window.hatRecht = hatRecht;
+window.anmeldenBenutzer = anmeldenBenutzer;
+window.abmelden = abmelden;
