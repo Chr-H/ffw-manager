@@ -144,6 +144,7 @@ function renderLagerView() {
     // Rechteprüfung für Schreibaktionen
     const darfSchreiben = typeof window.hatRecht === "function" ? window.hatRecht('lager_schreiben') : true;
 
+    // Aufruf an den exakten Funktionsnamen anpassen (openLagerModal oder oeffneLagerModal)
     const buttonHTML = darfSchreiben 
         ? `<button class="btn btn-primary" onclick="openLagerModal()">➕ Material anlegen</button>`
         : `<p style="color:#666; font-style:italic; margin:0;">ℹ️ Sie haben nur Lesezugriff (Schreibgeschützt).</p>`;
@@ -190,7 +191,9 @@ function renderLagerView() {
     `;
 
     container.innerHTML = html;
-    filterLager();
+    if (typeof filterLager === "function") {
+        filterLager();
+    }
 }
 
 // Live-Filterfunktion
@@ -685,3 +688,6 @@ function importLagerCSV(input) {
 // Global verfügbar machen
 window.exportLagerCSV = exportLagerCSV;
 window.importLagerCSV = importLagerCSV;
+window.renderLagerView = renderLagerView;
+window.openLagerModal = openLagerModal; // bzw. oeffneLagerModal
+window.filterLager = filterLager;
