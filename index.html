@@ -13,18 +13,18 @@
     
     <link rel="manifest" href="manifest.json">
     
-    <!-- Anwendungsskripte -->
-    <script src="js/storage.js?v=5"></script>
-    <script src="js/kategorien.js?v=5"></script>
-    <script src="js/geraete.js?v=5"></script>
-    <script src="js/fahrzeuge.js?v=5"></script>
-    <script src="js/personal.js?v=5"></script>
-    <script src="js/psa.js?v=5"></script>
-    <script src="js/lager.js?v=5"></script>
-    <script src="js/pruefungen.js?v=5"></script>
-    <script src="js/benutzer.js?v=6"></script>
-    <script src="js/import.js?v=5"></script>
-    <script src="js/app.js?v=6"></script>
+    <!-- Anwendungsskripte (mit defer geladen) -->
+    <script src="js/storage.js?v=5" defer></script>
+    <script src="js/kategorien.js?v=5" defer></script>
+    <script src="js/geraete.js?v=5" defer></script>
+    <script src="js/fahrzeuge.js?v=5" defer></script>
+    <script src="js/personal.js?v=5" defer></script>
+    <script src="js/psa.js?v=5" defer></script>
+    <script src="js/lager.js?v=5" defer></script>
+    <script src="js/pruefungen.js?v=5" defer></script>
+    <script src="js/benutzer.js?v=6" defer></script>
+    <script src="js/import.js?v=5" defer></script>
+    <script src="js/app.js?v=6" defer></script>
 
     <meta name="theme-color" content="#B71C1C">
     
@@ -219,19 +219,21 @@
 
                 <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
                     <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                        <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th class="no-print">Aktionen</th>
-                                    <th>Inv.-Nr.</th>
-                                    <th>Bezeichnung</th>
-                                    <th>Kategorie</th>
-                                    <th>Hersteller</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="geraeteListe"></tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th class="no-print">Aktionen</th>
+                                        <th>Inv.-Nr.</th>
+                                        <th>Bezeichnung</th>
+                                        <th>Kategorie</th>
+                                        <th>Hersteller</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="geraeteListe"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
@@ -273,19 +275,21 @@
 
                 <div style="display:grid; grid-template-columns: 1fr 450px; gap:20px; align-items:start;">
                     <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                        <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th class="no-print">Aktionen</th>
-                                    <th>Funkrufname</th>
-                                    <th>Typ</th>
-                                    <th>Kennzeichen</th>
-                                    <th>TÜV/HU</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="fahrzeugeListe"></tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th class="no-print">Aktionen</th>
+                                        <th>Funkrufname</th>
+                                        <th>Typ</th>
+                                        <th>Kennzeichen</th>
+                                        <th>TÜV/HU</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fahrzeugeListe"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
@@ -514,74 +518,7 @@
                 firebase.initializeApp(firebaseConfig);
             }
             window.db = firebase.firestore();
-
-            try {
-                window.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-                    if (err.code === 'failed-precondition') {
-                        console.warn('Offline-Speicher: Tab bereits offen.');
-                    } else if (err.code === 'unimplemented') {
-                        console.warn('Browser unterstützt keinen Offline-Speicher.');
-                    }
-                });
-            } catch (e) {
-                console.warn('Persistence Setup übersprungen:', e);
-            }
-        } else {
-            console.error('Firebase SDK konnte nicht geladen werden.');
         }
-
-        window.onerror = function(msg) { console.error("JS-Fehler: " + msg); };
-    </script>
-
-    <!-- Anwendungsskripte -->
-    <script src="js/storage.js?v=5"></script>
-    <script src="js/kategorien.js?v=5"></script>
-    <script src="js/geraete.js?v=5"></script>
-    <script src="js/fahrzeuge.js?v=5"></script>
-    <script src="js/personal.js"></script>
-    <script src="js/psa.js?v=5"></script>
-    <script src="js/lager.js?v=5"></script>
-    <script src="js/pruefungen.js?v=5"></script>
-    <script src="js/benutzer.js?v=6"></script>
-    <script src="js/import.js?v=5"></script>
-    <script src="js/app.js?v=6"></script>
-
-    <!-- Service Worker & Initialisierung -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js').then((reg) => {
-                    reg.update();
-                }).catch((err) => {
-                    console.error('Service Worker Fehler:', err);
-                });
-            });
-
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    refreshing = true;
-                    window.location.reload();
-                }
-            });
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            if (typeof starteCloudSync === "function") starteCloudSync();
-            if (typeof filterGeraete === "function") filterGeraete();
-            if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
-            
-            if (typeof renderPSAView === "function") renderPSAView();
-            else if (typeof ladePSA === "function") ladePSA();
-            
-            if (typeof renderLagerView === "function") renderLagerView();
-            else if (typeof ladeLager === "function") ladeLager();
-            
-            if (typeof renderPruefungenView === "function") renderPruefungenView();
-            else if (typeof ladePruefungen === "function") ladePruefungen();
-            
-            if (typeof renderBenutzerVerwaltung === "function") renderBenutzerVerwaltung();
-        });
     </script>
 </body>
 </html>

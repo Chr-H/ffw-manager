@@ -512,62 +512,125 @@ body{
     }
 }
 /* Mobile Korrektur: Anmeldebereich & Buttons vor Kacheln schieben */
+/* ==========================================================
+   FFW Manager - Sauberes Mobile Responsive Layout
+   ========================================================== */
+
+/* 1. Grundlegendes Box-Sizing & Viewport-Resets */
+*, *::before, *::after {
+    box-sizing: border-box !important;
+}
+
 @media screen and (max-width: 768px) {
-    /* 1. Hauptcontainer scrollbar und flüssig machen */
-    body, 
-    .main-container, 
-    .login-wrapper {
-        display: flex !important;
-        flex-direction: column !important;
+    /* 2. Container auf volle Displaybreite ausdehnen */
+    html, body {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container, 
+    .main-content, 
+    .dashboard, 
+    main, 
+    section {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 10px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 3. Header & Navigation entzerren */
+    header, 
+    .header, 
+    .top-bar, 
+    .navbar {
+        position: relative !important;
+        width: 100% !important;
         height: auto !important;
-        min-height: 100vh !important;
-        overflow-y: auto !important;
-        padding: 15px !important;
+        z-index: 10 !important;
     }
 
-    /* 2. Obere Kacheln nach hinten stellen & Abstände korrigieren */
-    .kacheln-container,
-    .dashboard-grid,
-    .cards-container,
-    .card {
+    /* 4. Willkommenstext & Kacheln im Fluss anordnen (kein Überlappen) */
+    .welcome-section, 
+    .banner, 
+    .alert-box, 
+    .kacheln-container, 
+    .dashboard-grid {
         position: relative !important;
-        z-index: 1 !important;
-        margin-bottom: 20px !important;
-    }
-
-    /* 3. Login-Bereich & Formular nach vorne holen */
-    .login-container,
-    .auth-container,
-    #login-box {
-        position: relative !important;
-        z-index: 99 !important; /* Liegt sicher über den Kacheln */
-        margin-top: 10px !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
         width: 100% !important;
+        margin: 10px 0 !important;
+        clear: both !important;
     }
 
-    /* 4. Button-Gruppe ganz oben halten und klickbar machen */
-    .auth-buttons,
-    .button-group,
-    .form-group {
-        position: relative !important;
-        z-index: 100 !important;
+    /* 5. Aktions-Buttons / CSV-Buttons flüssig anpassen */
+    .action-buttons, 
+    .btn-group, 
+    .top-actions {
         display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-        margin-top: 15px !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        width: 100% !important;
     }
 
-    /* 5. Alle Interaktions-Buttons erzwingen */
-    .btn,
-    button,
-    #btn-login,
-    #btn-request-rights {
-        position: relative !important;
-        z-index: 101 !important;
-        pointer-events: auto !important; /* Garantiert Klickbarkeit */
+    .action-buttons .btn, 
+    .btn-group .btn {
+        flex: 1 1 calc(50% - 8px) !important;
+        min-width: 120px !important;
+        margin: 0 !important;
+        font-size: 0.85rem !important;
+        padding: 8px 5px !important;
+        text-align: center !important;
+    }
+
+    /* 6. Formulare auf volle Breite umstellen */
+    form input, 
+    form select, 
+    form textarea, 
+    .form-control, 
+    .form-group {
         width: 100% !important;
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+        max-width: 100% !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* 7. Gerätetabelle: Sauberes horizontales Scrollen erzwingen */
+    .table-responsive, 
+    .table-wrapper, 
+    .table-container {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin-top: 15px !important;
+        border: 1px solid #ddd !important;
+    }
+
+    table {
+        width: 100% !important;
+        min-width: 650px !important; /* Verhindert das Zusammenquetschen der Spalten */
+    }
+
+    /* 8. Bearbeitungs- & Löschen-Buttons nebeneinander in einer Zeile */
+    table td:first-child, 
+    table th:first-child,
+    td.aktions-spalte, 
+    .action-cell {
+        white-space: nowrap !important;
+        width: 1% !important;
+    }
+
+    table td .btn, 
+    table td button {
+        display: inline-block !important;
+        width: auto !important;
+        padding: 5px 8px !important;
+        margin: 2px !important;
+        vertical-align: middle !important;
     }
 }
