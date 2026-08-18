@@ -1,6 +1,27 @@
 // ==========================================
-// FFW Manager - Prüfungsverwaltung (v1.2.0)
+// FFW Manager - Prüfungsverwaltung (v1.2.1)
 // ==========================================
+
+/**
+ * Zentrale Rechteprüfung für das Prüfungsmodul
+ */
+function hatPruefungSchreibRecht() {
+    if (typeof window.hatRecht === "function") {
+        if (window.hatRecht('pruefungen_schreiben')) return true;
+    }
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    if (userString) {
+        try {
+            const u = JSON.parse(userString);
+            const rolle = (u.rolle || '').toLowerCase();
+            return rolle === 'admin' || rolle === 'editor';
+        } catch (e) {
+            console.error("Fehler beim Lesen der Rolle:", e);
+        }
+    }
+    const aktiveRolle = localStorage.getItem('ffw_aktive_rolle') || 'gast';
+    return aktiveRolle === 'admin' || aktiveRolle === 'editor';
+}
 
 function getPruefungen() {
     const data = ladeDaten("pruefungen");
@@ -8,6 +29,10 @@ function getPruefungen() {
 }
 
 function speicherePruefungen(liste) {
+    if (!hatPruefungSchreibRecht()) {
+        alert("⚠️ Keine Berechtigung zum Speichern vorhanden!");
+        return;
+    }
     speichereDaten('pruefungen', liste);
     document.dispatchEvent(new Event("pruefungenGeaendert"));
 }
@@ -22,102 +47,6 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
-// ==========================================
-// Pruefungen Modul - Rechte & Rendering
-// ==========================================
-
-function renderPruefungenView() {
-    const ziel = document.getElementById('seite-pruefungen');
-    if (!ziel) return;
-
-    // Lese- & Schreibrechte prüfen
-    const darfSchreiben = typeof window.hatRecht === "function" 
-        ? window.hatRecht('pruefungen_schreiben') 
-        : false;
-
-    const pruefungen = getPruefungen();
-
-    let html = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>📋 Prüfungen & Wartungen</h2>
-            ${darfSchreiben ? `
-                <button onclick="oeffnePruefungModal()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                    + Neue Prüfung erfassen
-                </button>
-            ` : `<span style="color: #666; font-style: italic;">🔒 Sie besitzen nur Leserechte für dieses Modul.</span>`}
-        </div>
-
-        <div style="background: white; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                <thead>
-                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                        <th style="padding: 12px 15px;">Gegenstand / Gerät</th>
-                        <th style="padding: 12px 15px;">Prüfdatum</th>
-                        <th style="padding: 12px 15px;">Nächste Prüfung</th>
-                        <th style="padding: 12px 15px;">Prüfer</th>
-                        <th style="padding: 12px 15px;">Ergebnis</th>
-                        ${darfSchreiben ? `<th style="padding: 12px 15px;">Aktionen</th>` : ''}
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    if (pruefungen.length === 0) {
-        html += `<tr><td colspan="${darfSchreiben ? 6 : 5}" style="text-align: center; padding: 20px; color: #777;">Keine Prüfungen eingetragen.</td></tr>`;
-    } else {
-        pruefungen.forEach((p, index) => {
-            const bestanden = p.ergebnis === 'Bestanden' || p.bestanden === true;
-            const statusColor = bestanden ? '#d4edda' : '#f8d7da';
-            const statusTextColor = bestanden ? '#155724' : '#721c24';
-
-            html += `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 12px 15px; font-weight: bold;">${escapeHtml(p.gegenstand || p.gerat || '-')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.datum || '-')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.naechstePruefung || p.naechste_pruefung || '-')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.pruefer || '-')}</td>
-                    <td style="padding: 12px 15px;">
-                        <span style="background: ${statusColor}; color: ${statusTextColor}; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">
-                            ${bestanden ? 'Bestanden' : 'Mangelhaft / Fällig'}
-                        </span>
-                    </td>
-                    ${darfSchreiben ? `
-                        <td style="padding: 12px 15px;">
-                            <button onclick="loeschePruefung(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-                                🗑️ Löschen
-                            </button>
-                        </td>
-                    ` : ''}
-                </tr>
-            `;
-        });
-    }
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    ziel.innerHTML = html;
-}
-
-function loeschePruefung(index) {
-    if (typeof window.hatRecht === "function" && !window.hatRecht('pruefungen_schreiben')) {
-        alert("⚠️ Keine Berechtigung zum Löschen vorhanden!");
-        return;
-    }
-
-    if (!confirm("Möchten Sie diesen Prüfeintrag wirklich löschen?")) return;
-
-    const liste = getPruefungen();
-    liste.splice(index, 1);
-    speicherePruefungen(liste);
-    renderPruefungenView();
-}
-
-window.renderPruefungenView = renderPruefungenView;
-window.loeschePruefung = loeschePruefung;
 
 // Zeitzonen-sichere Datumsformatierung inkl. Überfälligkeitswarnung
 function formatiereDatum(datumStr) {
@@ -158,12 +87,18 @@ function renderPruefungenView() {
 
     if (!container) return;
 
+    const darfSchreiben = hatPruefungSchreibRecht();
+
     container.innerHTML = `
-        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+        <div class="view-header" style="display:flex; justify-space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>📋 Prüfungsübersicht & Termine</h2>
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:10px; align-items:center;">
                 <button class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
-                <button class="btn btn-primary" onclick="openPruefungModal()">+ Neue Prüfung anlegen</button>
+                ${darfSchreiben ? `
+                    <button class="btn btn-primary" onclick="openPruefungModal()">+ Neue Prüfung anlegen</button>
+                ` : `
+                    <span style="color: #666; font-style: italic; font-size: 0.9em;">🔒 Schreibgeschützt (Viewer)</span>
+                `}
             </div>
         </div>
 
@@ -187,7 +122,7 @@ function renderPruefungenView() {
             <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
                     <tr style="background:#f4f6f8; text-align:left; border-bottom:2px solid #e0e0e0;">
-                        <th style="padding:10px;">Aktionen</th>
+                        ${darfSchreiben ? `<th style="padding:10px;">Aktionen</th>` : ''}
                         <th style="padding:10px;">Gegenstand / Objekt</th>
                         <th style="padding:10px;">Prüfart</th>
                         <th style="padding:10px;">Prüfdatum</th>
@@ -214,6 +149,7 @@ function filterPruefungen() {
         if (!tbody) return;
     }
 
+    const darfSchreiben = hatPruefungSchreibRecht();
     const liste = getPruefungen();
     const suchText = (document.getElementById('pruefung-filter-suche')?.value || '').toLowerCase().trim();
     const ergebnisFilter = document.getElementById('pruefung-filter-ergebnis')?.value || '';
@@ -232,8 +168,10 @@ function filterPruefungen() {
         return passtText && passtErgebnis;
     });
 
+    const spaltenAnzahl = darfSchreiben ? 7 : 6;
+
     if (gefiltert.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#666;">Keine passenden Prüfungen eingetragen.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${spaltenAnzahl}" style="text-align:center; padding:20px; color:#666;">Keine passenden Prüfungen eingetragen.</td></tr>`;
         return;
     }
 
@@ -250,10 +188,12 @@ function filterPruefungen() {
 
         rowsHtml += `
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:8px 10px; white-space:nowrap;">
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPruefungModal('${safeId}')">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePruefung('${safeId}')">🗑️</button>
-                </td>
+                ${darfSchreiben ? `
+                    <td style="padding:8px 10px; white-space:nowrap;">
+                        <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPruefungModal('${safeId}')">✏️</button>
+                        <button class="btn btn-loeschen" title="Löschen" onclick="loeschePruefung('${safeId}')">🗑️</button>
+                    </td>
+                ` : ''}
                 <td style="padding:10px;"><strong>${escapeHtml(item.objekt || '-')}</strong></td>
                 <td style="padding:10px;">${escapeHtml(item.art || '-')}</td>
                 <td style="padding:10px;">${formatiereDatum(item.datum)}</td>
@@ -269,6 +209,11 @@ function filterPruefungen() {
 
 // 3. Modal für Prüfungen
 function openPruefungModal(id = null) {
+    if (!hatPruefungSchreibRecht()) {
+        alert("⚠️ Sie besitzen nur Leserechte und können keine Prüfungen anlegen oder bearbeiten.");
+        return;
+    }
+
     let item = { 
         id: '', 
         geraetId: '',
@@ -285,7 +230,6 @@ function openPruefungModal(id = null) {
         if (found) item = found;
     }
 
-    // Abfrage vorhandener Geräte für Verknüpfung
     const geraeteListe = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
     let geraeteOptions = '<option value="">-- Manuelle Eingabe / Kein Gerät --</option>';
     geraeteListe.forEach(g => {
@@ -380,7 +324,7 @@ function berechneAutoNaechstePruefung() {
 
     if (!datumVal || !naechsteInput) return;
 
-    let intervallMonate = 12; // Standard: 1 Jahr
+    let intervallMonate = 12;
     if (geraetId) {
         const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
         const g = geraete.find(item => item.id === geraetId);
@@ -407,6 +351,11 @@ function closePruefungModal() {
 
 function savePruefungFromModal(event, existingId) {
     event.preventDefault();
+
+    if (!hatPruefungSchreibRecht()) {
+        alert("⚠️ Keine Berechtigung zum Speichern!");
+        return;
+    }
 
     const liste = getPruefungen();
     const isEdit = Boolean(existingId && existingId !== 'null' && existingId !== 'undefined' && existingId.trim() !== '');
@@ -436,7 +385,6 @@ function savePruefungFromModal(event, existingId) {
 
     speicherePruefungen(liste);
 
-    // Optional: Synchronisiere mit Geräte-Historie aus geraete.js falls Gerät verknüpft
     if (geraetId) {
         const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
         const gIdx = geraete.findIndex(g => g.id === geraetId);
@@ -464,13 +412,17 @@ function savePruefungFromModal(event, existingId) {
 }
 
 function loeschePruefung(id) {
+    if (!hatPruefungSchreibRecht()) {
+        alert("⚠️ Keine Berechtigung zum Löschen vorhanden!");
+        return;
+    }
+
     if (!confirm("Möchtest du diesen Prüfungseintrag wirklich löschen?")) return;
     const liste = getPruefungen().filter(p => p && p.id !== id);
     speicherePruefungen(liste);
     filterPruefungen();
 }
 
-// Direct CSV Export für Prüfungen
 function exportPruefungenCSV() {
     const daten = getPruefungen();
 
@@ -505,14 +457,12 @@ function exportPruefungenCSV() {
     }
 }
 
-// Globaler Keydown Listener für Schließen per ESC-Taste
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
         closePruefungModal();
     }
 });
 
-// Event Listener & Aliase für app.js
 function ladePruefungen() {
     renderPruefungenView();
 }
@@ -524,7 +474,6 @@ function oeffnePruefungModal(id = null) {
 document.addEventListener("pruefungenGeaendert", () => { filterPruefungen(); });
 document.addEventListener("DOMContentLoaded", () => { renderPruefungenView(); });
 
-// Globale Bereitstellung
 window.getPruefungen = getPruefungen;
 window.speicherePruefungen = speicherePruefungen;
 window.renderPruefungenView = renderPruefungenView;
