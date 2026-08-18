@@ -1,268 +1,183 @@
-// Globale Variable für das aktuell ausgewählte Fahrzeug
-let aktuellesFahrzeugId = null;
+// ==========================================
+// Modul: Fahrzeuge (fahrzeuge.js)
+// ==========================================
 
-// Initiales Rendern der Übersicht
+// Initialer / Lokaler Datenspeicher
+let fahrzeugeDaten = [];
+
+/**
+ * Hilfsfunktion zum Laden der Fahrzeugdaten aus LocalStorage
+ */
+function ladeFahrzeugDaten() {
+    fahrzeugeDaten = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [
+        {
+            id: 'f1',
+            funkrufname: 'Florian Albertsried 40/1',
+            typ: 'LF 10',
+            kennzeichen: 'REG-FW 101',
+            baujahr: '2018',
+            status: 'Einsatzbereit',
+            bemerkung: 'Erstangriffsfahrzeug'
+        },
+        {
+            id: 'f2',
+            funkrufname: 'Florian Albertsried 11/1',
+            typ: 'MZF',
+            kennzeichen: 'REG-FW 111',
+            baujahr: '2015',
+            status: 'Einsatzbereit',
+            bemerkung: 'Mannschaftstransport & Einsatzleitung'
+        }
+    ];
+    return fahrzeugeDaten;
+}
+
+/**
+ * Hilfsfunktion zum Speichern der Fahrzeugdaten in LocalStorage
+ */
+function speichereFahrzeugDaten() {
+    localStorage.setItem('ffw_fahrzeuge', JSON.stringify(fahrzeugeDaten));
+    if (typeof window.aktualisiereDashboard === 'function') {
+        window.aktualisiereDashboard();
+    }
+}
+
+/**
+ * Haupt-Renderfunktion für die Fahrzeug-Ansicht
+ */
 function renderFahrzeugeView() {
-    ladeFahrzeugTabelle();
-}
+    const ziel = document.getElementById('seite-fahrzeuge');
+    if (!ziel) return;
 
-// Fahrzeugliste laden & anzeigen
-function ladeFahrzeugTabelle() {
-    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
-    const tbody = document.getElementById("fahrzeugeListe");
-    if (!tbody) return;
+    // Prüfen, ob der Benutzer Schreibrechte besitzt (Gast/Viewer haben keine 'fahrzeuge_schreiben' Rechte)
+    const kannSchreiben = typeof window.hatRecht === 'function' ? window.hatRecht('fahrzeuge_schreiben') : false;
 
-    tbody.innerHTML = "";
+    const daten = ladeFahrzeugDaten();
 
-    if (fahrzeuge.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Keine Fahrzeuge vorhanden.</td></tr>`;
-        return;
-    }
+    // HTML-Aktionsbereich für neue Fahrzeuge
+    const erstelleButtonHTML = kannSchreiben 
+        ? `<button onclick="oeffneFahrzeugModal()" style="padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">➕ Neues Fahrzeug anlegen</button>`
+        : `<p style="color: #666; font-style: italic;">🔒 Sie besitzen nur Leserechte für dieses Modul.</p>`;
 
-    fahrzeuge.forEach(fz => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td class="no-print">
-                <button title="Akte öffnen" onclick="oeffneFahrzeugAkte('${fz.id}')">👁️</button>
-                <button title="Löschen" onclick="loescheFahrzeug('${fz.id}')">🗑️</button>
-            </td>
-            <td><strong>${fz.funkrufname || '-'}</strong></td>
-            <td>${fz.typ || '-'}</td>
-            <td>${fz.kennzeichen || '-'}</td>
-            <td>${fz.tuev || '-'}</td>
-            <td>${fz.status || 'Einsatzbereit'}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
+    // Tabellenzeilen generieren
+    const zeilenHTML = daten.map(f => {
+        const aktionsButtons = kannSchreiben ? `
+            <button onclick="bearbeiteFahrzeug('${f.id}')" style="padding: 5px 10px; background: #ffc107; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px;">✏️ Bearbeiten</button>
+            <button onclick="loescheFahrzeug('${f.id}')" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">🗑️ Löschen</button>
+        ` : `<span style="color: #999;">Keine Aktionen</span>`;
 
-// Neues Fahrzeug im Speicher ablegen
-function neuesFahrzeugSpeichern() {
-    const funkruf = document.getElementById("fz-funkruf").value.trim();
-    const kennzeichen = document.getElementById("fz-kennzeichen").value.trim();
-    const typ = document.getElementById("fz-typ").value.trim();
-    const baujahr = document.getElementById("fz-baujahr").value;
-    const tuev = document.getElementById("fz-tuev").value;
-    const sp = document.getElementById("fz-sp").value;
-    const status = document.getElementById("fz-status").value;
-
-    if (!funkruf) {
-        alert("Bitte mindestens den Funkrufnamen angeben.");
-        return;
-    }
-
-    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
-    
-    const neuesFZ = {
-        id: 'fz_' + Date.now(),
-        funkrufname: funkruf,
-        kennzeichen: kennzeichen,
-        typ: typ,
-        baujahr: baujahr,
-        tuev: tuev,
-        sp: sp,
-        status: status,
-        beladung: [],      // Array für Zuweisungen (z. B. { fach: "G1", geraet: "Stromerzeuger" })
-        wartungen: [],     // Array für Historie/Reparaturen
-        pruefplan: []      // Array für Beladungsprüfungen
-    };
-
-    fahrzeuge.push(neuesFZ);
-    if (typeof speichereDaten === "function") speichereDaten("fahrzeuge", fahrzeuge);
-
-    // Formular zurücksetzen & Liste neu laden
-    document.getElementById("fz-funkruf").value = "";
-    document.getElementById("fz-kennzeichen").value = "";
-    document.getElementById("fz-typ").value = "";
-    document.getElementById("fz-baujahr").value = "";
-    document.getElementById("fz-tuev").value = "";
-    document.getElementById("fz-sp").value = "";
-
-    ladeFahrzeugTabelle();
-    oeffneFahrzeugAkte(neuesFZ.id);
-}
-
-// Öffnet die Detail-Akte mit Reiter-Navigation
-function oeffneFahrzeugAkte(fzId) {
-    aktuellesFahrzeugId = fzId;
-    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
-    const fz = fahrzeuge.find(item => item.id === fzId);
-
-    const container = document.getElementById("fahrzeugAkteContainer");
-    if (!container || !fz) return;
-
-    container.innerHTML = `
-        <div style="border-bottom: 2px solid #ddd; padding-bottom:10px; margin-bottom:15px;">
-            <h2 style="margin:0;">🚒 ${fz.funkrufname}</h2>
-            <small style="color:#666;">${fz.typ || 'Fahrzeug'} | ${fz.kennzeichen || 'Kein Kennzeichen'}</small>
-        </div>
-
-        <!-- Reiter / Tabs Navigation -->
-        <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:1px solid #ccc;" class="no-print">
-            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('stammdaten')">📋 Stammdaten</button>
-            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('beladung')">📦 Beladung / Raum</button>
-            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('pruefplan')">📊 Prüfplan</button>
-            <button class="btn" style="border-radius:4px 4px 0 0;" onclick="wechselFahrzeugTab('wartung')">🛠️ Wartung & Mängel</button>
-        </div>
-
-        <!-- Tab Inhaltsbereiche -->
-        <div id="tab-fz-content"></div>
-    `;
-
-    wechselFahrzeugTab('stammdaten');
-}
-
-// Umschalten der Tabs in der Akte
-function wechselFahrzeugTab(tabName) {
-    const fahrzeuge = typeof ladeDaten === "function" ? (ladeDaten("fahrzeuge") || []) : [];
-    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
-    const content = document.getElementById("tab-fz-content");
-    if (!content || !fz) return;
-
-    if (tabName === 'stammdaten') {
-        content.innerHTML = `
-            <h3>Stammdaten & Termine</h3>
-            <p><strong>Baujahr:</strong> ${fz.baujahr || 'Nicht angegeben'}</p>
-            <p><strong>Nächster TÜV / HU:</strong> ${fz.tuev || 'Kein Datum'}</p>
-            <p><strong>Nächste SP:</strong> ${fz.sp || 'Kein Datum'}</p>
-            <p><strong>Status:</strong> ${fz.status}</p>
-        `;
-    } 
-    else if (tabName === 'beladung') {
-        let beladungHTML = (fz.beladung || []).map((b, idx) => `
+        return `
             <tr>
-                <td><strong>${b.raum}</strong></td>
-                <td>${b.gegenstand}</td>
-                <td class="no-print"><button onclick="entferneBeladung(${idx})">🗑️</button></td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>${f.funkrufname}</strong></td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.typ}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.kennzeichen || '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.baujahr || '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                    <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.85em; background: ${f.status === 'Einsatzbereit' ? '#d4edda' : '#f8d7da'}; color: ${f.status === 'Einsatzbereit' ? '#155724' : '#721c24'}; font-weight: bold;">
+                        ${f.status}
+                    </span>
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${f.bemerkung || ''}</td>
+                <td class="no-print" style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${aktionsButtons}</td>
             </tr>
-        `).join("");
+        `;
+    }).join('');
 
-        content.innerHTML = `
-            <h3>Lageplan & Geräte-Zuordnung</h3>
-            <div style="display:flex; gap:5px; margin-bottom:15px;" class="no-print">
-                <select id="fz-raum-select">
-                    <option value="Kabine">Mannschaftskabine</option>
-                    <option value="G1">Geräteraum G1 (Links Vorne)</option>
-                    <option value="G2">Geräteraum G2 (Rechts Vorne)</option>
-                    <option value="G3">Geräteraum G3 (Links Mitte)</option>
-                    <option value="G4">Geräteraum G4 (Rechts Mitte)</option>
-                    <option value="G5">Geräteraum G5 (Links Hinten)</option>
-                    <option value="G6">Geräteraum G6 (Rechts Hinten)</option>
-                    <option value="GR">Geräteraum GR (Heck)</option>
-                    <option value="Dach">Dachbeladung</option>
-                </select>
-                <input id="fz-geraet-input" type="text" placeholder="Gerät / Gegenstand">
-                <button onclick="fuegeBeladungHinzu()">➕ Zuordnen</button>
-            </div>
-            <table style="width:100%; border-collapse:collapse;">
+    ziel.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>🚒 Fahrzeugübersicht</h2>
+            <div>${erstelleButtonHTML}</div>
+        </div>
+
+        <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead>
-                    <tr style="background:#f2f2f2;"><th>Lagerort</th><th>Gegenstand</th><th class="no-print"></th></tr>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #ddd;">
+                        <th style="padding: 10px;">Funkrufname</th>
+                        <th style="padding: 10px;">Fahrzeugtyp</th>
+                        <th style="padding: 10px;">Kennzeichen</th>
+                        <th style="padding: 10px;">Baujahr</th>
+                        <th style="padding: 10px;">Status</th>
+                        <th style="padding: 10px;">Bemerkung</th>
+                        <th class="no-print" style="padding: 10px; text-align: right;">Aktionen</th>
+                    </tr>
                 </thead>
-                <tbody>${beladungHTML || '<tr><td colspan="3">Noch keine Beladung eingetragen.</td></tr>'}</tbody>
+                <tbody>
+                    ${daten.length > 0 ? zeilenHTML : '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #777;">Keine Fahrzeuge vorhanden.</td></tr>'}
+                </tbody>
             </table>
-        `;
-    }
-    else if (tabName === 'pruefplan') {
-        content.innerHTML = `
-            <h3>Prüfplan der Beladung</h3>
-            <p><small>Wiederkehrende Funktionskontrollen (z. B. Stromerzeuger Probelauf, Kettensäge).</small></p>
-            <button onclick="alert('Funktion in Kürze verfügbar')">➕ Prüfpunkt hinzufügen</button>
-        `;
-    }
-    else if (tabName === 'wartung') {
-        let wartungHTML = (fz.wartungen || []).map(w => `
-            <div style="border-left:3px solid #007bff; padding-left:8px; margin-bottom:10px;">
-                <small>${w.datum}</small> - <strong>${w.titel}</strong>
-                <br><span style="font-size:0.9em; color:#555;">${w.beschreibung}</span>
-            </div>
-        `).join("");
-
-        content.innerHTML = `
-            <h3>Wartung & Reparaturhistorie</h3>
-            <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:15px;" class="no-print">
-                <input id="fz-w-titel" type="text" placeholder="Titel (z. B. Ölwechsel, Kundendienst)">
-                <textarea id="fz-w-beschr" placeholder="Beschreibung / Werkstatt / Mangelbehebung"></textarea>
-                <button onclick="fuegeWartungHinzu()">➕ Eintrag speichern</button>
-            </div>
-            <div>${wartungHTML || '<p style="color:#777;">Keine Wartungseinträge vorhanden.</p>'}</div>
-        `;
-    }
-}
-
-// Beladung hinzufügen
-function fuegeBeladungHinzu() {
-    const raum = document.getElementById("fz-raum-select").value;
-    const gegenstand = document.getElementById("fz-geraet-input").value.trim();
-    if (!gegenstand) return;
-
-    const fahrzeuge = ladeDaten("fahrzeuge") || [];
-    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
-    if (!fz) return;
-
-    if (!fz.beladung) fz.beladung = [];
-    fz.beladung.push({ raum, gegenstand });
-
-    speichereDaten("fahrzeuge", fahrzeuge);
-    wechselFahrzeugTab('beladung');
-}
-
-// Beladung entfernen
-function entferneBeladung(index) {
-    const fahrzeuge = ladeDaten("fahrzeuge") || [];
-    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
-    if (!fz || !fz.beladung) return;
-
-    fz.beladung.splice(index, 1);
-    speichereDaten("fahrzeuge", fahrzeuge);
-    wechselFahrzeugTab('beladung');
-}
-
-// Wartungseintrag hinzufügen
-function fuegeWartungHinzu() {
-    const titel = document.getElementById("fz-w-titel").value.trim();
-    const beschreibung = document.getElementById("fz-w-beschr").value.trim();
-    if (!titel) return;
-
-    const fahrzeuge = ladeDaten("fahrzeuge") || [];
-    const fz = fahrzeuge.find(item => item.id === aktuellesFahrzeugId);
-    if (!fz) return;
-
-    if (!fz.wartungen) fz.wartungen = [];
-    fz.wartungen.unshift({
-        datum: new Date().toLocaleDateString('de-DE'),
-        titel,
-        beschreibung
-    });
-
-    speichereDaten("fahrzeuge", fahrzeuge);
-    wechselFahrzeugTab('wartung');
-}
-
-// Fahrzeug löschen
-function loescheFahrzeug(fzId) {
-    if (!confirm("Fahrzeug wirklich löschen?")) return;
-    let fahrzeuge = ladeDaten("fahrzeuge") || [];
-    fahrzeuge = fahrzeuge.filter(item => item.id !== fzId);
-    speichereDaten("fahrzeuge", fahrzeuge);
-    
-    document.getElementById("fahrzeugAkteContainer").innerHTML = `
-        <h2>📋 Fahrzeugakte</h2>
-        <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+        </div>
     `;
-    ladeFahrzeugTabelle();
 }
 
-// CSV Export
-function exportFahrzeugeCSV() {
-    const daten = ladeDaten("fahrzeuge") || [];
-    if (daten.length === 0) {
-        alert("Keine Fahrzeugdaten vorhanden.");
+/**
+ * Fahrzeug löschen (Geschützt)
+ */
+function loescheFahrzeug(id) {
+    if (typeof window.hatRecht === 'function' && !window.hatRecht('fahrzeuge_schreiben')) {
+        alert("⚠️ Sie besitzen keine Berechtigung, Fahrzeuge zu löschen.");
         return;
     }
-    const headers = ["Funkrufname", "Typ", "Kennzeichen", "Baujahr", "TÜV", "SP", "Status"];
-    const rows = daten.map(f => [f.funkrufname, f.typ, f.kennzeichen, f.baujahr, f.tuev, f.sp, f.status]);
-    
-    if (typeof downloadCSV === "function") {
-        downloadCSV(`Fahrzeugliste_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+
+    if (confirm("Möchten Sie dieses Fahrzeug wirklich löschen?")) {
+        fahrzeugeDaten = fahrzeugeDaten.filter(f => f.id !== id);
+        speichereFahrzeugDaten();
+        renderFahrzeugeView();
     }
 }
+
+/**
+ * Modal zum Erstellen/Bearbeiten öffnen (Geschützt)
+ */
+function oeffneFahrzeugModal(id = null) {
+    if (typeof window.hatRecht === 'function' && !window.hatRecht('fahrzeuge_schreiben')) {
+        alert("⚠️ Sie besitzen keine Berechtigung, Fahrzeuge zu bearbeiten oder neu anzulegen.");
+        return;
+    }
+
+    const fahrzeug = id ? fahrzeugeDaten.find(f => f.id === id) : { id: '', funkrufname: '', typ: '', kennzeichen: '', baujahr: '', status: 'Einsatzbereit', bemerkung: '' };
+
+    const funkrufname = prompt("Funkrufname:", fahrzeug.funkrufname);
+    if (funkrufname === null) return; // Abbrechen gedrückt
+
+    const typ = prompt("Fahrzeugtyp (z.B. LF 10, MZF):", fahrzeug.typ) || '';
+    const kennzeichen = prompt("Kennzeichen:", fahrzeug.kennzeichen) || '';
+    const baujahr = prompt("Baujahr:", fahrzeug.baujahr) || '';
+    const bemerkung = prompt("Bemerkung:", fahrzeug.bemerkung) || '';
+
+    if (id) {
+        // Bearbeiten
+        const idx = fahrzeugeDaten.findIndex(f => f.id === id);
+        if (idx !== -1) {
+            fahrzeugeDaten[idx] = { ...fahrzeugeDaten[idx], funkrufname, typ, kennzeichen, baujahr, bemerkung };
+        }
+    } else {
+        // Neu anlegen
+        const neuesFahrzeug = {
+            id: 'f_' + Date.now(),
+            funkrufname,
+            typ,
+            kennzeichen,
+            baujahr,
+            status: 'Einsatzbereit',
+            bemerkung
+        };
+        fahrzeugeDaten.push(neuesFahrzeug);
+    }
+
+    speichereFahrzeugDaten();
+    renderFahrzeugeView();
+}
+
+/**
+ * Alias-Funktion für Bearbeiten
+ */
+function bearbeiteFahrzeug(id) {
+    oeffneFahrzeugModal(id);
+}
+
+// Global verfügbar machen
+window.renderFahrzeugeView = renderFahrzeugeView;
+window.loescheFahrzeug = loescheFahrzeug;
+window.bearbeiteFahrzeug = bearbeiteFahrzeug;
+window.oeffneFahrzeugModal = oeffneFahrzeugModal;
