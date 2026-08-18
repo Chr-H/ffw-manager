@@ -9,13 +9,13 @@ function zeigeSeite(seiteId) {
     if (!seiteId) return;
 
     // 1. Parameter bereinigen (falls 'seite-benutzer' statt 'benutzer' übergeben wurde)
-    const modul = seiteId.replace('seite-', '');
+    const modul = seiteId.replace(/^seite-/, '');
 
     // 2. Rechte-Prüfung vorschalten
     if (typeof window.pruefeSeitenZugriff === "function") {
         if (!window.pruefeSeitenZugriff(modul)) {
             alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
-            return; // bricht ab, wenn keine Berechtigung vorliegt
+            return; // Bricht ab, wenn keine Berechtigung vorliegt
         }
     }
 
@@ -82,7 +82,7 @@ function zeigeSeite(seiteId) {
             break;
 
         case 'zulassung':
-            initZulassungLayout();
+            if (typeof initZulassungLayout === 'function') initZulassungLayout();
             break;
 
         default:
@@ -266,6 +266,11 @@ function druckeListe(titel, elementId) {
     druckKopie.querySelectorAll('.no-print').forEach(node => node.remove());
 
     const druckFenster = window.open('', '_blank', 'width=900,height=650');
+    if (!druckFenster) {
+        alert("Pop-up wurde vom Browser blockiert. Bitte erlauben Sie Pop-ups für diese Seite.");
+        return;
+    }
+
     druckFenster.document.write(`
         <!DOCTYPE html>
         <html>
@@ -339,38 +344,42 @@ window.installiereApp = installiereApp;
 // ==========================================
 
 function aktualisiereDashboard() {
-    const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
-    const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
-    const fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
-    const lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
-    const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
-    const pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
+    try {
+        const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
+        const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+        const fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
+        const lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
+        const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
+        const pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
 
-    const heute = new Date();
-    
-    const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
-    
-    const in30Tagen = new Date();
-    in30Tagen.setDate(heute.getDate() + 30);
-    const faellig = pruefungen.filter(p => {
-        const d = new Date(p.datum);
-        return d >= heute && d <= in30Tagen && p.status !== 'erledigt';
-    }).length;
+        const heute = new Date();
+        
+        const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
+        
+        const in30Tagen = new Date();
+        in30Tagen.setDate(heute.getDate() + 30);
+        const faellig = pruefungen.filter(p => {
+            const d = new Date(p.datum);
+            return d >= heute && d <= in30Tagen && p.status !== 'erledigt';
+        }).length;
 
-    const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit').length;
-    const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
+        const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit').length;
+        const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
 
-    setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
-    setTileValue('stat-wartung-faellig', `${faellig} fällig`);
-    setTileValue('stat-einsatzbereit', `${einsatzbereitCount} Geräte einsatzbereit`);
-    setTileValue('stat-defekt', `${defektCount} inaktiv`);
+        setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
+        setTileValue('stat-wartung-faellig', `${faellig} fällig`);
+        setTileValue('stat-einsatzbereit', `${einsatzbereitCount} Geräte einsatzbereit`);
+        setTileValue('stat-defekt', `${defektCount} inaktiv`);
 
-    setTileValue('stat-modul-geraete', `${geraete.length} Geräte`);
-    setTileValue('stat-modul-fahrzeuge', `${fahrzeuge.length} Fahrzeuge`);
-    setTileValue('stat-modul-psa', `${psa.length} Personen`);
-    setTileValue('stat-modul-pruefungen', `${faellig + ueberfaellig} fällig`);
-    setTileValue('stat-modul-lager', `${lager.length} Artikel`);
-    setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
+        setTileValue('stat-modul-geraete', `${geraete.length} Geräte`);
+        setTileValue('stat-modul-fahrzeuge', `${fahrzeuge.length} Fahrzeuge`);
+        setTileValue('stat-modul-psa', `${psa.length} Personen`);
+        setTileValue('stat-modul-pruefungen', `${faellig + ueberfaellig} fällig`);
+        setTileValue('stat-modul-lager', `${lager.length} Artikel`);
+        setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
+    } catch (e) {
+        console.error("Fehler beim Aktualisieren des Dashboards:", e);
+    }
 }
 
 window.updateDashboard = aktualisiereDashboard;
@@ -538,6 +547,99 @@ function initEinstellungenLayout() {
     `;
 }
 
+function speichereEinstellungen() {
+    if (typeof window.pruefeSeitenZugriff === "function" && !window.pruefeSeitenZugriff('einstellungen_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Speichern vorhanden.");
+        return;
+    }
+
+    const neueEinstellungen = {
+        wehrName: document.getElementById('cfg-wehr-name').value,
+        wachenNummer: document.getElementById('cfg-wachen-nummer').value,
+        ansprechpartner: document.getElementById('cfg-ansprechpartner').value,
+        adresse: document.getElementById('cfg-adresse').value,
+        vorlaufTagePruefung: parseInt(document.getElementById('cfg-vorlauf-pruefung').value, 10) || 30,
+        vorlaufTageWartung: parseInt(document.getElementById('cfg-vorlauf-wartung').value, 10) || 14
+    };
+
+    localStorage.setItem('ffw_einstellungen', JSON.stringify(neueEinstellungen));
+    alert("✅ Einstellungen erfolgreich gespeichert!");
+}
+
+function exportiereSystemBackupGesichert() {
+    const darfLesen = (modul) => {
+        if (typeof window.pruefeSeitenZugriff === "function") {
+            return window.pruefeSeitenZugriff(modul);
+        }
+        return true;
+    };
+
+    const backupData = {
+        exportiertAm: new Date().toISOString(),
+        einstellungen: JSON.parse(localStorage.getItem('ffw_einstellungen')) || {}
+    };
+
+    if (darfLesen('geraete')) backupData.geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
+    if (darfLesen('fahrzeuge')) backupData.fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
+    if (darfLesen('lager')) backupData.lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
+    if (darfLesen('pruefungen')) backupData.pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
+    
+    if (darfLesen('personal')) {
+        backupData.mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
+    }
+
+    if (darfLesen('psa')) {
+        backupData.psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
+    }
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `FFW_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+}
+
+window.speichereEinstellungen = speichereEinstellungen;
+window.exportiereSystemBackupGesichert = exportiereSystemBackupGesichert;
+
+
+// ==========================================
+// Firebase-Anbindung (mit Verfügbarkeits-Prüfung)
+// ==========================================
+
+if (typeof firebase !== 'undefined') {
+    const firebaseConfig = {
+        apiKey: "DEIN_API_KEY",
+        authDomain: "DEIN_PROJECT.firebaseapp.com",
+        projectId: "DEIN_PROJECT_ID",
+        storageBucket: "DEIN_PROJECT.appspot.com",
+        messagingSenderId: "DEINE_SENDER_ID",
+        appId: "DEINE_APP_ID"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const db = firebase.firestore();
+
+    // Offline-Unterstützung (Persistenz) aktivieren
+    db.enablePersistence({ synchronizeTabs: true })
+        .catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Offline-Speicher: Mehrere Tabs geöffnet.');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Browser unterstützt keinen Offline-Speicher.');
+            }
+        });
+
+    window.db = db;
+} else {
+    console.warn("Firebase JS-SDK wurde nicht geladen. Lokale Speicherung wird verwendet.");
+}
+
 
 // ==========================================
 // Modul: Auswertungen Render-Logik
@@ -599,63 +701,11 @@ function initAuswertungenLayout() {
     `;
 }
 
-function speichereEinstellungen() {
-    if (typeof window.pruefeSeitenZugriff === "function" && !window.pruefeSeitenZugriff('einstellungen_schreiben')) {
-        alert("⚠️ Keine Berechtigung zum Speichern vorhanden.");
-        return;
-    }
-
-    const neueEinstellungen = {
-        wehrName: document.getElementById('cfg-wehr-name').value,
-        wachenNummer: document.getElementById('cfg-wachen-nummer').value,
-        ansprechpartner: document.getElementById('cfg-ansprechpartner').value,
-        adresse: document.getElementById('cfg-adresse').value,
-        vorlaufTagePruefung: parseInt(document.getElementById('cfg-vorlauf-pruefung').value, 10) || 30,
-        vorlaufTageWartung: parseInt(document.getElementById('cfg-vorlauf-wartung').value, 10) || 14
-    };
-
-    localStorage.setItem('ffw_einstellungen', JSON.stringify(neueEinstellungen));
-    alert("✅ Einstellungen erfolgreich gespeichert!");
-}
-
-function exportiereSystemBackupGesichert() {
-    const darfLesen = (modul) => {
-        if (typeof window.pruefeSeitenZugriff === "function") {
-            return window.pruefeSeitenZugriff(modul);
-        }
-        return true;
-    };
-
-    const backupData = {
-        exportiertAm: new Date().toISOString(),
-        einstellungen: JSON.parse(localStorage.getItem('ffw_einstellungen')) || {}
-    };
-
-    if (darfLesen('geraete')) backupData.geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
-    if (darfLesen('fahrzeuge')) backupData.fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
-    if (darfLesen('lager')) backupData.lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
-    if (darfLesen('pruefungen')) backupData.pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
-    
-    if (darfLesen('personal')) {
-        backupData.mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
-    }
-
-    if (darfLesen('psa')) {
-        backupData.psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
-    }
-
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const dlAnchor = document.createElement('a');
-    dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute("download", `FFW_Backup_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(dlAnchor);
-    dlAnchor.click();
-    dlAnchor.remove();
-}
+window.initAuswertungenLayout = initAuswertungenLayout;
 
 
 // ==========================================
-// Rollen-, Rechte- & Authentifizierungs-System (KORRIGIERT)
+// Rollen-, Rechte- & Authentifizierungs-System
 // ==========================================
 
 const ROLLEN_CONFIG = {
@@ -665,7 +715,7 @@ const ROLLEN_CONFIG = {
     },
     editor: {
         seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen', 'zulassung'],
-        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben', 'zulassung_beantragen', 'personal_schreiben']
+        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben', 'zulassung_beantragen', 'personal_schreiben', 'einstellungen_schreiben']
     },
     viewer: {
         seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen'],
@@ -762,3 +812,27 @@ window.pruefeSeitenZugriff = hatRecht;
 window.hatRecht = hatRecht;
 window.anmeldenBenutzer = anmeldenBenutzer;
 window.abmelden = abmelden;
+
+
+// ==========================================
+// Netzwerk- & Online-Status-Anzeige
+// ==========================================
+
+function updateOnlineStatus() {
+    const statusEl = document.getElementById('network-status');
+    if (!statusEl) return;
+
+    if (navigator.onLine) {
+        statusEl.innerHTML = '🟢 Online (Synchronisiert)';
+        statusEl.style.background = '#e8f5e9';
+        statusEl.style.color = '#2e7d32';
+    } else {
+        statusEl.innerHTML = '🟠 Offline (Daten werden lokal gespeichert)';
+        statusEl.style.background = '#fff3e0';
+        statusEl.style.color = '#ef6c00';
+    }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+document.addEventListener('DOMContentLoaded', updateOnlineStatus);

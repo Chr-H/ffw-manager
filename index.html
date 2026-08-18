@@ -15,24 +15,28 @@
 
 <body>
 
-  <!-- Kopfbereich -->
-<header class="header">
-    <div class="logo" style="display: flex; align-items: center; gap: 10px;">
-        <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
-        <span>FFW Manager</span>
-    </div>
+    <!-- Kopfbereich -->
+    <header class="header">
+        <div class="logo" style="display: flex; align-items: center; gap: 10px;">
+            <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
+            <span>FFW Manager</span>
+        </div>
 
-    <!-- PWA Install Button (standardmäßig ausgeblendet) -->
-    <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none; margin-left: auto;" onclick="installiereApp()">
-        📲 App installieren
-    </button>
+        <!-- PWA Install Button (standardmäßig ausgeblendet) -->
+        <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none; margin-left: auto;" onclick="installiereApp()">
+            📲 App installieren
+        </button>
 
-    <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 8px 12px; margin: 10px;">
-    🏠 Zurück zum Dashboard
-    </button>
+        <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 8px 12px; margin: 10px;">
+            🏠 Zurück zum Dashboard
+        </button>
 
-    <div class="feuerwehr" style="margin-left: 15px;">Freiwillige Feuerwehr Albertsried</div>
-</header>
+        <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">
+            🟢 Online (Synchronisiert)
+        </div>
+
+        <div class="feuerwehr" style="margin-left: 15px;">Freiwillige Feuerwehr Albertsried</div>
+    </header>
 
     <div class="container">
 
@@ -57,68 +61,68 @@
         <!-- Hauptinhaltsbereich -->
         <main class="content">
 
-           <!-- 1. DASHBOARD -->
-<section id="seite-dashboard" class="seite-ansicht">
-    <section class="welcome">
-        <h1>👋 Willkommen im FFW Manager</h1>
-        <p>Schön, dass du da bist.</p>
-        <p id="heute"></p>
-    </section>
+            <!-- 1. DASHBOARD -->
+            <section id="seite-dashboard" class="seite-ansicht">
+                <section class="welcome">
+                    <h1>👋 Willkommen im FFW Manager</h1>
+                    <p>Schön, dass du da bist.</p>
+                    <p id="heute"></p>
+                </section>
 
-    <!-- STATUS-KACHELN OBEN -->
-    <section class="status">
-        <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
-            <h3>🔴 Prüfungen</h3>
-            <p id="stat-pruefungen-ueberfaellig">0 überfällig</p>
-        </div>
-        <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;">
-            <h3>🟡 Wartung & Fristen</h3>
-            <p id="stat-wartung-faellig">0 fällig</p>
-        </div>
-        <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
-            <h3>🟢 Einsatzbereit</h3>
-            <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p>
-        </div>
-        <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
-            <h3>⚫ Außer Dienst / Defekt</h3>
-            <p id="stat-defekt">0 inaktiv</p>
-        </div>
-    </section>
+                <!-- STATUS-KACHELN OBEN -->
+                <section class="status">
+                    <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
+                        <h3>🔴 Prüfungen</h3>
+                        <p id="stat-pruefungen-ueberfaellig">0 überfällig</p>
+                    </div>
+                    <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;">
+                        <h3>🟡 Wartung & Fristen</h3>
+                        <p id="stat-wartung-faellig">0 fällig</p>
+                    </div>
+                    <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
+                        <h3>🟢 Einsatzbereit</h3>
+                        <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p>
+                    </div>
+                    <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
+                        <h3>⚫ Außer Dienst / Defekt</h3>
+                        <p id="stat-defekt">0 inaktiv</p>
+                    </div>
+                </section>
 
-    <h2>Module</h2>
-    
-    <!-- MODULE-KACHELN UNTEN -->
-    <div class="cards">
-        <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
-            <h2>🔧 Geräte</h2>
-            <p id="stat-modul-geraete" class="card-geraete-count">0 Geräte</p>
-        </div>
-        <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;">
-            <h2>🚒 Fahrzeuge</h2>
-            <p id="stat-modul-fahrzeuge">0 Fahrzeuge</p>
-        </div>
-        <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;">
-            <h2>🧯 PSA</h2>
-            <p id="stat-modul-psa">0 PSA's</p>
-        </div>
-        <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
-            <h2>📋 Prüfungen</h2>
-            <p id="stat-modul-pruefungen">0 fällig</p>
-        </div>
-        <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
-            <h2>📦 Lager</h2>
-            <p id="stat-modul-lager">0 Artikel</p>
-        </div>
-        <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
-            <h2>👥 Personal</h2>
-            <p id="stat-modul-personal">0 Mitglieder</p>
-        </div>
-        <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
-            <h2>🔐 Rechte & Benutzer</h2>
-            <p>Zugang & Rollen</p>
-        </div>
-    </div>
-</section>
+                <h2>Module</h2>
+                
+                <!-- MODULE-KACHELN UNTEN -->
+                <div class="cards">
+                    <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
+                        <h2>🔧 Geräte</h2>
+                        <p id="stat-modul-geraete" class="card-geraete-count">0 Geräte</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;">
+                        <h2>🚒 Fahrzeuge</h2>
+                        <p id="stat-modul-fahrzeuge">0 Fahrzeuge</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;">
+                        <h2>🧯 PSA</h2>
+                        <p id="stat-modul-psa">0 PSA's</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
+                        <h2>📋 Prüfungen</h2>
+                        <p id="stat-modul-pruefungen">0 fällig</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
+                        <h2>📦 Lager</h2>
+                        <p id="stat-modul-lager">0 Artikel</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
+                        <h2>👥 Personal</h2>
+                        <p id="stat-modul-personal">0 Mitglieder</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
+                        <h2>🔐 Rechte & Benutzer</h2>
+                        <p>Zugang & Rollen</p>
+                    </div>
+                </div>
+            </section>
 
             <!-- 2. GERÄTE BEREICH -->
             <section id="seite-geraete" class="seite-ansicht" style="display: none;">
@@ -290,7 +294,6 @@
             </section>
 
             <!-- 7. PERSONAL & AUSWERTUNGEN -->
-            <!-- PERSONAL MODUL -->
             <section id="seite-personal" class="seite-ansicht" style="display: none;">
                 <!-- Wird automatisch beim ersten Aufruf aus personal.js befüllt -->
             </section>
@@ -300,50 +303,47 @@
                 <p>In Entwicklung...</p>
             </section>
 
-            <!-- 8. RECHTE & BENUTZER BEREICH & RECHTEVERWALTUNG -->
-            
-<div id="seite-benutzer" class="seite-ansicht" style="display: none;">
-    <h2>🔐 Benutzer- & Rechteverwaltung</h2>
-    
-    <!-- Antragsformular für neue Zugänge (Wird im Admin-Modus ausgeblendet) -->
-    <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
-        <h3>🔑 Zugang / Rolle beantragen</h3>
-        <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="reqName" style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
-                <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="reqEmail" style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
-                <input type="text" id="reqEmail" class="form-control" required placeholder="max.mustermann@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="reqPin" style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label>
-                <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl (z. B. 4711)" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
-            </div>
+            <!-- 8. RECHTE & BENUTZER BEREICH -->
+            <div id="seite-benutzer" class="seite-ansicht" style="display: none;">
+                <h2>🔐 Benutzer- & Rechteverwaltung</h2>
+                
+                <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
+                    <h3>🔑 Zugang / Rolle beantragen</h3>
+                    <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqName" style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
+                            <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqEmail" style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
+                            <input type="text" id="reqEmail" class="form-control" required placeholder="max.mustermann@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqPin" style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label>
+                            <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl (z. B. 4711)" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="reqWunschRolle" style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
-                <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
-                    <option value="viewer">Leserechte (z. B. Mannschaft)</option>
-                    <option value="editor">Schreibrechte (z. B. Gerätewart / Kleidungswart)</option>
-                    <option value="admin">Administrator</option>
-                </select>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
-                Zugang beantragen
-            </button>
-        </form>
-        
-        <div id="requestStatusMessage" style="margin-top: 15px; font-weight: bold;"></div>
-    </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqWunschRolle" style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
+                            <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
+                                <option value="viewer">Leserechte (z. B. Mannschaft)</option>
+                                <option value="editor">Schreibrechte (z. B. Gerätewart / Kleidungswart)</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+                            Zugang beantragen
+                        </button>
+                    </form>
+                    
+                    <div id="requestStatusMessage" style="margin-top: 15px; font-weight: bold;"></div>
+                </div>
 
-    <!-- Admin-Bereich (Hier werden Anträge & aktive Kameraden geladen) -->
-    <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
-</div>
+                <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
+            </div>
 
             <!-- 9. EINSTELLUNGEN -->
             <section id="seite-einstellungen" class="seite-ansicht" style="display: none;">
@@ -368,11 +368,28 @@
             appId: "1:45591494617:web:46ddf894c840871212e3c8"
         };
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            window.db = firebase.firestore();
+
+            try {
+                window.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+                    if (err.code === 'failed-precondition') {
+                        console.warn('Offline-Speicher: Tab bereits offen.');
+                    } else if (err.code === 'unimplemented') {
+                        console.warn('Browser unterstützt keinen Offline-Speicher.');
+                    }
+                });
+            } catch (e) {
+                console.warn('Persistence Setup übersprungen:', e);
+            }
+        } else {
+            console.error('Firebase SDK konnte nicht geladen werden.');
         }
-        window.db = firebase.firestore();
-        window.onerror = function(msg) { alert("JS-Fehler: " + msg); };
+
+        window.onerror = function(msg) { console.error("JS-Fehler: " + msg); };
     </script>
 
     <!-- Anwendungsskripte -->
@@ -412,12 +429,16 @@
             if (typeof starteCloudSync === "function") starteCloudSync();
             if (typeof filterGeraete === "function") filterGeraete();
             if (typeof renderFahrzeugeView === "function") renderFahrzeugeView();
+            
             if (typeof renderPSAView === "function") renderPSAView();
             else if (typeof ladePSA === "function") ladePSA();
+            
             if (typeof renderLagerView === "function") renderLagerView();
             else if (typeof ladeLager === "function") ladeLager();
+            
             if (typeof renderPruefungenView === "function") renderPruefungenView();
             else if (typeof ladePruefungen === "function") ladePruefungen();
+            
             if (typeof renderBenutzerVerwaltung === "function") renderBenutzerVerwaltung();
         });
     </script>
