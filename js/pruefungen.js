@@ -22,6 +22,102 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+// ==========================================
+// Pruefungen Modul - Rechte & Rendering
+// ==========================================
+
+function renderPruefungenView() {
+    const ziel = document.getElementById('seite-pruefungen');
+    if (!ziel) return;
+
+    // Lese- & Schreibrechte prüfen
+    const darfSchreiben = typeof window.hatRecht === "function" 
+        ? window.hatRecht('pruefungen_schreiben') 
+        : false;
+
+    const pruefungen = getPruefungen();
+
+    let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>📋 Prüfungen & Wartungen</h2>
+            ${darfSchreiben ? `
+                <button onclick="oeffnePruefungModal()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                    + Neue Prüfung erfassen
+                </button>
+            ` : `<span style="color: #666; font-style: italic;">🔒 Sie besitzen nur Leserechte für dieses Modul.</span>`}
+        </div>
+
+        <div style="background: white; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px 15px;">Gegenstand / Gerät</th>
+                        <th style="padding: 12px 15px;">Prüfdatum</th>
+                        <th style="padding: 12px 15px;">Nächste Prüfung</th>
+                        <th style="padding: 12px 15px;">Prüfer</th>
+                        <th style="padding: 12px 15px;">Ergebnis</th>
+                        ${darfSchreiben ? `<th style="padding: 12px 15px;">Aktionen</th>` : ''}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    if (pruefungen.length === 0) {
+        html += `<tr><td colspan="${darfSchreiben ? 6 : 5}" style="text-align: center; padding: 20px; color: #777;">Keine Prüfungen eingetragen.</td></tr>`;
+    } else {
+        pruefungen.forEach((p, index) => {
+            const bestanden = p.ergebnis === 'Bestanden' || p.bestanden === true;
+            const statusColor = bestanden ? '#d4edda' : '#f8d7da';
+            const statusTextColor = bestanden ? '#155724' : '#721c24';
+
+            html += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 15px; font-weight: bold;">${escapeHtml(p.gegenstand || p.gerat || '-')}</td>
+                    <td style="padding: 12px 15px;">${escapeHtml(p.datum || '-')}</td>
+                    <td style="padding: 12px 15px;">${escapeHtml(p.naechstePruefung || p.naechste_pruefung || '-')}</td>
+                    <td style="padding: 12px 15px;">${escapeHtml(p.pruefer || '-')}</td>
+                    <td style="padding: 12px 15px;">
+                        <span style="background: ${statusColor}; color: ${statusTextColor}; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">
+                            ${bestanden ? 'Bestanden' : 'Mangelhaft / Fällig'}
+                        </span>
+                    </td>
+                    ${darfSchreiben ? `
+                        <td style="padding: 12px 15px;">
+                            <button onclick="loeschePruefung(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                🗑️ Löschen
+                            </button>
+                        </td>
+                    ` : ''}
+                </tr>
+            `;
+        });
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    ziel.innerHTML = html;
+}
+
+function loeschePruefung(index) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('pruefungen_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Löschen vorhanden!");
+        return;
+    }
+
+    if (!confirm("Möchten Sie diesen Prüfeintrag wirklich löschen?")) return;
+
+    const liste = getPruefungen();
+    liste.splice(index, 1);
+    speicherePruefungen(liste);
+    renderPruefungenView();
+}
+
+window.renderPruefungenView = renderPruefungenView;
+window.loeschePruefung = loeschePruefung;
 
 // Zeitzonen-sichere Datumsformatierung inkl. Überfälligkeitswarnung
 function formatiereDatum(datumStr) {

@@ -11,15 +11,21 @@ function initPersonalLayout() {
 
     if (container.querySelector('.table-container')) return;
 
+    const darfSchreiben = typeof window.hatRecht === "function" 
+        ? window.hatRecht('personal_schreiben') 
+        : false;
+
     container.innerHTML = `
         <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
             <h2>👥 Personalverwaltung</h2>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <button class="btn btn-secondary" onclick="exportPersonalCSV()" title="Als CSV für Excel exportieren">📊 CSV Export</button>
                 <button class="btn btn-secondary" onclick="exportPersonalJSON()" title="Als JSON-Datei sichern">💾 Backup (JSON)</button>
-                <button class="btn btn-secondary" onclick="document.getElementById('import-personal-file').click()" title="JSON-Sicherung wiederherstellen">📂 Import</button>
-                <input type="file" id="import-personal-file" accept=".json" style="display: none;" onchange="importPersonalJSON(event)">
-                <button class="btn btn-primary" onclick="oeffneMitgliedModal()">➕ Neues Mitglied</button>
+                ${darfSchreiben ? `
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-personal-file').click()" title="JSON-Sicherung wiederherstellen">📂 Import</button>
+                    <input type="file" id="import-personal-file" accept=".json" style="display: none;" onchange="importPersonalJSON(event)">
+                    <button class="btn btn-primary" onclick="oeffneMitgliedModal()">➕ Neues Mitglied</button>
+                ` : `<span style="color: #666; font-style: italic;">🔒 Sie besitzen nur Leserechte für dieses Modul.</span>`}
             </div>
         </div>
 
@@ -53,7 +59,7 @@ function initPersonalLayout() {
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">G26.3 (Atemschutz)</th>
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">Lehrgänge</th>
                         <th style="padding: 10px; border-bottom: 2px solid #ddd;">Bemerkung</th>
-                        <th style="padding: 10px; border-bottom: 2px solid #ddd;">Aktionen</th>
+                        ${darfSchreiben ? `<th style="padding: 10px; border-bottom: 2px solid #ddd;">Aktionen</th>` : ''}
                     </tr>
                 </thead>
                 <tbody id="personal-tabelle-body">
@@ -135,7 +141,6 @@ function initPersonalLayout() {
                         <input type="text" id="mitglied-lehrgaenge" placeholder="z. B. MTA, AGT, Maschinist, GF" style="width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box;">
                     </div>
 
-                    <!-- Kommentarfeld / Notizen -->
                     <div style="margin-top: 15px;">
                         <label><strong>Kommentar / Bemerkungen:</strong></label>
                         <textarea id="mitglied-kommentar" rows="3" placeholder="Führerscheinklassen, Notizen, Besondere Ausbildungen etc." style="width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; font-family: inherit;"></textarea>
@@ -160,6 +165,10 @@ function renderePersonalTabelle() {
     const tbody = document.getElementById('personal-tabelle-body');
     if (!tbody) return;
 
+    const darfSchreiben = typeof window.hatRecht === "function" 
+        ? window.hatRecht('personal_schreiben') 
+        : false;
+
     const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
     const suche = (document.getElementById('personal-suche')?.value || '').toLowerCase();
     const filterFunktion = document.getElementById('personal-filter-funktion')?.value || '';
@@ -183,7 +192,7 @@ function renderePersonalTabelle() {
     });
 
     if (gefiltert.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 15px; color: #777;">Keine Mitglieder gefunden.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${darfSchreiben ? 7 : 6}" style="text-align:center; padding: 15px; color: #777;">Keine Mitglieder gefunden.</td></tr>`;
         return;
     }
 
@@ -219,10 +228,12 @@ function renderePersonalTabelle() {
                 <td style="padding: 10px;">${g26Badge}</td>
                 <td style="padding: 10px; font-size: 0.9em; color: #444;">${lehrgaengeStr}</td>
                 <td style="padding: 10px; font-size: 0.85em; color: #666;">${kommentarStr}</td>
-                <td style="padding: 10px;">
-                    <button class="btn btn-sm" onclick="bearbeiteMitglied('${m.id}')" title="Bearbeiten">✏️</button>
-                    <button class="btn btn-sm" onclick="loescheMitglied('${m.id}')" title="Löschen" style="color: red;">🗑️</button>
-                </td>
+                ${darfSchreiben ? `
+                    <td style="padding: 10px;">
+                        <button class="btn btn-sm" onclick="bearbeiteMitglied('${m.id}')" title="Bearbeiten">✏️</button>
+                        <button class="btn btn-sm" onclick="loescheMitglied('${m.id}')" title="Löschen" style="color: red;">🗑️</button>
+                    </td>
+                ` : ''}
             </tr>
         `;
     }).join('');
@@ -232,6 +243,11 @@ function renderePersonalTabelle() {
  * Öffnet das Modal
  */
 function oeffneMitgliedModal(mitgliedId = null) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('personal_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Bearbeiten/Anlegen vorhanden!");
+        return;
+    }
+
     initPersonalLayout();
 
     const modal = document.getElementById('modal-mitglied');
@@ -281,6 +297,11 @@ function schliesseMitgliedModal() {
 function speichereMitglied(event) {
     event.preventDefault();
 
+    if (typeof window.hatRecht === "function" && !window.hatRecht('personal_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Speichern vorhanden!");
+        return;
+    }
+
     const id = document.getElementById('mitglied-id').value || 'm_' + Date.now();
     const vorname = document.getElementById('mitglied-vorname').value;
     const nachname = document.getElementById('mitglied-nachname').value;
@@ -320,6 +341,11 @@ function speichereMitglied(event) {
  * Löscht ein Mitglied
  */
 function loescheMitglied(id) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('personal_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Löschen vorhanden!");
+        return;
+    }
+
     if (!confirm('Möchtest du dieses Mitglied wirklich löschen?')) return;
 
     let mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
@@ -334,13 +360,7 @@ function bearbeiteMitglied(id) {
     oeffneMitgliedModal(id);
 }
 
-// ==========================================
-// Export & Import Funktionen
-// ==========================================
-
-/**
- * Exportiert die Personalakte als CSV (mit UTF-8 BOM für Excel)
- */
+// Export & Import
 function exportPersonalCSV() {
     const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
 
@@ -377,9 +397,6 @@ function exportPersonalCSV() {
     }
 }
 
-/**
- * Exportiert Personaldaten als JSON-Sicherungsdatei
- */
 function exportPersonalJSON() {
     const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(mitglieder, null, 2));
@@ -389,10 +406,12 @@ function exportPersonalJSON() {
     link.click();
 }
 
-/**
- * Importiert Personaldaten aus einer JSON-Sicherungsdatei
- */
 function importPersonalJSON(event) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('personal_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Importieren vorhanden!");
+        return;
+    }
+
     const file = event.target.files[0];
     if (!file) return;
 
@@ -416,7 +435,7 @@ function importPersonalJSON(event) {
         }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset input
+    event.target.value = '';
 }
 
 // Global verfügbar machen

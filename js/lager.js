@@ -25,6 +25,108 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+// ==========================================
+// Lager Modul - Rechte & Rendering
+// ==========================================
+
+function renderLagerView() {
+    const ziel = document.getElementById('seite-lager');
+    if (!ziel) return;
+
+    // Lese- & Schreibrechte prüfen
+    const darfSchreiben = typeof window.hatRecht === "function" 
+        ? window.hatRecht('lager_schreiben') 
+        : false;
+
+    const lager = getLager();
+
+    let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>📦 Lagerbestand & Verbrauchsmaterial</h2>
+            ${darfSchreiben ? `
+                <button onclick="oeffneLagerModal()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                    + Artikel hinzufügen
+                </button>
+            ` : `<span style="color: #666; font-style: italic;">🔒 Sie besitzen nur Leserechte für dieses Modul.</span>`}
+        </div>
+
+        <div style="background: white; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px 15px;">Artikelbezeichnung</th>
+                        <th style="padding: 12px 15px;">Kategorie</th>
+                        <th style="padding: 12px 15px;">Menge</th>
+                        <th style="padding: 12px 15px;">Mindestbestand</th>
+                        <th style="padding: 12px 15px;">Lagerort</th>
+                        ${darfSchreiben ? `<th style="padding: 12px 15px;">Aktionen</th>` : ''}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    if (lager.length === 0) {
+        html += `<tr><td colspan="${darfSchreiben ? 6 : 5}" style="text-align: center; padding: 20px; color: #777;">Keine Lagerartikel vorhanden.</td></tr>`;
+    } else {
+        lager.forEach((artikel, index) => {
+            const menge = Number(artikel.menge) || 0;
+            const mindest = Number(artikel.mindestbestand) || 0;
+            
+            // Warnung bei Unterschreitung des Mindestbestands
+            const knapperBestand = mindest > 0 && menge <= mindest;
+            const statusColor = knapperBestand ? '#f8d7da' : '#transparent';
+            const textColor = knapperBestand ? '#721c24' : 'inherit';
+
+            html += `
+                <tr style="border-bottom: 1px solid #eee; background-color: ${statusColor}; color: ${textColor};">
+                    <td style="padding: 12px 15px; font-weight: bold;">${escapeHtml(artikel.name || artikel.bezeichnung || '-')}</td>
+                    <td style="padding: 12px 15px;">${escapeHtml(artikel.kategorie || '-')}</td>
+                    <td style="padding: 12px 15px; font-weight: bold;">
+                        ${menge} ${escapeHtml(artikel.einheit || 'Stk.')}
+                        ${knapperBestand ? ' ⚠️' : ''}
+                    </td>
+                    <td style="padding: 12px 15px;">${mindest} ${escapeHtml(artikel.einheit || 'Stk.')}</td>
+                    <td style="padding: 12px 15px;">${escapeHtml(artikel.lagerort || '-')}</td>
+                    ${darfSchreiben ? `
+                        <td style="padding: 12px 15px; display: flex; gap: 6px;">
+                            <button onclick="bearbeiteLagerArtikel(${index})" style="background: #ffc107; color: #333; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                ✏️ Bearbeiten
+                            </button>
+                            <button onclick="loescheLagerArtikel(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                🗑️ Löschen
+                            </button>
+                        </td>
+                    ` : ''}
+                </tr>
+            `;
+        });
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    ziel.innerHTML = html;
+}
+
+function loescheLagerArtikel(index) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('lager_schreiben')) {
+        alert("⚠️ Keine Berechtigung zum Löschen vorhanden!");
+        return;
+    }
+
+    if (!confirm("Möchten Sie diesen Lagerartikel wirklich löschen?")) return;
+
+    const liste = getLager();
+    liste.splice(index, 1);
+    speichereLager(liste);
+    renderLagerView();
+}
+
+window.renderLagerView = renderLagerView;
+window.loescheLagerArtikel = loescheLagerArtikel;
 
 // Hilfsfunktion: Datum formatieren
 function formatiereDatum(datumStr) {
