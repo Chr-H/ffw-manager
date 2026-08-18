@@ -427,7 +427,48 @@ function abmelden() {
         zeigeSeite('dashboard');
     }
 }
+// Dynamic Header UI für Rolle & Anmelden/Abmelden
+function aktualisiereUserHeaderUI() {
+    const rolle = typeof holeAktuelleRolle === 'function' ? holeAktuelleRolle() : 'gast';
+    const roleBadge = document.getElementById('aktueller-benutzer-rolle');
+    const btn = document.getElementById('btn-login-logout');
 
+    if (roleBadge) {
+        roleBadge.textContent = rolle.toUpperCase();
+    }
+
+    if (btn) {
+        if (rolle === 'gast') {
+            btn.textContent = 'Anmelden';
+            btn.style.background = '#28a745';
+            btn.style.color = 'white';
+        } else {
+            btn.textContent = 'Abmelden';
+            btn.style.background = '#dc3545';
+            btn.style.color = 'white';
+        }
+    }
+}
+
+function zeigLoginModalOderAbmelden() {
+    const rolle = typeof holeAktuelleRolle === 'function' ? holeAktuelleRolle() : 'gast';
+    if (rolle === 'gast') {
+        const modal = document.getElementById('login-modal');
+        if (modal) modal.style.display = 'block';
+        else alert('Login-Modal wurde im HTML nicht gefunden.');
+    } else {
+        if (typeof abmelden === 'function') {
+            abmelden();
+        }
+    }
+}
+
+// Globale Verfügbarkeit herstellen
+window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
+window.aktualisiereUserHeaderUI = aktualisiereUserHeaderUI;
+
+// Nach dem Laden der Seite automatisch aufrufen
+document.addEventListener('DOMContentLoaded', aktualisiereUserHeaderUI);
 // AUTOMATISCHE SPERRE BEI INAKTIVITÄT (5 MIN)
 let inaktivitaetsTimer;
 

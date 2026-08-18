@@ -36,24 +36,44 @@
 <body>
 
     <!-- Kopfbereich -->
-    <header class="header">
-        <div class="logo" style="display: flex; align-items: center; gap: 10px;">
+    <header class="header" style="background: #B71C1C; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        
+        <!-- Logo & Titel -->
+        <div class="logo" style="display: flex; align-items: center; gap: 12px;">
             <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
-            <span>FFW Manager</span>
+            <h1 style="margin: 0; font-size: 1.3rem; color: white;">Freiwillige Feuerwehr Albertsried</h1>
         </div>
 
-        <!-- PWA Install Button (standardmäßig ausgeblendet) -->
-        <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none; margin-left: auto;" onclick="installiereApp()">
-            📲 App installieren
-        </button>
+        <!-- Funktions-Buttons & Status -->
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            
+            <!-- PWA Install Button -->
+            <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none;" onclick="installiereApp()">
+                📲 App installieren
+            </button>
 
-        <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 8px 12px; margin: 10px;">
-            🏠 Zurück zum Dashboard
-        </button>
+            <!-- Mobil-Zurück-Button -->
+            <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 6px 10px;">
+                🏠 Zurück
+            </button>
 
-        <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">
-            🟢 Online (Synchronisiert)
+            <!-- Network Status -->
+            <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">
+                🟢 Online
+            </div>
+
+            <!-- Benutzer-Status & Anmelde-Button -->
+            <div id="user-header-info" style="display: flex; align-items: center; gap: 10px;">
+                <span id="user-role-badge" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 0.85em;">
+                    👤 Rolle: <strong id="aktueller-benutzer-rolle">Gast</strong>
+                </span>
+                <button id="btn-login-logout" onclick="zeigLoginModalOderAbmelden()" style="background: white; color: #B71C1C; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                    Anmelden
+                </button>
+            </div>
+            
         </div>
+    </header>
 
         <div class="feuerwehr" style="margin-left: 15px;">Freiwillige Feuerwehr Albertsried</div>
     </header>
