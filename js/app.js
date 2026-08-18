@@ -345,12 +345,13 @@ window.installiereApp = installiereApp;
 
 function aktualisiereDashboard() {
     try {
-        const geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
-        const mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
-        const fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
-        const lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
-        const psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
-        const pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
+        // WICHTIG: Nutze ladeDaten / ladePersonalData statt harter Key-Namen
+        const geraete = typeof ladeDaten === 'function' ? ladeDaten('geraete') : (JSON.parse(localStorage.getItem('ffw_geraete')) || []);
+        const mitglieder = typeof ladePersonalData === 'function' ? ladePersonalData() : (JSON.parse(localStorage.getItem('ffw_personal')) || []);
+        const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : (JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || []);
+        const lager = typeof ladeDaten === 'function' ? ladeDaten('lager') : (JSON.parse(localStorage.getItem('ffw_lager')) || []);
+        const psa = typeof ladeDaten === 'function' ? ladeDaten('psa') : (JSON.parse(localStorage.getItem('ffw_psa')) || []);
+        const pruefungen = typeof ladeDaten === 'function' ? ladeDaten('pruefungen') : (JSON.parse(localStorage.getItem('ffw_pruefungen')) || []);
 
         const heute = new Date();
         
@@ -376,6 +377,8 @@ function aktualisiereDashboard() {
         setTileValue('stat-modul-psa', `${psa.length} Personen`);
         setTileValue('stat-modul-pruefungen', `${faellig + ueberfaellig} fällig`);
         setTileValue('stat-modul-lager', `${lager.length} Artikel`);
+        
+        // Greift jetzt zuverlässig auf ffw_personal zu:
         setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
     } catch (e) {
         console.error("Fehler beim Aktualisieren des Dashboards:", e);
