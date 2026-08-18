@@ -14,6 +14,7 @@ function zeigeSeite(seiteId) {
     // 2. Rechte-Prüfung vorschalten
     if (typeof window.pruefeSeitenZugriff === "function") {
         if (!window.pruefeSeitenZugriff(modul)) {
+            alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
             return; // bricht ab, wenn keine Berechtigung vorliegt
         }
     }
@@ -78,6 +79,10 @@ function zeigeSeite(seiteId) {
 
         case 'auswertungen':
             if (typeof initAuswertungenLayout === 'function') initAuswertungenLayout();
+            break;
+
+        case 'zulassung':
+            initZulassungLayout();
             break;
 
         default:
@@ -375,6 +380,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==========================================
+// Modul: Zulassung beantragen (NEU VORHANDEN)
+// ==========================================
+
+function initZulassungLayout() {
+    const ziel = document.getElementById('seite-zulassung');
+    if (!ziel) return;
+
+    const darfBeantragen = typeof window.hatRecht === "function" 
+        ? window.hatRecht('zulassung_beantragen') 
+        : true;
+
+    ziel.innerHTML = `
+        <h2>📋 Zulassung / Antrag stellen</h2>
+        <p style="color: #666; margin-bottom: 20px;">Reichen Sie hier Anträge für neue Berechtigungen, Geräte oder Zugänge ein.</p>
+
+        <div style="background: #fff; padding: 25px; border-radius: 8px; border: 1px solid #ddd; max-width: 600px;">
+            <form onsubmit="beantrageZulassungForm(event)">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Name des Antragstellers:</label>
+                    <input type="text" id="antrag-name" required placeholder="Max Mustermann" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Art des Antrags:</label>
+                    <select id="antrag-art" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="Systemzugang">Systemzugang erweitern</option>
+                        <option value="Geräteübernahme">Neue Geräteübernahme</option>
+                        <option value="PSA-Anforderung">PSA Ausrüstungsanforderung</option>
+                        <option value="Sonstiges">Sonstiges</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Begründung / Anmerkung:</label>
+                    <textarea id="antrag-grund" rows="4" required placeholder="Bitte begründen Sie Ihren Antrag..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+                </div>
+
+                ${darfBeantragen 
+                    ? `<button type="submit" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📩 Antrag kostenfrei einreichen</button>`
+                    : `<p style="color: #c00; font-weight: bold;">⚠️ Sie besitzen keine Berechtigung, einen Antrag zu stellen.</p>`
+                }
+            </form>
+        </div>
+    `;
+}
+
+function beantrageZulassungForm(event) {
+    event.preventDefault();
+
+    if (typeof window.hatRecht === "function" && !window.hatRecht('zulassung_beantragen')) {
+        alert("⚠️ Sie besitzen keine Berechtigung, einen Zulassungsantrag zu stellen.");
+        return;
+    }
+
+    const name = document.getElementById('antrag-name').value;
+    const art = document.getElementById('antrag-art').value;
+    const grund = document.getElementById('antrag-grund').value;
+
+    const antraege = JSON.parse(localStorage.getItem('ffw_antraege')) || [];
+    antraege.push({
+        id: 'antrag_' + Date.now(),
+        datum: new Date().toISOString(),
+        name,
+        art,
+        grund,
+        status: 'Ausstehend'
+    });
+
+    localStorage.setItem('ffw_antraege', JSON.stringify(antraege));
+
+    alert("✅ Antrag erfolgreich eingereicht! Ein Administrator wird Ihre Anfrage prüfen.");
+    initZulassungLayout(); // Formular zurücksetzen
+}
+
+window.initZulassungLayout = initZulassungLayout;
+window.beantrageZulassungForm = beantrageZulassungForm;
+
+
+// ==========================================
 // Modul: Einstellungen Render-Logik & Speicher
 // ==========================================
 
@@ -568,41 +652,53 @@ function exportiereSystemBackupGesichert() {
 
 
 // ==========================================
-// Rollen- & Rechte-System
+// Rollen- & Rechte-System (Korrigiert)
 // ==========================================
 
 const ROLLEN_CONFIG = {
     admin: {
-        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'benutzer', 'einstellungen', 'auswertungen'],
+        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'benutzer', 'einstellungen', 'auswertungen', 'zulassung'],
         schreibrechte: ['*']
     },
     editor: {
-        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen'],
-        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben']
+        seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen', 'zulassung'],
+        schreibrechte: ['geraete_schreiben', 'fahrzeuge_schreiben', 'psa_schreiben', 'lager_schreiben', 'pruefungen_schreiben', 'zulassung_beantragen']
     },
     viewer: {
         seiten: ['dashboard', 'personal', 'geraete', 'fahrzeuge', 'psa', 'lager', 'pruefungen', 'auswertungen'],
         schreibrechte: []
     },
     gast: {
-        seiten: ['dashboard', 'geraete'],
-        schreibrechte: []
+        // Gast hat nun Zugriff auf Dashboard, Geräte, Fahrzeuge und das Zulassungsformular
+        seiten: ['dashboard', 'geraete', 'zulassung', 'fahrzeuge'],
+        // Explizites Recht, Anträge einzureichen
+        schreibrechte: ['zulassung_beantragen']
     }
 };
 
-function hohleAktuelleRolle() {
+/**
+ * Robustere Rollenabfrage (prüft sowohl 'rolle' als auch 'role')
+ */
+function holeAktuelleRolle() {
     const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer')) || {};
-    return (user.rolle || 'gast').toLowerCase();
+    // Unterstützt sowohl user.rolle als auch user.role (Groß-/Kleinschreibung ignoriert)
+    const rolle = (user.rolle || user.role || 'gast').toLowerCase();
+    
+    // Fallback-Schutz: Falls Rolle ungültig ist, nutze gast
+    return ROLLEN_CONFIG[rolle] ? rolle : 'gast';
 }
 
 function hatRecht(recht) {
-    const rolle = hohleAktuelleRolle();
-    const rechteDef = ROLLEN_CONFIG[rolle] || ROLLEN_CONFIG.gast;
+    const rolle = holeAktuelleRolle();
+    const rechteDef = ROLLEN_CONFIG[rolle];
 
+    // Admin / Vollzugriff
     if (rechteDef.schreibrechte.includes('*')) return true;
 
+    // Seiten- oder Schreibrecht vorhanden?
     return rechteDef.seiten.includes(recht) || rechteDef.schreibrechte.includes(recht);
 }
 
+window.holeAktuelleRolle = holeAktuelleRolle;
 window.pruefeSeitenZugriff = hatRecht;
 window.hatRecht = hatRecht;
