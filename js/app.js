@@ -300,28 +300,43 @@ function druckeListe(titel, elementId) {
 
 
 // ==========================================
-// Automatischer PWA Installations-Prompt
+// PWA Installations-Prompt (Sauber per Nutzer-Klick)
 // ==========================================
 
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
+    // Standard-Banner des Browsers verhindern
     e.preventDefault();
     deferredPrompt = e;
 
-    setTimeout(() => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('App-Installation akzeptiert.');
-                }
-                deferredPrompt = null;
-            });
-        }
-    }, 1000);
+    // Optional: Hier einen eigenen "App installieren"-Button in der UI einblenden
+    const installBtn = document.getElementById('btn-app-installieren');
+    if (installBtn) {
+        installBtn.style.display = 'block';
+    }
 });
+
+/**
+ * Diese Funktion wird aufgerufen, wenn der Nutzer auf "App installieren" klickt
+ */
+function installiereApp() {
+    if (!deferredPrompt) {
+        alert("Die App ist bereits installiert oder wird von diesem Browser nicht unterstützt.");
+        return;
+    }
+
+    deferredPrompt.prompt();
+
+    deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('App-Installation akzeptiert.');
+        }
+        deferredPrompt = null;
+    });
+}
+
+window.installiereApp = installiereApp;
 
 
 // ==========================================
