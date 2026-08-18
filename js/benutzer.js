@@ -141,30 +141,7 @@ function zeigePinModal(zielSeite) {
         }
     }
 }
-// Dieser kurze Code kommtZUSÄTZLICH unter deine zeigePinModal-Funktion:
 
-function zeigLoginModalOderAbmelden() {
-    const rolle = typeof holeAktuelleRolle === 'function' ? holeAktuelleRolle() : 'gast';
-    
-    if (rolle === 'gast') {
-        if (typeof zeigePinModal === 'function') {
-            zeigePinModal();
-        } else {
-            alert("Fehler: zeigePinModal() nicht gefunden.");
-        }
-    } else {
-        if (typeof abmelden === 'function') {
-            abmelden();
-        } else {
-            sessionStorage.removeItem('ffw_user');
-            localStorage.removeItem('ffw_user');
-            localStorage.setItem('ffw_aktive_rolle', 'gast');
-            location.reload();
-        }
-    }
-}
-
-window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
 
 // ZUGANGS-ANTRAG SENDEN
 function beantrageZugang(e) {
@@ -556,3 +533,31 @@ window.pinZuruecksetzen = pinZuruecksetzen;
 window.aendereBenutzerRolle = aendereBenutzerRolle;
 window.loescheBenutzer = loescheBenutzer;
 window.abmelden = abmelden;
+
+// Dieser kurze Code kommtZUSÄTZLICH unter deine zeigePinModal-Funktion:
+
+function zeigLoginModalOderAbmelden() {
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    const u = userString ? JSON.parse(userString) : null;
+    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : 'gast';
+
+    if (rolle === 'gast') {
+        if (typeof zeigePinModal === 'function') {
+            zeigePinModal();
+        } else {
+            alert("Fehler: zeigePinModal() ist nicht definiert.");
+        }
+    } else {
+        if (typeof abmelden === 'function') {
+            abmelden();
+        } else {
+            sessionStorage.removeItem('ffw_user');
+            localStorage.removeItem('ffw_user');
+            localStorage.setItem('ffw_aktive_rolle', 'gast');
+            location.reload();
+        }
+    }
+}
+
+// Global für das HTML-onclick Attribut verfügbar machen
+window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
