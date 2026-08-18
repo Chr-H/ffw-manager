@@ -573,3 +573,115 @@ function ladeLager() {
 
 window.renderLagerView = renderLagerView;
 window.ladeLager = ladeLager;
+
+// ==========================================
+// CSV Export & Import für Lager
+// ==========================================
+
+// 1. CSV Export
+function exportLagerCSV() {
+    const lager = typeof ladeDaten === 'function' ? ladeDaten('lager') : [];
+    
+    if (lager.length === 0) {
+        alert("Keine Lagerdaten zum Exportieren vorhanden.");
+        return;
+    }
+
+    // CSV Header & Zeilen erstellen (mit Semikolon getrennt für deutsches Excel)
+    let csvContent = "\uFEFF"; // UTF-BOM für korrekte Umlaute in Excel
+    csvContent += "ID;Bezeichnung;Kategorie;Menge;Mindestmenge;Einheit;Lagerort;Status\n";
+
+    lager.forEach(item => {
+        const row = [
+            `"${item.id || ''}"`,
+            `"${item.name || item.bezeichnung || ''}"`,
+            `"${item.kategorie || ''}"`,
+            `"${item.menge || 0}"`,
+            `"${item.mindestmenge || 0}"`,
+            `"${item.einheit || 'Stk'}"`,
+            `"${item.lagerort || ''}"`,
+            `"${item.status || ''}"`
+        ];
+        csvContent += row.join(";") + "\n";
+    });
+
+    // Download anstoßen
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Lagerbestand_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 2. CSV Import
+function importLagerCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const zeilen = text.split('\n');
+        
+        if (zeilen.length < 2) {
+            alert("Die CSV-Datei enthält keine gültigen Daten.");
+            return;
+        }
+
+        let ladeLager = typeof ladeDaten === 'function' ? ladeDaten('lager') : [];
+        let importZaehler = 0;
+
+        for (let i = 1; i < zeilen.length; i++) {
+            const zeile = zeilen[i].trim();
+            if (!zeile) continue;
+
+            // Spalten trennen (unterstützt Semikolon und Komma)
+            const spalten = zeile.split(';').map(s => s.replace(/^"|"$/g, '').trim());
+
+            if (spalten.length >= 2) {
+                const neuesItem = {
+                    id: spalten[0] || 'LAG-' + Date.now() + '-' + i,
+                    name: spalten[1] || 'Unbenannter Artikel',
+                    bezeichnung: spalten[1] || 'Unbenannter Artikel',
+                    kategorie: spalten[2] || '',
+                    menge: parseInt(spalten[3]) || 0,
+                    mindestmenge: parseInt(spalten[4]) || 0,
+                    einheit: spalten[5] || 'Stk',
+                    lagerort: spalten[6] || '',
+                    status: spalten[7] || 'Aktiv'
+                };
+
+                // Prüfen ob bereits vorhanden, sonst hinzufügen
+                const idx = ladeLager.findIndex(x => x.id === neuesItem.id);
+                if (idx >= 0) {
+                    ladeLager[idx] = neuesItem;
+                } else {
+                    ladeLager.push(neuesItem);
+                }
+                importZaehler++;
+            }
+        }
+
+        // Speichern und Ansicht erneuern
+        if (typeof speichereDaten === 'function') {
+            speichereDaten('lager', ladeLager);
+        }
+
+        if (typeof renderLagerView === 'function') renderLagerView();
+        else if (typeof ladeLagerView === 'function') ladeLagerView();
+
+        if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
+
+        alert(`${importZaehler} Lagerartikel erfolgreich importiert!`);
+        input.value = ''; // Reset File-Input
+    };
+
+    reader.readAsText(file, 'UTF-8');
+}
+
+// Global verfügbar machen
+window.exportLagerCSV = exportLagerCSV;
+window.importLagerCSV = importLagerCSV;

@@ -288,15 +288,16 @@
             <!-- 6. LAGER BEREICH -->
             <section id="seite-lager" class="seite-ansicht" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>📦 Lagerverwaltung</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <button type="button" class="btn btn-secondary" onclick="exportLagerCSV()">📥 CSV Export</button>
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📤 CSV Import</button>
-                        <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
-                    </div>
-                </div>
-                <div id="lager-container" class="table-responsive"></div>
-            </section>
+                <h2>📦 Lagerverwaltung</h2>
+                <div style="display: flex; gap: 10px;" class="no-print">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📥 CSV Import</button>
+            <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
+            <button type="button" class="btn btn-secondary" onclick="exportLagerCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Lagerliste', 'lager-container')">🖨️ Liste drucken / PDF</button>
+        </div>
+    </div>
+    <div id="lager-container" class="table-responsive"></div>
+</section>
 
             <!-- 7. PERSONAL BEREICH -->
             <section id="seite-personal" class="seite-ansicht" style="display: none;">
