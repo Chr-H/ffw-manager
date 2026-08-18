@@ -6,29 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FFW Manager - Albertsried</title>
     
-    <!-- Alle CSS-Dateien aus dem css/ Ordner einbinden -->
-    <link rel="stylesheet" href="css/style.css?v=5">
-    <link rel="stylesheet" href="css/layout.css?v=5">
-    <link rel="stylesheet" href="css/geraete.css?v=5">
+    <!-- CSS-Dateien -->
+    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/layout.css?v=6">
+    <link rel="stylesheet" href="css/geraete.css?v=6">
     
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Anwendungsskripte (mit defer geladen) -->
-    <script src="js/storage.js?v=5" defer></script>
-    <script src="js/kategorien.js?v=5" defer></script>
-    <script src="js/geraete.js?v=5" defer></script>
-    <script src="js/fahrzeuge.js?v=5" defer></script>
-    <script src="js/personal.js?v=5" defer></script>
-    <script src="js/psa.js?v=5" defer></script>
-    <script src="js/lager.js?v=5" defer></script>
-    <script src="js/pruefungen.js?v=5" defer></script>
-    <script src="js/benutzer.js?v=6" defer></script>
-    <script src="js/import.js?v=5" defer></script>
-    <script src="js/app.js?v=6" defer></script>
-
     <meta name="theme-color" content="#B71C1C">
     
-    <!-- Favicons gemäß Explorer-Ordnerstruktur -->
+    <!-- Favicons -->
     <link rel="icon" type="image/png" href="emblem-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="emblem-192.png">
 </head>
@@ -37,51 +23,27 @@
 
     <!-- Kopfbereich -->
     <header class="header" style="background: #B71C1C; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        
-        <!-- Logo & Titel -->
         <div class="logo" style="display: flex; align-items: center; gap: 12px;">
             <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
             <h1 style="margin: 0; font-size: 1.3rem; color: white;">Freiwillige Feuerwehr Albertsried</h1>
         </div>
 
-        <!-- Funktions-Buttons & Status -->
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            
-            <!-- PWA Install Button -->
-            <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none;" onclick="installiereApp()">
-                📲 App installieren
-            </button>
+            <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none;" onclick="installiereApp()">📲 App installieren</button>
+            <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 6px 10px;">🏠 Zurück</button>
+            <button onclick="rechteBeantragen()" style="background: #ffc107; color: black; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">🔑 Rechte anfragen</button>
 
-            <!-- Mobil-Zurück-Button -->
-            <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 6px 10px;">
-                🏠 Zurück
-            </button>
+            <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">🟢 Online</div>
 
-            <button onclick="rechteBeantragen()" style="background: #ffc107; color: black; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">
-                🔑 Rechte anfragen
-            </button>
-
-            <!-- Network Status -->
-            <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">
-                🟢 Online
-            </div>
-
-            <!-- Benutzer-Status & Anmelde-Button -->
             <div id="user-header-info" style="display: flex; align-items: center; gap: 10px;">
-                <span id="user-role-badge" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 0.85em;">
-                    👤 Rolle: <strong id="aktueller-benutzer-rolle">Gast</strong>
-                </span>
-                <button id="btn-login-logout" onclick="zeigLoginModalOderAbmelden()" style="background: white; color: #B71C1C; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">
-                    Anmelden
-                </button>
+                <span id="user-role-badge" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 0.85em;">👤 Rolle: <strong id="aktueller-benutzer-rolle">Gast</strong></span>
+                <button id="btn-login-logout" onclick="zeigLoginModalOderAbmelden()" style="background: white; color: #B71C1C; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Anmelden</button>
             </div>
-            
         </div>
     </header>
 
     <div class="container">
-
-        <!-- Navigation (Sidebar) -->
+        <!-- Navigation -->
         <aside class="sidebar">
             <nav>
                 <ul>
@@ -110,7 +72,6 @@
                     <p id="heute"></p>
                 </section>
 
-                <!-- STATUS-KACHELN OBEN -->
                 <section class="status">
                     <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
                         <h3>🔴 Prüfungen</h3>
@@ -132,7 +93,6 @@
 
                 <h2>Module</h2>
                 
-                <!-- MODULE-KACHELN UNTEN -->
                 <div class="cards">
                     <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
                         <h2>🔧 Geräte</h2>
@@ -205,7 +165,7 @@
 
                 <hr style="margin:20px 0;">
 
-                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px;">
+                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px; flex-wrap: wrap;">
                     <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
                     <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
                     <select id="filterStatus" onchange="filterGeraete()">
@@ -217,7 +177,7 @@
                     </select>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items:start;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:start;">
                     <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                         <div class="table-responsive">
                             <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
@@ -258,12 +218,12 @@
                 <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                     <h3>➕ Neues Fahrzeug anlegen</h3>
                     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                        <input id="fz-funkruf" type="text" placeholder="Funkrufname (z.B. Florian 1/40/1)">
+                        <input id="fz-funkruf" type="text" placeholder="Funkrufname">
                         <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
-                        <input id="fz-typ" type="text" placeholder="Fahrzeugtyp (z.B. HLF 20)">
+                        <input id="fz-typ" type="text" placeholder="Fahrzeugtyp">
                         <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
                         <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
-                        <input id="fz-sp" type="date" title="Nächste Sicherheitsprüfung (SP)">
+                        <input id="fz-sp" type="date" title="Nächste SP">
                         <select id="fz-status">
                             <option value="Einsatzbereit">🟢 Einsatzbereit</option>
                             <option value="Wartung">🟡 In Werkstatt / Wartung</option>
@@ -273,7 +233,7 @@
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 450px; gap:20px; align-items:start;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:start;">
                     <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                         <div class="table-responsive">
                             <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
@@ -310,7 +270,7 @@
                         <button type="button" class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
                     </div>
                 </div>
-                <div id="psa-container"></div>
+                <div id="psa-container" class="table-responsive"></div>
             </section>
 
             <!-- 5. PRÜFUNGEN BEREICH -->
@@ -322,7 +282,7 @@
                         <button type="button" class="btn btn-secondary" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-container')">🖨️ Prüfbericht drucken / PDF</button>
                     </div>
                 </div>
-                <div id="pruefungen-container" class="liste-container"></div>
+                <div id="pruefungen-container" class="liste-container table-responsive"></div>
             </section>
 
             <!-- 6. LAGER BEREICH -->
@@ -335,16 +295,15 @@
                         <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
                     </div>
                 </div>
-                <div id="lager-container"></div>
+                <div id="lager-container" class="table-responsive"></div>
             </section>
 
             <!-- 7. PERSONAL BEREICH -->
             <section id="seite-personal" class="seite-ansicht" style="display: none;">
                 <h2>👥 Personalverwaltung</h2>
 
-                <!-- Such- und Filterleiste -->
                 <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <input type="text" id="personal-suche" placeholder="Suche nach Name, Spind, Dienstgrad..." oninput="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+                    <input type="text" id="personal-suche" placeholder="Suche nach Name, Spind..." oninput="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
                     
                     <select id="personal-filter-funktion" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
                         <option value="">Alle Funktionen</option>
@@ -365,9 +324,8 @@
                     <button class="btn btn-primary" onclick="oeffneMitgliedModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Neues Mitglied</button>
                 </div>
 
-                <!-- Tabellengerüst für personal.js -->
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover" style="width:100%; border-collapse: collapse;">
+                <div class="table-responsive" style="width:100%; overflow-x:auto;">
+                    <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse;">
                         <thead class="table-dark">
                             <tr>
                                 <th>Spind</th>
@@ -394,7 +352,6 @@
             <!-- 8. RECHTE & BENUTZER BEREICH -->
             <div id="seite-benutzer" class="seite-ansicht" style="display: none;">
                 <h2>🔐 Benutzer- & Rechteverwaltung</h2>
-                
                 <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
                     <h3>🔑 Zugang / Rolle beantragen</h3>
                     <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
@@ -402,34 +359,26 @@
                             <label for="reqName" style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
                             <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
                         </div>
-                        
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label for="reqEmail" style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
                             <input type="text" id="reqEmail" class="form-control" required placeholder="max.mustermann@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
                         </div>
-                        
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label for="reqPin" style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label>
-                            <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl (z. B. 4711)" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                            <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
                         </div>
-
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label for="reqWunschRolle" style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
                             <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
                                 <option value="viewer">Leserechte (z. B. Mannschaft)</option>
-                                <option value="editor">Schreibrechte (z. B. Gerätewart / Kleidungswart)</option>
+                                <option value="editor">Schreibrechte (z. B. Gerätewart)</option>
                                 <option value="admin">Administrator</option>
                             </select>
                         </div>
-                        
-                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
-                            Zugang beantragen
-                        </button>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">Zugang beantragen</button>
                     </form>
-                    
                     <div id="requestStatusMessage" style="margin-top: 15px; font-weight: bold;"></div>
                 </div>
-
                 <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
             </div>
 
@@ -442,45 +391,38 @@
         </main>
     </div>
 
-    <!-- Mitglied-Modal -->
+    <!-- Modal für Mitglieder -->
     <div id="mitglied-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
         <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; margin: 3% auto; max-height: 90vh; overflow-y: auto;">
             <h3 style="margin-top:0;">Mitglied verwalten</h3>
             <form id="mitglied-form" onsubmit="speichereMitglied(event)">
                 <input type="hidden" id="mitglied-id">
-                
                 <div style="margin-bottom:10px;">
                     <label style="display:block; margin-bottom:3px; font-weight:bold;">Spind-Nr.:</label>
-                    <input type="text" id="mitglied-spind" placeholder="z. B. 12 oder A-05" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    <input type="text" id="mitglied-spind" placeholder="z. B. 12" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 </div>
-
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <input type="text" id="mitglied-vorname" placeholder="Vorname *" required style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
                     <input type="text" id="mitglied-nachname" placeholder="Nachname *" required style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
                 </div>
-
                 <div style="margin-bottom:10px;">
                     <label style="display:block; margin-bottom:3px; font-weight:bold;">Dienstgrad:</label>
                     <input type="text" id="mitglied-dienstgrad" placeholder="z. B. Hauptfeuerwehrmann" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 </div>
-
                 <div style="margin-bottom:10px;">
                     <label style="display:block; margin-bottom:3px; font-weight:bold;">G26.3 Datum:</label>
                     <input type="date" id="mitglied-g26datum" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 </div>
-
                 <div style="margin-bottom:10px;">
                     <label style="display:block; margin-bottom:3px; font-weight:bold;">Lehrgänge:</label>
-                    <input type="text" id="mitglied-lehrgaenge" placeholder="z. B. TM1, AGT, Truppführer (kommagetrennt)" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    <input type="text" id="mitglied-lehrgaenge" placeholder="z. B. TM1, AGT" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 </div>
-
                 <div style="margin-bottom:10px;">
                     <label style="display:block; margin-bottom:3px; font-weight:bold;">Bemerkung:</label>
-                    <textarea id="mitglied-bemerkung" placeholder="Zusätzliche Hinweise..." rows="3" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; resize:vertical;"></textarea>
+                    <textarea id="mitglied-bemerkung" rows="3" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
                 </div>
-
                 <div style="margin-bottom:15px;">
-                    <label style="font-weight:bold; display:block; margin-bottom:5px;">Funktionen / Aufgaben:</label>
+                    <label style="font-weight:bold; display:block; margin-bottom:5px;">Funktionen:</label>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                         <label><input type="checkbox" class="cb-funktion" value="Kommandant"> Kommandant</label>
                         <label><input type="checkbox" class="cb-funktion" value="stellv. Kommandant"> stellv. Kommandant</label>
@@ -490,7 +432,6 @@
                         <label><input type="checkbox" class="cb-funktion" value="Atemschutzträger"> Atemschutzträger</label>
                     </div>
                 </div>
-
                 <div style="display:flex; justify-content:flex-end; gap:10px;">
                     <button type="button" onclick="schliesseMitgliedModal()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">Abbrechen</button>
                     <button type="submit" style="padding:8px 12px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Speichern</button>
@@ -499,7 +440,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs & Konfiguration -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -520,5 +461,19 @@
             window.db = firebase.firestore();
         }
     </script>
+
+    <!-- Anwendungsskripte am Dateiende laden -->
+    <script src="js/storage.js?v=6"></script>
+    <script src="js/kategorien.js?v=6"></script>
+    <script src="js/geraete.js?v=6"></script>
+    <script src="js/fahrzeuge.js?v=6"></script>
+    <script src="js/personal.js?v=6"></script>
+    <script src="js/psa.js?v=6"></script>
+    <script src="js/lager.js?v=6"></script>
+    <script src="js/pruefungen.js?v=6"></script>
+    <script src="js/benutzer.js?v=6"></script>
+    <script src="js/import.js?v=6"></script>
+    <script src="js/app.js?v=6"></script>
+
 </body>
 </html>
