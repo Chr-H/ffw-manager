@@ -511,3 +511,63 @@ body{
         box-sizing: border-box !important;
     }
 }
+/* Mobile Korrektur: Anmeldebereich & Buttons vor Kacheln schieben */
+@media screen and (max-width: 768px) {
+    /* 1. Hauptcontainer scrollbar und flüssig machen */
+    body, 
+    .main-container, 
+    .login-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: auto !important;
+        padding: 15px !important;
+    }
+
+    /* 2. Obere Kacheln nach hinten stellen & Abstände korrigieren */
+    .kacheln-container,
+    .dashboard-grid,
+    .cards-container,
+    .card {
+        position: relative !important;
+        z-index: 1 !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* 3. Login-Bereich & Formular nach vorne holen */
+    .login-container,
+    .auth-container,
+    #login-box {
+        position: relative !important;
+        z-index: 99 !important; /* Liegt sicher über den Kacheln */
+        margin-top: 10px !important;
+        width: 100% !important;
+    }
+
+    /* 4. Button-Gruppe ganz oben halten und klickbar machen */
+    .auth-buttons,
+    .button-group,
+    .form-group {
+        position: relative !important;
+        z-index: 100 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        margin-top: 15px !important;
+    }
+
+    /* 5. Alle Interaktions-Buttons erzwingen */
+    .btn,
+    button,
+    #btn-login,
+    #btn-request-rights {
+        position: relative !important;
+        z-index: 101 !important;
+        pointer-events: auto !important; /* Garantiert Klickbarkeit */
+        width: 100% !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
