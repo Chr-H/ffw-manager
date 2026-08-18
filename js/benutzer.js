@@ -617,3 +617,32 @@ function rechteBeantragen() {
 }
 
 window.rechteBeantragen = rechteBeantragen;
+
+/**
+ * Sperrt alle Eingaben und Speichern-Buttons für Rollen ohne Schreibrechte (z.B. Viewer/Gast)
+ */
+function pruefeModulSchreibrechte() {
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    const u = userString ? JSON.parse(userString) : null;
+    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'gast');
+
+    const darfSchreiben = (rolle === 'admin' || rolle === 'editor');
+
+    if (!darfSchreiben) {
+        // PSA & Prüfungs-Buttons ausblenden
+        document.querySelectorAll('#psa-container button, #pruefungen-container button, .btn-psa, .btn-pruefung, form button[type="submit"]').forEach(btn => {
+            // Ausgenommen sind reine Schließen-/Abbrechen-Buttons im Modal
+            if (!btn.classList.contains('btn-close') && !btn.classList.contains('btn-secondary')) {
+                btn.style.display = 'none';
+            }
+        });
+
+        // Alle Eingabefelder in PSA / Prüfungen schreibgeschützt machen
+        document.querySelectorAll('#psa-container input, #psa-container select, #psa-container textarea, #pruefungen-container input, #pruefungen-container select, #pruefungen-container textarea').forEach(input => {
+            input.disabled = true;
+        });
+    }
+}
+
+// Führe die Sperre nach jedem Seitenaufruf/Wechsel aus:
+document.addEventListener('DOMContentLoaded', pruefeModulSchreibrechte);

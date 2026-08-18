@@ -338,9 +338,49 @@
             </section>
 
             <!-- 7. PERSONAL & AUSWERTUNGEN -->
-            <section id="seite-personal" class="seite-ansicht" style="display: none;">
-                <!-- Wird automatisch beim ersten Aufruf aus personal.js befüllt -->
-            </section>
+<section id="seite-personal" class="seite-ansicht" style="display: none;">
+    <h2>Personalverwaltung</h2>
+
+    <!-- Such- und Filterleiste -->
+    <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="personal-suche" placeholder="Suche nach Name, Dienstgrad..." oninput="renderePersonalTabelle()">
+        
+        <select id="personal-filter-funktion" onchange="renderePersonalTabelle()">
+            <option value="">Alle Funktionen</option>
+            <option value="Atemschutzträger">Atemschutzträger</option>
+            <option value="Maschinist">Maschinist</option>
+            <option value="Gruppenführer">Gruppenführer</option>
+        </select>
+
+        <select id="personal-filter-g26" onchange="renderePersonalTabelle()">
+            <option value="">G26.3 Status (Alle)</option>
+            <option value="gueltig">Gültig</option>
+            <option value="abgelaufen">Abgelaufen</option>
+        </select>
+
+        <button class="btn btn-primary" onclick="oeffneMitgliedModal()">➕ Neues Mitglied</button>
+    </div>
+
+    <!-- Tabellengerüst für personal.js -->
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Dienstgrad</th>
+                    <th>Funktionen</th>
+                    <th>G26.3</th>
+                    <th>Lehrgänge</th>
+                    <th>Bemerkung</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody id="personal-tabelle-body">
+                <!-- Wird dynamisch durch personal.js befüllt -->
+            </tbody>
+        </table>
+    </div>
+</section>
 
             <section id="seite-auswertungen" class="seite-ansicht" style="display: none;">
                 <h2>📊 Auswertungen</h2>

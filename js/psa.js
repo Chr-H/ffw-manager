@@ -8,9 +8,22 @@ function getPSA() {
 }
 
 function speicherePSA(psaListe) {
+    // 1. Prüfen, ob der Nutzer Schreibrechte hat (Admin oder Editor)
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    const u = userString ? JSON.parse(userString) : null;
+    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'gast');
+    const darfSchreiben = (rolle === 'admin' || rolle === 'editor');
+
+    // 2. Abbrechen, wenn keine Schreibrechte vorliegen
+    if (!darfSchreiben) {
+        alert("⚠️ Viewer haben keine Berechtigung, Änderungen zu speichern.");
+        return;
+    }
+
+    // 3. Nur speichern, wenn Rechte vorhanden sind
     speichereDaten('psa', psaListe);
     document.dispatchEvent(new Event("psaGeaendert"));
-}
+} // <-- Diese Klammer hat gefehlt!
 
 // Safe HTML Escaping
 function escapeHtml(text) {
