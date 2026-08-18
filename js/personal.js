@@ -1,20 +1,29 @@
-// ==========================================
-// FFW Manager - Personalverwaltung
-// ==========================================
-
 // js/personal.js
 
-// 1. Personal-Tabelle rendern
+// 1. Hauptfunktion: Personal-Tabelle & Dashboard-Statistik rendern
 function renderePersonalTabelle() {
     const tbody = document.getElementById('personal-tabelle-body');
+
+    // Daten laden (per Hilfsfunktion aus storage.js oder globalem Array)
+    let mitglieder = [];
+    if (typeof ladePersonalData === 'function') {
+        mitglieder = ladePersonalData();
+    } else if (window.personalDaten) {
+        mitglieder = window.personalDaten;
+    }
+
+    // --- DASHBOARD-ZÄHLER AKTUALISIEREN ---
+    const statElem = document.getElementById('stat-modul-personal');
+    if (statElem) {
+        statElem.innerText = `${mitglieder.length} Mitglieder`;
+    }
+
     if (!tbody) return;
 
+    // Filter-Werte abgreifen
     const suche = (document.getElementById('personal-suche')?.value || '').toLowerCase();
     const filterFunktion = document.getElementById('personal-filter-funktion')?.value || '';
     const filterG26 = document.getElementById('personal-filter-g26')?.value || '';
-
-    // Daten aus LocalStorage / Globalem Speicher laden
-    let mitglieder = typeof ladePersonalData === 'function' ? ladePersonalData() : [];
 
     // Filterung anwenden
     const gefiltert = mitglieder.filter(m => {
@@ -51,7 +60,7 @@ function renderePersonalTabelle() {
             : '-';
 
         // G26 Status
-        let g26HTML = 'N/A';
+        let g26HTML = '-';
         if (m.g26datum) {
             const datum = new Date(m.g26datum);
             const istGueltig = datum >= new Date();
@@ -63,23 +72,24 @@ function renderePersonalTabelle() {
 
         tr.innerHTML = `
             <td><strong>${m.spind || '-'}</strong></td>
-            <td><strong>${m.nachname || ''}</strong>, ${m.vorname || ''}</td>
+            <td><strong>${m.vorname || ''} ${m.nachname || ''}</strong></td>
             <td>${m.dienstgrad || '-'}</td>
             <td>${funktionenHTML}</td>
             <td>${g26HTML}</td>
             <td>${m.lehrgaenge || '-'}</td>
             <td>${m.bemerkung || '-'}</td>
             <td>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="editierMitglied('${m.id}')" title="Bearbeiten">✏️</button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="loescheMitglied('${m.id}')" title="Löschen">🗑️</button>
+                <button onclick="bearbeiteMitglied('${m.id}')" style="padding:4px 8px; cursor:pointer;">✏️</button>
+                <button onclick="loescheMitglied('${m.id}')" style="padding:4px 8px; cursor:pointer; background:#dc3545; color:white; border:none; border-radius:3px;">🗑️</button>
             </td>
         `;
+
         tbody.appendChild(tr);
     });
 }
 
-// 2. Modal öffnen & Formular leeren/befüllen
-function oeffneMitgliedModal(id = null) {
+// 2. Modal-Steuerung & Aktionen
+function oeffneMitgliedModal(mitgliedId = null) {
     const modal = document.getElementById('mitglied-modal');
     const form = document.getElementById('mitglied-form');
     if (!modal || !form) return;
@@ -87,9 +97,9 @@ function oeffneMitgliedModal(id = null) {
     form.reset();
     document.getElementById('mitglied-id').value = '';
 
-    if (id) {
+    if (mitgliedId) {
         let mitglieder = typeof ladePersonalData === 'function' ? ladePersonalData() : [];
-        const m = mitglieder.find(x => x.id === id);
+        const m = mitglieder.find(x => x.id === mitgliedId);
         if (m) {
             document.getElementById('mitglied-id').value = m.id;
             document.getElementById('mitglied-spind').value = m.spind || '';
@@ -116,87 +126,54 @@ function schliesseMitgliedModal() {
     if (modal) modal.style.display = 'none';
 }
 
-function editierMitglied(id) {
-    oeffneMitgliedModal(id);
-}
-
-// 3. Mitglied speichern
 function speichereMitglied(e) {
     e.preventDefault();
 
     const id = document.getElementById('mitglied-id').value || 'pers_' + Date.now();
-    const spind = document.getElementById('mitglied-spind')?.value.trim() || '';
-    const vorname = document.getElementById('mitglied-vorname')?.value.trim() || '';
-    const nachname = document.getElementById('mitglied-nachname')?.value.trim() || '';
-    const dienstgrad = document.getElementById('mitglied-dienstgrad')?.value.trim() || '';
-    const g26datum = document.getElementById('mitglied-g26datum')?.value || '';
-    const lehrgaenge = document.getElementById('mitglied-lehrgaenge')?.value.trim() || '';
-    const bemerkung = document.getElementById('mitglied-bemerkung')?.value.trim() || '';
+    const ausgewaehlteFunktionen = Array.from(document.querySelectorAll('.cb-funktion:checked')).map(cb => cb.value);
 
-    const funktionen = [];
-    document.querySelectorAll('.cb-funktion:checked').forEach(cb => {
-        funktionen.push(cb.value);
-    });
-
-    const mitgliedObj = {
-        id,
-        spind,
-        vorname,
-        nachname,
-        dienstgrad,
-        g26datum,
-        lehrgaenge,
-        bemerkung,
-        funktionen,
-        updatedAt: new Date().toISOString()
+    const mitgliedData = {
+        id: id,
+        spind: document.getElementById('mitglied-spind').value,
+        vorname: document.getElementById('mitglied-vorname').value,
+        nachname: document.getElementById('mitglied-nachname').value,
+        dienstgrad: document.getElementById('mitglied-dienstgrad').value,
+        g26datum: document.getElementById('mitglied-g26datum').value,
+        lehrgaenge: document.getElementById('mitglied-lehrgaenge').value,
+        bemerkung: document.getElementById('mitglied-bemerkung').value,
+        funktionen: ausgewaehlteFunktionen
     };
 
-    // Daten direkt aus LocalStorage holen zur Vermeidung von Schnittstellen-Fehlern
-    let mitglieder = [];
-    try {
-        const raw = localStorage.getItem('ffw_personal');
-        mitglieder = raw ? JSON.parse(raw) : [];
-    } catch (err) {
-        mitglieder = [];
+    if (typeof speichereMitgliedData === 'function') {
+        speichereMitgliedData(mitgliedData);
     }
 
-    const index = mitglieder.findIndex(x => x.id === id);
-    if (index >= 0) {
-        mitglieder[index] = mitgliedObj;
-    } else {
-        mitglieder.push(mitgliedObj);
-    }
-
-    // In LocalStorage speichern
-    localStorage.setItem('ffw_personal', JSON.stringify(mitglieder));
-
-    // Falls globale Speicherfunktion existiert, ebenfalls aufrufen
-    if (typeof speicherePersonalData === 'function') {
-        speicherePersonalData(mitglieder);
-    }
-
-    // Modal schließen & Tabelle sofort neu zeichnen
     schliesseMitgliedModal();
     renderePersonalTabelle();
 }
 
-// 4. Mitglied löschen
 function loescheMitglied(id) {
-    if (!confirm('Soll dieses Mitglied wirklich gelöscht werden?')) return;
-
-    let mitglieder = typeof ladePersonalData === 'function' ? ladePersonalData() : [];
-    mitglieder = mitglieder.filter(x => x.id !== id);
-
-    if (typeof speicherePersonalData === 'function') {
-        speicherePersonalData(mitglieder);
-    } else {
-        localStorage.setItem('ffw_personal', JSON.stringify(mitglieder));
+    if (confirm('Möchtest du dieses Mitglied wirklich löschen?')) {
+        if (typeof loescheMitgliedData === 'function') {
+            loescheMitgliedData(id);
+        }
+        renderePersonalTabelle();
     }
-
-    renderePersonalTabelle();
 }
 
-// Initialer Aufruf bei Seitenload
+function bearbeiteMitglied(id) {
+    oeffneMitgliedModal(id);
+}
+
+// Global verfügbar machen
+window.renderePersonalTabelle = renderePersonalTabelle;
+window.oeffneMitgliedModal = oeffneMitgliedModal;
+window.schliesseMitgliedModal = schliesseMitgliedModal;
+window.speichereMitglied = speichereMitglied;
+window.bearbeiteMitglied = bearbeiteMitglied;
+window.loescheMitglied = loescheMitglied;
+
+// Beim Initialisieren der Seite einmal ausführen
 document.addEventListener('DOMContentLoaded', () => {
     renderePersonalTabelle();
 });

@@ -22,6 +22,27 @@ function speicherePersonalData(daten) {
     speichereDaten('personal', daten);
 }
 
+// Einzelnes Mitglied hinzufügen oder aktualisieren
+function speichereMitgliedData(mitglied) {
+    let alle = ladePersonalData();
+    const index = alle.findIndex(m => m.id === mitglied.id);
+    
+    if (index >= 0) {
+        alle[index] = mitglied;
+    } else {
+        alle.push(mitglied);
+    }
+    
+    speicherePersonalData(alle);
+}
+
+// Einzelnes Mitglied löschen
+function loescheMitgliedData(id) {
+    let alle = ladePersonalData();
+    alle = alle.filter(m => m.id !== id);
+    speicherePersonalData(alle);
+}
+
 // 2. Daten lokal & in Firebase Cloud speichern
 function speichereDaten(schluessel, daten) {
     const bereinigteDaten = Array.isArray(daten) ? daten : [];
@@ -55,7 +76,6 @@ function starteCloudSync() {
     if (cloudSyncGestartet) return; // Verhindert doppelte Aufrufe
     cloudSyncGestartet = true;
 
-    // 'personal' WURDE HIER ERGÄNZT!
     const sammlungen = ['geraete', 'fahrzeuge', 'kategorien', 'psa', 'lager', 'pruefungen', 'personal'];
 
     sammlungen.forEach(schluessel => {
@@ -119,6 +139,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 nextHU: "2026-10",
                 nextSP: "2027-04",
                 description: "Löschgruppenfahrzeug mit 2000l Tank"
+            }
+        ]);
+    }
+
+    // Standard-Personal anlegen, falls Speicher leer ist
+    const vorhandenesPersonal = ladeDaten("personal");
+    if (!vorhandenesPersonal || vorhandenesPersonal.length === 0) {
+        speichereDaten('personal', [
+            {
+                id: "PERS-1",
+                spind: "01",
+                vorname: "Max",
+                nachname: "Mustermann",
+                dienstgrad: "Hauptfeuerwehrmann",
+                funktionen: ["Atemschutzgeräteträger", "Maschinist"],
+                g26datum: "2027-05-15",
+                lehrgaenge: "Truppführer, AGT, Maschinist",
+                bemerkung: "Zugführer II. Zug"
             }
         ]);
     }
