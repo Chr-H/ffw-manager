@@ -40,22 +40,15 @@ function startePersonalEchtzeitSync() {
     if (!tbody) return;
 
     if (window.db) {
-        // Fragt die Collection 'mitglieder' ab (Fallback auf 'personal' falls nötig)
         window.db.collection('mitglieder').onSnapshot((snapshot) => {
             const mitglieder = [];
             snapshot.forEach(doc => {
                 mitglieder.push({ id: doc.id, ...doc.data() });
             });
-            
-            try {
-                localStorage.setItem('ffw_mitglieder', JSON.stringify(mitglieder));
-            } catch (e) {
-                console.warn("LocalStorage konnte nicht aktualisiert werden:", e);
-            }
+            localStorage.setItem('ffw_mitglieder', JSON.stringify(mitglieder));
             renderePersonalTabelle(mitglieder);
         }, (error) => {
-            console.error("Firebase-Fehler beim Laden (Firestore Rules / Rechte):", error);
-            // Bei Berechtigungsfehler auf lokale Daten zurückfallen, damit die Seite nicht weiß bleibt!
+            console.warn("Firebase-Fehler, schalte auf LocalStorage um:", error);
             ladeLokalePersonalDaten();
         });
     } else {
