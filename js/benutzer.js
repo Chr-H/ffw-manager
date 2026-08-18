@@ -141,6 +141,30 @@ function zeigePinModal(zielSeite) {
         }
     }
 }
+// Dieser kurze Code kommtZUSÄTZLICH unter deine zeigePinModal-Funktion:
+
+function zeigLoginModalOderAbmelden() {
+    const rolle = typeof holeAktuelleRolle === 'function' ? holeAktuelleRolle() : 'gast';
+    
+    if (rolle === 'gast') {
+        if (typeof zeigePinModal === 'function') {
+            zeigePinModal();
+        } else {
+            alert("Fehler: zeigePinModal() nicht gefunden.");
+        }
+    } else {
+        if (typeof abmelden === 'function') {
+            abmelden();
+        } else {
+            sessionStorage.removeItem('ffw_user');
+            localStorage.removeItem('ffw_user');
+            localStorage.setItem('ffw_aktive_rolle', 'gast');
+            location.reload();
+        }
+    }
+}
+
+window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
 
 // ZUGANGS-ANTRAG SENDEN
 function beantrageZugang(e) {
