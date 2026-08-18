@@ -463,3 +463,51 @@ body{
 .print-footer {
     display: none;
 }
+
+/* Anpassungen für Smartphones / schmale Bildschirme */
+@media screen and (max-width: 768px) {
+    /* Container für Login / Willkommen flexibel & scrollbar machen */
+    .login-container, 
+    .welcome-section,
+    body {
+        height: auto !important;
+        min-height: 100vh;
+        overflow-y: auto !important;
+        padding: 15px;
+    }
+
+    /* Willkommenstext anpassen, damit er nichts überdeckt */
+    .welcome-header, 
+    .welcome-title,
+    h1 {
+        font-size: 1.5rem !important;
+        position: relative !important;
+        z-index: 1 !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Buttons untereinander anordnen und voll sichtbar machen */
+    .login-form,
+    .auth-buttons,
+    .button-group {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        position: relative !important;
+        z-index: 10 !important;
+        width: 100% !important;
+    }
+
+    /* Anmelde- & Rechte-Anfragen-Button vollbreit & anklickbar */
+    .btn, 
+    button,
+    #btn-login,
+    #btn-request-rights {
+        width: 100% !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        padding: 12px 16px !important;
+        box-sizing: border-box !important;
+    }
+}
