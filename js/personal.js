@@ -3,6 +3,29 @@
 // ==========================================
 
 /**
+ * Hilfsfunktion: Prüft Schreibrechte für das Personalmodul
+ */
+function hatPersonalSchreibRecht() {
+    // 1. Priorität: Globale Rechtematrix
+    if (typeof window.hatRecht === "function") {
+        if (window.hatRecht('personal_schreiben')) return true;
+    }
+    // 2. Priorität: Direktes Auslesen der aktiven Rolle aus dem Storage
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    if (userString) {
+        try {
+            const u = JSON.parse(userString);
+            const rolle = (u.rolle || '').toLowerCase();
+            return rolle === 'admin' || rolle === 'editor';
+        } catch (e) {
+            console.error("Fehler beim Parsen der Rolle:", e);
+        }
+    }
+    const aktiveRolle = localStorage.getItem('ffw_aktive_rolle') || 'gast';
+    return aktiveRolle === 'admin' || aktiveRolle === 'editor';
+}
+
+/**
  * Initialisiert das Layout und startet den Daten-Sync
  */
 function initPersonalLayout() {
@@ -17,12 +40,13 @@ function startePersonalEchtzeitSync() {
     if (!tbody) return;
 
     if (window.db) {
+        // Fragt die Collection 'mitglieder' ab (Fallback auf 'personal' falls nötig)
         window.db.collection('mitglieder').onSnapshot((snapshot) => {
             const mitglieder = [];
             snapshot.forEach(doc => {
                 mitglieder.push({ id: doc.id, ...doc.data() });
             });
-            // Daten im LocalStorage als Cache sichern
+            
             try {
                 localStorage.setItem('ffw_mitglieder', JSON.stringify(mitglieder));
             } catch (e) {
@@ -30,7 +54,8 @@ function startePersonalEchtzeitSync() {
             }
             renderePersonalTabelle(mitglieder);
         }, (error) => {
-            console.error("Fehler beim Laden der Personaldaten aus Firebase:", error);
+            console.error("Firebase-Fehler beim Laden (Firestore Rules / Rechte):", error);
+            // Bei Berechtigungsfehler auf lokale Daten zurückfallen, damit die Seite nicht weiß bleibt!
             ladeLokalePersonalDaten();
         });
     } else {
@@ -58,7 +83,6 @@ function renderePersonalTabelle(mitgliederInput) {
     const tbody = document.getElementById('personal-tabelle-body');
     if (!tbody) return;
 
-    // Falls keine Mitglieder übergeben wurden, lokale Daten abrufen
     let mitglieder = mitgliederInput;
     if (!Array.isArray(mitglieder)) {
         try {
@@ -68,9 +92,7 @@ function renderePersonalTabelle(mitgliederInput) {
         }
     }
 
-    const darfSchreiben = typeof window.hatRecht === "function" 
-        ? window.hatRecht('personal_schreiben') 
-        : false;
+    const darfSchreiben = hatPersonalSchreibRecht();
 
     const suche = (document.getElementById('personal-suche')?.value || '').toLowerCase();
     const filterFunktion = document.getElementById('personal-filter-funktion')?.value || '';
@@ -138,12 +160,12 @@ function renderePersonalTabelle(mitgliederInput) {
 }
 
 /**
- * Mitglied Speichern (Erstellen / Update in Firebase & LocalStorage Fallback)
+ * Mitglied Speichern
  */
 function speichereMitglied(event) {
     if (event) event.preventDefault();
 
-    if (typeof window.hatRecht === "function" && !window.hatRecht('personal_schreiben')) {
+    if (!hatPersonalSchreibRecht()) {
         alert("⚠️ Sie besitzen keine Berechtigung, Personaldaten zu bearbeiten.");
         return;
     }
@@ -178,7 +200,6 @@ function speichereMitglied(event) {
                 .catch(err => alert("Fehler beim Anlegen: " + err.message));
         }
     } else {
-        // Fallback: LocalStorage
         let mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
         if (id) {
             const index = mitglieder.findIndex(m => m.id === id);
@@ -199,6 +220,11 @@ function speichereMitglied(event) {
  * Mitglied zum Bearbeiten ins Modal laden
  */
 function bearbeiteMitglied(id) {
+    if (!hatPersonalSchreibRecht()) {
+        alert("⚠️ Sie besitzen keine Berechtigung zum Bearbeiten.");
+        return;
+    }
+
     let mitglieder = [];
     try {
         mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
@@ -230,7 +256,7 @@ function bearbeiteMitglied(id) {
  * Mitglied Löschen
  */
 function loescheMitglied(id) {
-    if (typeof window.hatRecht === "function" && !window.hatRecht('personal_schreiben')) {
+    if (!hatPersonalSchreibRecht()) {
         alert("⚠️ Sie besitzen keine Berechtigung, Personaldaten zu löschen.");
         return;
     }

@@ -561,3 +561,59 @@ function zeigLoginModalOderAbmelden() {
 
 // Global für das HTML-onclick Attribut verfügbar machen
 window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
+
+function aktualisiereModulSichtbarkeit() {
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    const u = userString ? JSON.parse(userString) : null;
+    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : 'gast';
+
+    const istAdminOderEditor = (rolle === 'admin' || rolle === 'editor');
+
+    // Alle Speichern/Löschen/Bearbeiten-Buttons für Viewer sperren
+    document.querySelectorAll('.btn-speichern, .btn-loeschen, .btn-bearbeiten, .admin-only').forEach(elem => {
+        elem.style.display = istAdminOderEditor ? '' : 'none';
+    });
+
+    // Alle Eingabefelder im Viewer-Modus auf readOnly setzen
+    document.querySelectorAll('input, select, textarea').forEach(elem => {
+        if (!istAdminOderEditor && !elem.classList.contains('allow-viewer')) {
+            elem.disabled = true;
+        } else {
+            elem.disabled = false;
+        }
+    });
+}
+
+// Nach Seitenaufruf und Login ausführen
+document.addEventListener('DOMContentLoaded', aktualisiereModulSichtbarkeit);
+
+function rechteBeantragen() {
+    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
+    const u = userString ? JSON.parse(userString) : null;
+    
+    const name = u ? u.name : prompt("Wie ist dein Name?");
+    if (!name) return;
+
+    const wunschRolle = prompt("Welche Rolle benötigst du? (editor / admin)", "editor");
+    if (!wunschRolle) return;
+
+    const begründung = prompt("Kurze Begründung für den Administrator:");
+
+    if (window.db) {
+        window.db.collection('rechte_anfragen').add({
+            name: name,
+            wunschRolle: wunschRolle,
+            begruendung: begründung || '',
+            datum: new Date().toISOString(),
+            status: 'offen'
+        }).then(() => {
+            alert("✅ Deine Anfrage wurde an den Administrator übermittelt!");
+        }).catch(err => {
+            alert("Fehler beim Senden der Anfrage: " + err.message);
+        });
+    } else {
+        alert("Keine Datenbankverbindung möglich.");
+    }
+}
+
+window.rechteBeantragen = rechteBeantragen;
