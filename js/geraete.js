@@ -514,10 +514,11 @@ function importGeraeteCSV(inputOrEvent) {
             const spalten = parseCSVLine(zeile, delim);
 
             if (spalten.length >= 2) {
-                const rawId = spalten[0] || '';
-                const inventar = spalten[1] || '';
-                const bezeichnung = spalten[2] || '';
+                const rawId = (spalten[0] || '').trim();
+                const inventar = (spalten[1] || '').trim();
+                const bezeichnung = (spalten[2] || '').trim();
 
+                // Falls Inventarnummer UND Bezeichnung fehlen, Zeile überspringen
                 if (!inventar && !bezeichnung) continue;
 
                 const kategorie = spalten[3] || 'Sonstiges';
@@ -528,10 +529,15 @@ function importGeraeteCSV(inputOrEvent) {
                 const pruefintervall = parseInt(spalten[8], 10) || 12;
                 const naechstePruefung = spalten[9] || berechneNaechstePruefung(letztePruefung, pruefintervall);
 
-                const existingIndex = geraeteListe.findIndex(g => 
-                    (rawId && String(g.id).toLowerCase() === String(rawId).toLowerCase()) || 
-                    (inventar && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase())
-                );
+                // Nur abgleichen, wenn ID oder Inventarnummer wirklich befüllt sind
+                let existingIndex = -1;
+                if (rawId !== '' || inventar !== '') {
+                    existingIndex = geraeteListe.findIndex(g => {
+                        const matchId = rawId !== '' && String(g.id).toLowerCase() === rawId.toLowerCase();
+                        const matchInv = inventar !== '' && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase();
+                        return matchId || matchInv;
+                    });
+                }
 
                 const item = {
                     id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
@@ -563,11 +569,13 @@ function importGeraeteCSV(inputOrEvent) {
 
         geraete = geraeteListe;
         speichereGeraete();
-        filterGeraete();
+        
+        if (typeof renderGeraeteView === "function") renderGeraeteView();
+        else filterGeraete();
 
         if (inputElement) inputElement.value = '';
 
-        alert(`✅ Import erfolgreich abgeschlossen!\n\n• ${hinzugefuegt} Geräte neu angelegt\n• ${geaendert} Geräte aktualisiert`);
+        alert(`✅ Geräte-Import abgeschlossen!\n\n• ${hinzugefuegt} Geräte neu angelegt\n• ${geaendert} bestehende Geräte aktualisiert`);
     };
 
     reader.onerror = function() {
