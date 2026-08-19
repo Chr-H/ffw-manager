@@ -1,8 +1,8 @@
 // ==========================================
-// FFW Manager - Speicher & Cloud-Sync (v1.2)
+// FFW Manager - Speicher & Cloud-Sync (v1.3 Repariert)
 // ==========================================
 
-// 1. Daten aus dem Speicher laden
+// 1. Daten aus dem Speicher laden (Fallback auf LocalStorage)
 function ladeDaten(schluessel) {
     const lokal = localStorage.getItem('ffw_' + schluessel);
     try {
@@ -13,7 +13,7 @@ function ladeDaten(schluessel) {
     }
 }
 
-// Spezifische Helper-Funktionen für Personal (für Rückwärtskompatibilität in personal.js)
+// Spezifische Helper-Funktionen für Personal
 function ladePersonalData() {
     return ladeDaten('personal');
 }
@@ -22,21 +22,17 @@ function speicherePersonalData(daten) {
     speichereDaten('personal', daten);
 }
 
-// Einzelnes Mitglied hinzufügen oder aktualisieren
 function speichereMitgliedData(mitglied) {
     let alle = ladePersonalData();
     const index = alle.findIndex(m => m.id === mitglied.id);
-    
     if (index >= 0) {
         alle[index] = mitglied;
     } else {
         alle.push(mitglied);
     }
-    
     speicherePersonalData(alle);
 }
 
-// Einzelnes Mitglied löschen
 function loescheMitgliedData(id) {
     let alle = ladePersonalData();
     alle = alle.filter(m => m.id !== id);
@@ -47,7 +43,7 @@ function loescheMitgliedData(id) {
 function speichereDaten(schluessel, daten) {
     const bereinigteDaten = Array.isArray(daten) ? daten : [];
     
-    // Lokal sichern
+    // Immer ZUERST lokal im Browser sichern (Verhindert Datenverlust)
     localStorage.setItem('ffw_' + schluessel, JSON.stringify(bereinigteDaten));
 
     // In Firebase Cloud speichern
@@ -58,72 +54,81 @@ function speichereDaten(schluessel, daten) {
         })
         .then(() => console.log(`[Cloud] ${schluessel} erfolgreich hochgeladen.`))
         .catch(err => {
-            console.error("Firebase Speicherfehler:", err);
-            // Alert nur bei echten Netz-Fehlern anzeigen
-            if (navigator.onLine) {
-                alert("Fehler beim Cloud-Speichern: " + err.message);
-            }
+            console.error(`Firebase Speicherfehler bei ${schluessel}:`, err);
+            // Keine störenden Alerts bei temporären Verbindungsproblemen
         });
     }
 }
 
-// Variable um mehrfaches Starten der Sync-Listener zu verhindern
 let cloudSyncGestartet = false;
 
-// 3. Live-Synchronisation mit Firebase
+// 3. Live-Synchronisation mit Firebase (Sicher gegen 400er Fehler & Überschreiben)
 function starteCloudSync() {
     if (typeof db === 'undefined' || db === null) return;
-    if (cloudSyncGestartet) return; // Verhindert doppelte Aufrufe
+    if (cloudSyncGestartet) return; 
     cloudSyncGestartet = true;
 
     const sammlungen = ['geraete', 'fahrzeuge', 'kategorien', 'psa', 'lager', 'pruefungen', 'personal'];
 
     sammlungen.forEach(schluessel => {
         db.collection('ffw_data').doc(schluessel)
-            .onSnapshot((doc) => {
-                if (doc.exists && doc.data().eintraege) {
-                    const cloudDaten = doc.data().eintraege;
-                    
-                    // 1. Im lokalen Speicher ablegen
-                    localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
-                    
-                    // 2. Live-Aktualisierung der jeweiligen UI-Ansichten
-                    switch (schluessel) {
-                        case 'geraete':
-                            if (typeof filterGeraete === 'function') filterGeraete();
-                            break;
-                        case 'fahrzeuge':
-                            if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
-                            break;
-                        case 'psa':
-                            if (typeof renderPSAView === 'function') renderPSAView();
-                            else if (typeof filterPSA === 'function') filterPSA();
-                            break;
-                        case 'lager':
-                            if (typeof renderLagerView === 'function') renderLagerView();
-                            break;
-                        case 'pruefungen':
-                            if (typeof renderPruefungenView === 'function') renderPruefungenView();
-                            else if (typeof filterPruefungen === 'function') filterPruefungen();
-                            break;
-                        case 'personal':
-                            if (typeof renderePersonalTabelle === 'function') renderePersonalTabelle();
-                            break;
-                    }
+            .onSnapshot(
+                (doc) => {
+                    // NUR aktualisieren, wenn das Dokument in Firestore WIRKLICH Daten enthält
+                    if (doc.exists && doc.data() && Array.isArray(doc.data().eintraege)) {
+                        const cloudDaten = doc.data().eintraege;
+                        
+                        // Wenn Cloud leer ist, aber lokal Daten da sind, NICHT überschreiben!
+                        const lokaleDaten = ladeDaten(schluessel);
+                        if (cloudDaten.length === 0 && lokaleDaten.length > 0) {
+                            console.warn(`[Cloud Sync] Cloud-Dokument für ${schluessel} ist leer. Lokale Daten werden geschützt.`);
+                            return;
+                        }
 
-                    if (typeof aktualisiereDashboard === 'function') {
-                        aktualisiereDashboard();
+                        // 1. Im lokalen Speicher ablegen
+                        localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
+                        
+                        // 2. Live-Aktualisierung der UI-Ansichten
+                        switch (schluessel) {
+                            case 'geraete':
+                                if (typeof filterGeraete === 'function') filterGeraete();
+                                else if (typeof renderGeraeteView === 'function') renderGeraeteView();
+                                break;
+                            case 'fahrzeuge':
+                                if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
+                                break;
+                            case 'psa':
+                                if (typeof renderPSAView === 'function') renderPSAView();
+                                else if (typeof filterPSA === 'function') filterPSA();
+                                break;
+                            case 'lager':
+                                if (typeof renderLagerView === 'function') renderLagerView();
+                                else if (typeof ladeLager === 'function') ladeLager();
+                                break;
+                            case 'pruefungen':
+                                if (typeof renderPruefungenView === 'function') renderPruefungenView();
+                                else if (typeof filterPruefungen === 'function') filterPruefungen();
+                                break;
+                            case 'personal':
+                                if (typeof renderePersonalTabelle === 'function') renderePersonalTabelle();
+                                break;
+                        }
+
+                        if (typeof aktualisiereDashboard === 'function') {
+                            aktualisiereDashboard();
+                        }
                     }
+                }, 
+                (err) => {
+                    // Fängt den 400 Bad Request Fehler ab, ohne dass die App abstürzt
+                    console.error(`Cloud-Sync Stream-Fehler bei ${schluessel}:`, err);
                 }
-            }, err => {
-                console.error(`Cloud-Sync Fehler bei ${schluessel}:`, err);
-            });
+            );
     });
 }
 
 // 4. Initialisierung & Testdaten
 document.addEventListener("DOMContentLoaded", () => {
-    // Cloud Sync auslösen
     starteCloudSync();
 
     // Standard-Fahrzeug anlegen, falls Speicher leer ist
@@ -161,10 +166,9 @@ document.addEventListener("DOMContentLoaded", () => {
         ]);
     }
 
-    // Diagnose-Check nach 2 Sekunden
     setTimeout(() => {
         if (typeof db === 'undefined' || db === null) {
-            console.warn("Achtung: Firebase ist nicht verbunden! Prüfe die API-Schlüssel.");
+            console.warn("Achtung: Firebase ist nicht verbunden!");
         }
     }, 2000);
 });
