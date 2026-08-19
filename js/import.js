@@ -1,15 +1,28 @@
 function importLagerCSV(inputElement) {
     try {
-        const file = inputElement.files[0];
+        // Falls ein Event übergeben wurde (z.B. event.target)
+        let el = inputElement;
+        if (inputElement && inputElement.target) el = inputElement.target;
+
+        const file = (el && el.files) ? el.files[0] : null;
         if (!file) return;
 
-        // 1. Daten aus bestehenden Funktionen oder direkt aus localStorage laden
+        // 1. Nachfragen, ob der Bestand ERSETZT oder ERGÄNZT werden soll
+        const meeresErsetzen = confirm(
+            "Möchtest du den vorhandenen Lagerbestand KOMPLETT ÜBERSCHREIBEN?\n\n" +
+            "• OK = Bisherigen Bestand löschen und nur die neuen Artikel laden\n" +
+            "• Abbrechen = Artikel zum bestehenden Bestand hinzufügen / aktualisieren"
+        );
+
+        // Datenbestand laden oder leeren
         let lagerDaten = [];
-        if (typeof getLager === "function") {
-            lagerDaten = getLager() || [];
-        } else {
-            const raw = localStorage.getItem("lager") || localStorage.getItem("lager_daten") || "[]";
-            try { lagerDaten = JSON.parse(raw); } catch(e) { lagerDaten = []; }
+        if (!meeresErsetzen) {
+            if (typeof getLager === "function") {
+                lagerDaten = getLager() || [];
+            } else {
+                const raw = localStorage.getItem("lager") || localStorage.getItem("lager_daten") || "[]";
+                try { lagerDaten = JSON.parse(raw); } catch(e) { lagerDaten = []; }
+            }
         }
 
         const reader = new FileReader();
@@ -22,7 +35,7 @@ function importLagerCSV(inputElement) {
 
                 const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
                 if (zeilen.length < 2) {
-                    alert("Die Datei enthält keine Daten.");
+                    alert("Die Datei enthält keine verwertbaren Daten.");
                     return;
                 }
 
@@ -37,13 +50,21 @@ function importLagerCSV(inputElement) {
                     });
                 };
 
+                // SPALTEN-MAPPING (Korrekt getrennt!)
+                const idxId = findIndex("id");
+                const idxArtNr = findIndex("artikelnumme", "artikelnummer", "artnr", "artikelnr");
+                // "artikel" darf HIER nur matchen, wenn es NICHT "artikelnummer" ist:
+                let idxBez = rawHeaders.findIndex(h => h.includes("bezeichn") || h.includes("name") || (h.includes("artikel") && !h.includes("numm")));
+                const idxHersteller = findIndex("hersteller", "herstell");
                 const idxKat = findIndex("kategorie", "kat");
-                const idxBez = findIndex("bezeichnung", "name", "artikel");
                 const idxGroesse = findIndex("groesse", "größe", "gr");
-                const idxBestand = findIndex("bestand", "menge");
+                const idxZustand = findIndex("zustand");
+                const idxBestand = findIndex("bestand", "menge", "ist");
                 const idxSoll = findIndex("mindest", "soll");
-                const idxEinheit = findIndex("einheit");
-                const idxOrt = findIndex("lagerort", "ort");
+
+                // Fallbacks falls Spaltennamen abweichen (Starre Positionszuweisung: A=0, B=1, C=2, D=3...)
+                const finalArtNr = idxArtNr !== -1 ? idxArtNr : 1;
+                const finalBez = idxBez !== -1 ? idxBez : 2;
 
                 let aktualisiert = 0;
                 let neuHinzugefuegt = 0;
@@ -55,52 +76,45 @@ function importLagerCSV(inputElement) {
 
                     if (werte.length === 0 || werte.every(v => v === "")) continue;
 
-                    const kategorie = idxKat !== -1 ? werte[idxKat] : "";
-                    const bezeichnung = idxBez !== -1 ? werte[idxBez] : "";
+                    const rawId = idxId !== -1 ? werte[idxId] : "";
+                    const artNr = werte[finalArtNr] || "";
+                    const bezeichnung = werte[finalBez] || "";
+
+                    if (!artNr && !bezeichnung) continue;
+
+                    const hersteller = idxHersteller !== -1 ? werte[idxHersteller] : "";
+                    const kategorie = idxKat !== -1 ? werte[idxKat] : "Sonstiges";
                     const groesse = idxGroesse !== -1 ? werte[idxGroesse] : "";
-                    const bestand = idxBestand !== -1 ? werte[idxBestand] : "0";
-                    const mindestbestand = idxSoll !== -1 ? werte[idxSoll] : "0";
-                    const einheit = idxEinheit !== -1 ? werte[idxEinheit] : "Stk.";
-                    const lagerort = idxOrt !== -1 ? werte[idxOrt] : "";
+                    const zustand = idxZustand !== -1 ? werte[idxZustand] : "Neu";
+                    const parsedBestand = parseFloat((idxBestand !== -1 ? werte[idxBestand] : "0").replace(',', '.')) || 0;
+                    const parsedMindest = parseFloat((idxSoll !== -1 ? werte[idxSoll] : "0").replace(',', '.')) || 0;
 
-                    if (!bezeichnung) continue;
-
-                    const parsedBestand = parseFloat(bestand.replace(',', '.')) || 0;
-                    const parsedMindest = parseFloat(mindestbestand.replace(',', '.')) || 0;
-
-                    // Suche nach exakt gleichem Artikel (Bezeichnung UND Größe)
-                    const index = lagerDaten.findIndex(item => {
-                        if (!item) return false;
-                        const itemBez = String(item.bezeichnung || item.name || "").trim().toLowerCase();
-                        const itemGr = String(item.groesse || item.größe || "").trim().toLowerCase();
-                        return itemBez === bezeichnung.toLowerCase() && itemGr === groesse.toLowerCase();
-                    });
-
-                    // Suche nach Artikel OHNE Größe (falls aus alter Liste ohne Größe aktualisiert werden soll)
-                    const indexOhneGroesse = (index === -1 && groesse) ? lagerDaten.findIndex(item => {
-                        if (!item) return false;
-                        const itemBez = String(item.bezeichnung || item.name || "").trim().toLowerCase();
-                        const itemGr = String(item.groesse || item.größe || "").trim();
-                        return itemBez === bezeichnung.toLowerCase() && (itemGr === "" || itemGr === "-");
-                    }) : -1;
-
-                    const targetIndex = index !== -1 ? index : indexOhneGroesse;
+                    // Suche nach bestehendem Artikel (falls nicht alles überschrieben wird)
+                    let targetIndex = -1;
+                    if (!meeresErsetzen) {
+                        targetIndex = lagerDaten.findIndex(item => {
+                            if (!item) return false;
+                            const matchId = rawId && String(item.id).toLowerCase() === rawId.toLowerCase();
+                            const matchArt = artNr && String(item.artikelnummer || item.artNr || "").toLowerCase() === artNr.toLowerCase();
+                            return matchId || matchArt;
+                        });
+                    }
 
                     const neuesItem = {
-                        id: targetIndex !== -1 ? lagerDaten[targetIndex].id : `LAGER_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
+                        id: (targetIndex !== -1) ? lagerDaten[targetIndex].id : (rawId || `LAGER_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`),
+                        artikelnummer: artNr,
+                        artNr: artNr,
                         bezeichnung: bezeichnung,
                         name: bezeichnung,
-                        kategorie: kategorie || (targetIndex !== -1 ? lagerDaten[targetIndex].kategorie : ""),
+                        hersteller: hersteller,
+                        kategorie: kategorie || "Sonstiges",
                         groesse: groesse,
                         größe: groesse,
+                        zustand: zustand,
                         bestand: parsedBestand,
                         menge: parsedBestand,
                         mindestbestand: parsedMindest,
-                        sollbestand: parsedMindest,
-                        einheit: einheit || "Stk.",
-                        lagerort: lagerort || (targetIndex !== -1 ? lagerDaten[targetIndex].lagerort : ""),
-                        ort: lagerort || (targetIndex !== -1 ? lagerDaten[targetIndex].lagerort : ""),
-                        historie: targetIndex !== -1 ? (lagerDaten[targetIndex].historie || []) : []
+                        sollbestand: parsedMindest
                     };
 
                     if (targetIndex !== -1) {
@@ -113,34 +127,24 @@ function importLagerCSV(inputElement) {
                 }
 
                 // 2. Speicher-Mechanismen auslösen
-                if (typeof speichereLager === "function") {
-                    speichereLager(lagerDaten);
-                }
-                if (typeof speichereDaten === "function") {
-                    speichereDaten("lager", lagerDaten);
-                }
+                if (typeof speichereLager === "function") speichereLager(lagerDaten);
+                if (typeof speichereLagerDaten === "function") speichereLagerDaten(lagerDaten);
+                if (typeof speichereDaten === "function") speichereDaten("lager", lagerDaten);
                 
-                // Redundantes Speichern direkt in LocalStorage (sichert alle üblichen Schluessel)
                 localStorage.setItem("lager", JSON.stringify(lagerDaten));
                 localStorage.setItem("lager_daten", JSON.stringify(lagerDaten));
 
-                // 3. Ansicht neu laden und Custom-Events auslösen
+                // 3. Ansicht neu laden
                 if (typeof filterLager === "function") filterLager();
                 if (typeof renderLagerView === "function") renderLagerView();
                 if (typeof renderLager === "function") renderLager();
                 if (typeof ladeLager === "function") ladeLager();
 
-                // Falls eure App auf ein Change-Event reagiert
                 window.dispatchEvent(new Event("lagerGeaendert"));
                 window.dispatchEvent(new Event("storage"));
 
-                alert(`Lager-Import erfolgreich!\n\n- ${neuHinzugefuegt} neue Artikel hinzugefügt\n- ${aktualisiert} bestehende Artikel aktualisiert`);
-                inputElement.value = "";
-                
-                // Seite / Tabelle zur Sicherheit neu rendern
-                setTimeout(() => {
-                    if (typeof filterLager === "function") filterLager();
-                }, 100);
+                alert(`✅ Lager-Import erfolgreich!\n\n• ${neuHinzugefuegt} neue Artikel hinzugefügt\n• ${aktualisiert} bestehende Artikel aktualisiert`);
+                if (el) el.value = "";
 
             } catch (err) {
                 alert("Fehler beim Lager-Import:\n" + err.message);
