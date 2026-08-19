@@ -349,73 +349,75 @@
     // FEHLERFREIER CSV IMPORT & EXPORT
     // ------------------------------------------
     function importLagerCSV(event) {
-        const file = event.target ? event.target.files[0] : null;
-        if (!file) return;
+    const file = event.target ? event.target.files[0] : null;
+    if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const text = e.target.result;
-            const zeilen = text.split(/\r\n|\n/);
-            if (zeilen.length < 2) {
-                alert('Die CSV-Datei enthält keine Daten.');
-                return;
-            }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const text = e.target.result;
+        const zeilen = text.split(/\r\n|\n/);
+        if (zeilen.length < 2) {
+            alert('Die CSV-Datei enthält keine Daten.');
+            return;
+        }
 
-            let lagerListe = holeLagerDaten();
-            let hinzugefuegt = 0;
-            let geaendert = 0;
+        let lagerListe = holeLagerDaten();
+        let hinzugefuegt = 0;
+        let geaendert = 0;
 
-            for (let i = 1; i < zeilen.length; i++) {
-                const zeile = zeilen[i].trim();
-                if (!zeile) continue;
+        for (let i = 1; i < zeilen.length; i++) {
+            const zeile = zeilen[i].trim();
+            if (!zeile) continue;
 
-                const spalten = zeile.split(';');
-                if (spalten.length >= 4) {
-                    const rawId = spalten[0] ? spalten[0].trim() : '';
-                    const artikelnummer = spalten[1] ? spalten[1].trim() : '';
-                    const hersteller = spalten[2] ? spalten[2].trim() : '';
-                    const bezeichnung = spalten[3] ? spalten[3].trim() : '';
+            // Flexibles Trennzeichen (akzeptiert ; und ,)
+            const trennzeichen = zeile.includes(';') ? ';' : ',';
+            const spalten = zeile.split(trennzeichen);
 
-                    if (!bezeichnung) continue; // Überspringe Zeilen ohne Bezeichnung
+            if (spalten.length >= 4) {
+                const rawId = spalten[0] ? spalten[0].trim() : '';
+                const artikelnummer = spalten[1] ? spalten[1].trim() : '';
+                const hersteller = spalten[2] ? spalten[2].trim() : '';
+                const bezeichnung = spalten[3] ? spalten[3].trim() : '';
 
-                    const kategorie = spalten[4] ? spalten[4].trim() : '';
-                    const groesse = spalten[5] ? spalten[5].trim() : '';
-                    const zustand = (spalten[6] && spalten[6].trim().toLowerCase() === 'gebraucht') ? 'Gebraucht' : 'Neu';
-                    const bestand = parseInt(spalten[7], 10) || 0;
-                    const mindestbestand = parseInt(spalten[8], 10) || 0;
-                    const sollbestand = parseInt(spalten[9], 10) || 0;
+                if (!bezeichnung) continue;
 
-                    let existingIndex = -1;
-                    if (rawId) {
-                        existingIndex = lagerListe.findIndex(l => String(l.id) === String(rawId));
-                    }
+                const kategorie = spalten[4] ? spalten[4].trim() : '';
+                const groesse = spalten[5] ? spalten[5].trim() : '';
+                const zustand = (spalten[6] && spalten[6].trim().toLowerCase() === 'gebraucht') ? 'Gebraucht' : 'Neu';
+                const bestand = parseInt(spalten[7], 10) || 0;
+                const mindestbestand = parseInt(spalten[8], 10) || 0;
+                const sollbestand = parseInt(spalten[9], 10) || 0;
 
-                    // Falls keine ID da ist, erstelle eine neue eindeutige ID
-                    const id = rawId || ('LAGER_IMPORT_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 4));
+                let existingIndex = -1;
+                if (rawId) {
+                    existingIndex = lagerListe.findIndex(l => String(l.id) === String(rawId));
+                }
 
-                    const item = {
-                        id, artikelnummer, hersteller, bezeichnung, name: bezeichnung,
-                        kategorie, groesse, zustand, bestand, mindestbestand, sollbestand
-                    };
+                const id = rawId || ('LAGER_IMPORT_' + Date.now() + '_' + i);
 
-                    if (existingIndex !== -1) {
-                        lagerListe[existingIndex] = item;
-                        geaendert++;
-                    } else {
-                        lagerListe.push(item);
-                        hinzugefuegt++;
-                    }
+                const item = {
+                    id, artikelnummer, hersteller, bezeichnung, name: bezeichnung,
+                    kategorie, groesse, zustand, bestand, mindestbestand, sollbestand
+                };
+
+                if (existingIndex !== -1) {
+                    lagerListe[existingIndex] = item;
+                    geaendert++;
+                } else {
+                    lagerListe.push(item);
+                    hinzugefuegt++;
                 }
             }
+        }
 
-            speichereLagerDaten(lagerListe);
-            if (event.target) event.target.value = '';
-            renderLagerView();
-            alert(`Import abgeschlossen!\n- ${hinzugefuegt} neue Artikel hinzugefügt\n- ${geaendert} bestehende Artikel aktualisiert`);
-        };
+        speichereLagerDaten(lagerListe);
+        if (event.target) event.target.value = '';
+        renderLagerView();
+        alert(`Import abgeschlossen!\n- ${hinzugefuegt} neue Artikel hinzugefügt\n- ${geaendert} bestehende Artikel aktualisiert`);
+    };
 
-        reader.readAsText(file, 'UTF-8');
-    }
+    reader.readAsText(file, 'UTF-8');
+}
 
     function exportLagerCSV() {
         const lager = holeLagerDaten();
