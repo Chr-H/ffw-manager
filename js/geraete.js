@@ -399,33 +399,43 @@ function loescheGeraet(id) {
     }
 }
 
-// ------------------------------------------
-// CSV-EXPORT (Mit einheitlichem Spaltenaufbau)
-// ------------------------------------------
-function exportGeraeteCSV() {
-    const daten = getGeraete();
+function exportLagerCSV() {
+    const daten = typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []);
 
     if (!Array.isArray(daten) || daten.length === 0) {
-        alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
+        alert("⚠️ Es wurden keine Lagerdaten zum Exportieren gefunden.");
         return;
     }
 
-    const headers = ["ID", "Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Status", "Letzte Prüfung", "Prüfintervall", "Nächste Prüfung"];
-    const rows = daten.map(g => [
-        g.id || '',
-        g.inventarnummer || '',
-        g.bezeichnung || '',
-        g.kategorie || '',
-        g.hersteller || '',
-        g.standort || '',
-        g.status || '',
-        g.letztePruefung || '',
-        g.pruefintervall || 12,
-        g.naechstePruefung || ''
+    // Saubere und einheitliche Spaltenreihenfolge
+    const headers = [
+        "ID", 
+        "Artikelnummer", 
+        "Bezeichnung", 
+        "Hersteller", 
+        "Kategorie", 
+        "Größe", 
+        "Zustand", 
+        "Bestand", 
+        "Mindestbestand", 
+        "Sollbestand"
+    ];
+
+    const rows = daten.map(l => [
+        l.id || '',
+        l.artikelnummer || l.artNr || '',
+        l.bezeichnung || l.name || '',
+        l.hersteller || '',
+        l.kategorie || '',
+        l.groesse || '',
+        l.zustand || 'Neu',
+        l.bestand !== undefined ? l.bestand : 0,
+        l.mindestbestand !== undefined ? l.mindestbestand : 0,
+        l.sollbestand !== undefined ? l.sollbestand : 0
     ]);
 
     const heute = new Date().toISOString().split('T')[0];
-    const dateiname = `Geraeteliste_FFW_${heute}.csv`;
+    const dateiname = `Lagerliste_FFW_${heute}.csv`;
     
     if (typeof window.downloadCSV === "function") {
         window.downloadCSV(dateiname, headers, rows);
