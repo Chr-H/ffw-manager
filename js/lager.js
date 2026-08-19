@@ -65,6 +65,13 @@ function importLagerCSV(inputOrEvent) {
     const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
     if (!file) return;
 
+    // FRAGE: Soll der alten Bestand überschrieben werden?
+    const meeresErsetzen = confirm(
+        "Möchtest du den vorhandenen Lagerbestand KOMPLETT ÜBERSCHREIBEN?\n\n" +
+        "• OK = Bisherigen Bestand löschen und nur die Datei-Artikel laden\n" +
+        "• Abbrechen = Artikel zu bestehendem Bestand hinzufügen / aktualisieren"
+    );
+
     const reader = new FileReader();
     reader.onload = function (e) {
         let text = e.target.result;
@@ -82,7 +89,7 @@ function importLagerCSV(inputOrEvent) {
 
         const delim = zeilen[0].includes(';') ? ';' : ',';
 
-        // 1. Spalten-Indizes anhand der Kopfzeile ermitteln
+        // Spalten-Indizes anhand der Kopfzeile dynamisch ermitteln
         const headerCols = parseCSVLine(zeilen[0].toLowerCase(), delim);
         
         const idxId = headerCols.findIndex(h => h === "id");
@@ -96,7 +103,8 @@ function importLagerCSV(inputOrEvent) {
         const idxMindest = headerCols.findIndex(h => h.includes("mindest"));
         const idxSoll = headerCols.findIndex(h => h.includes("soll"));
 
-        let lagerListe = ladeDaten("lager") || [];
+        // Wenn 'Ersetzen' gewählt wurde, starten wir mit einem leeren Array
+        let aktuelleListe = meeresErsetzen ? [] : (typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []));
         let hinzugefuegt = 0;
         let geaendert = 0;
 
@@ -118,21 +126,21 @@ function importLagerCSV(inputOrEvent) {
             const mindestbestand = idxMindest !== -1 ? (parseInt(spalten[idxMindest], 10) || 0) : 0;
             const sollbestand = idxSoll !== -1 ? (parseInt(spalten[idxSoll], 10) || 0) : 0;
 
-            // Strikter Abgleich über ID oder Artikelnummer
             let existingIndex = -1;
-            if (rawId || artNr) {
-                existingIndex = lagerListe.findIndex(l => {
+            if (!meeresErsetzen && (rawId || artNr)) {
+                existingIndex = aktuelleListe.findIndex(l => {
                     const matchId = rawId !== '' && String(l.id).toLowerCase() === rawId.toLowerCase();
-                    const matchArt = artNr !== '' && (l.artikelnummer || l.artNr || '').toLowerCase() === artNr.toLowerCase();
+                    const matchArt = artNr !== '' && String(l.artikelnummer || l.artNr || '').toLowerCase() === artNr.toLowerCase();
                     return matchId || matchArt;
                 });
             }
 
             const item = {
-                id: existingIndex !== -1 ? lagerListe[existingIndex].id : (rawId || "LAGER_" + Date.now() + "_" + i),
+                id: existingIndex !== -1 ? aktuelleListe[existingIndex].id : (rawId || ('LAGER_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4))),
                 artikelnummer: artNr,
-                bezeichnung: bezeichnung || artNr,
                 hersteller: hersteller,
+                bezeichnung: bezeichnung || artNr || 'Unbenannter Artikel',
+                name: bezeichnung || artNr || 'Unbenannter Artikel',
                 kategorie: kategorie,
                 groesse: groesse,
                 zustand: zustand,
@@ -142,24 +150,28 @@ function importLagerCSV(inputOrEvent) {
             };
 
             if (existingIndex !== -1) {
-                lagerListe[existingIndex] = item;
+                aktuelleListe[existingIndex] = item;
                 geaendert++;
             } else {
-                lagerListe.push(item);
+                aktuelleListe.push(item);
                 hinzugefuegt++;
             }
         }
 
-        // Speichern und Ansicht neu laden
-        speichereDaten("lager", lagerListe);
+        // Speichern
+        if (typeof speichereLagerDaten === "function") {
+            speichereLagerDaten(aktuelleListe);
+        } else if (typeof speichereDaten === "function") {
+            speichereDaten("lager", aktuelleListe);
+        }
         
+        // Ansicht neu rendern
         if (typeof renderLagerView === "function") renderLagerView();
         else if (typeof filterLager === "function") filterLager();
-        else location.reload();
 
         if (inputElement) inputElement.value = '';
 
-        alert(`✅ Lager-Import abgeschlossen!\n\n• ${hinzugefuegt} Artikel neu angelegt\n• ${geaendert} Artikel aktualisiert`);
+        alert(`✅ Import erfolgreich!\n\n• ${hinzugefuegt} Artikel geladen\n• ${geaendert} Artikel aktualisiert`);
     };
 
     reader.onerror = function() {
