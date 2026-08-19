@@ -181,40 +181,41 @@ function oeffneFahrzeugAkte(id) {
         <button type="button" onclick="fuegeAbteilHinzu()" style="background:#6c757d; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-top:5px;">+ Abteil hinzufügen</button>
     `;
 }
+
 // 4. Hilfsfunktionen für Geräteabteile
 function updateAbteilName(index, name) {
-    const fahrzeuge = ladeDaten('fahrzeuge');
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
     const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
-    if (f && f.abteile[index]) {
+    if (f && f.abteile && f.abteile[index]) {
         f.abteile[index].name = name;
     }
 }
 
 function updateAbteilInhalt(index, inhalt) {
-    const fahrzeuge = ladeDaten('fahrzeuge');
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
     const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
-    if (f && f.abteile[index]) {
+    if (f && f.abteile && f.abteile[index]) {
         f.abteile[index].inhalt = inhalt;
     }
 }
 
 function fuegeAbteilHinzu() {
-    const fahrzeuge = ladeDaten('fahrzeuge');
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
     const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
     if (f) {
         if (!f.abteile) f.abteile = [];
         f.abteile.push({ name: 'Neues Abteil', inhalt: '' });
-        speichereDaten('fahrzeuge', fahrzeuge);
+        if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
         oeffneFahrzeugAkte(aktuellesFahrzeugId);
     }
 }
 
 function entferneAbteil(index) {
-    const fahrzeuge = ladeDaten('fahrzeuge');
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
     const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
     if (f && f.abteile) {
         f.abteile.splice(index, 1);
-        speichereDaten('fahrzeuge', fahrzeuge);
+        if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
         oeffneFahrzeugAkte(aktuellesFahrzeugId);
     }
 }
@@ -226,7 +227,6 @@ function speichereAkte() {
     const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
 
     if (f) {
-        // Stammdaten aus den Feldern auslesen und im Objekt aktualisieren
         f.callSign = document.getElementById('akte-callSign')?.value || f.callSign;
         f.name = f.callSign;
         f.typ = document.getElementById('akte-typ')?.value || f.typ;
@@ -239,12 +239,10 @@ function speichereAkte() {
         f.nextSP = f.sp;
         f.status = document.getElementById('akte-status')?.value || f.status;
 
-        // In LocalStorage & Firebase Cloud speichern
         if (typeof speichereDaten === 'function') {
             speichereDaten('fahrzeuge', fahrzeuge);
         }
 
-        // Links die Tabelle und das Dashboard aktualisieren
         renderFahrzeugeView();
         if (typeof aktualisiereDashboard === 'function') {
             aktualisiereDashboard();
@@ -266,14 +264,189 @@ function loescheFahrzeug(id) {
 
         renderFahrzeugeView();
         
-        document.getElementById('fahrzeugAkteContainer').innerHTML = `
-            <h2>📋 Fahrzeugakte</h2>
-            <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
-        `;
+        const container = document.getElementById('fahrzeugAkteContainer');
+        if (container) {
+            container.innerHTML = `
+                <h2>📋 Fahrzeugakte</h2>
+                <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+            `;
+        }
 
         if (typeof aktualisiereDashboard === 'function') {
             aktualisiereDashboard();
         }
+    }
+}
+
+// ==========================================
+// 6. EXPORT FUNKTION (CSV)
+// ==========================================
+function exportFahrzeugeCSV() {
+    try {
+        const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+        if (!fahrzeuge || fahrzeuge.length === 0) {
+            alert('⚠️ Keine Fahrzeuge zum Exportieren vorhanden.');
+            return;
+        }
+
+        const headers = ["ID", "Funkrufname", "Fahrzeugtyp", "Kennzeichen", "Baujahr", "TUEV / HU", "SP", "Status"];
+        let csvContent = headers.map(h => `"${h}"`).join(";") + "\r\n";
+
+        fahrzeuge.forEach(f => {
+            const row = [
+                f.id || "",
+                f.callSign || f.name || "",
+                f.typ || "",
+                f.licensePlate || f.kennzeichen || "",
+                f.baujahr || "",
+                f.nextHU || f.tuev || "",
+                f.nextSP || f.sp || "",
+                f.status || "Einsatzbereit"
+            ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(";");
+
+            csvContent += row + "\r\n";
+        });
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const datum = new Date().toISOString().slice(0, 10);
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Fahrzeuge_Export_${datum}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+    } catch (err) {
+        alert("❌ Fehler beim Exportieren:\n" + err.message);
+    }
+}
+
+// ==========================================
+// 7. IMPORT FUNKTION (CSV)
+// ==========================================
+function importFahrzeugeCSV(inputOrEvent) {
+    try {
+        let inputElement = inputOrEvent;
+        if (inputOrEvent && inputOrEvent.target) inputElement = inputOrEvent.target;
+
+        const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
+        if (!file) return;
+
+        const meeresErsetzen = confirm(
+            "Möchtest du die Fahrzeuge KOMPLETT ÜBERSCHREIBEN?\n\n" +
+            "• OK = Bisherige Fahrzeuge löschen\n" +
+            "• Abbrechen = Neue Fahrzeuge ergänzen/aktualisieren"
+        );
+
+        let fahrzeuge = meeresErsetzen ? [] : (typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : []);
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let text = e.target.result;
+                if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1);
+
+                const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
+                if (zeilen.length < 2) {
+                    alert("Die Datei enthält keine Daten.");
+                    return;
+                }
+
+                const trenner = zeilen[0].includes(";") ? ";" : ",";
+                const headers = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+
+                const findIdx = (...kw) => headers.findIndex(h => kw.some(k => h.includes(k)));
+
+                const idxId = findIdx("id");
+                const idxFunkruf = findIdx("funkruf", "name", "callsign");
+                const idxTyp = findIdx("typ", "modell");
+                const idxKennzeichen = findIdx("kennzeichen", "license");
+                const idxBaujahr = findIdx("baujahr", "jahr");
+                const idxTuev = findIdx("tüv", "tuev", "hu");
+                const idxSp = findIdx("sp");
+                const idxStatus = findIdx("status");
+
+                let neu = 0;
+                let aktualisiert = 0;
+
+                for (let i = 1; i < zeilen.length; i++) {
+                    const spalten = zeilen[i]
+                        .split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
+                        .map(s => s.replace(/^"|"$/g, '').trim());
+
+                    if (spalten.length === 0 || spalten.every(s => s === "")) continue;
+
+                    const id = idxId !== -1 ? spalten[idxId] : "";
+                    const funkruf = idxFunkruf !== -1 ? spalten[idxFunkruf] : "";
+                    const typ = idxTyp !== -1 ? spalten[idxTyp] : "";
+                    const kennzeichen = idxKennzeichen !== -1 ? spalten[idxKennzeichen] : "";
+                    const baujahr = idxBaujahr !== -1 ? spalten[idxBaujahr] : "";
+                    const tuev = idxTuev !== -1 ? spalten[idxTuev] : "";
+                    const sp = idxSp !== -1 ? spalten[idxSp] : "";
+                    const status = idxStatus !== -1 ? spalten[idxStatus] : "Einsatzbereit";
+
+                    if (!funkruf && !typ && !kennzeichen) continue;
+
+                    // Existentes Fahrzeug suchen
+                    let matchIndex = -1;
+                    if (!meeresErsetzen) {
+                        matchIndex = fahrzeuge.findIndex(f => 
+                            (id && f.id === id) || 
+                            (funkruf && (f.callSign || f.name || '').toLowerCase() === funkruf.toLowerCase())
+                        );
+                    }
+
+                    const fzObject = {
+                        id: matchIndex !== -1 ? fahrzeuge[matchIndex].id : (id || 'VEH-' + Date.now() + '_' + i),
+                        callSign: funkruf,
+                        name: funkruf || typ,
+                        typ: typ,
+                        kennzeichen: kennzeichen,
+                        licensePlate: kennzeichen,
+                        baujahr: baujahr,
+                        tuev: tuev,
+                        nextHU: tuev,
+                        sp: sp,
+                        nextSP: sp,
+                        status: status || 'Einsatzbereit',
+                        abteile: matchIndex !== -1 ? (fahrzeuge[matchIndex].abteile || []) : [
+                            { name: 'G1 (Geräteraum 1)', inhalt: '' },
+                            { name: 'G2 (Geräteraum 2)', inhalt: '' },
+                            { name: 'GR (Geräteraum Heck)', inhalt: '' }
+                        ]
+                    };
+
+                    if (matchIndex !== -1) {
+                        fahrzeuge[matchIndex] = fzObject;
+                        aktualisiert++;
+                    } else {
+                        fahrzeuge.push(fzObject);
+                        neu++;
+                    }
+                }
+
+                if (typeof speichereDaten === 'function') {
+                    speichereDaten('fahrzeuge', fahrzeuge);
+                }
+
+                renderFahrzeugeView();
+                if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
+
+                alert(`✅ Fahrzeug-Import erfolgreich!\n\n• ${neu} neu hinzugefügt\n• ${aktualisiert} aktualisiert`);
+                if (inputElement) inputElement.value = '';
+
+            } catch (err) {
+                alert("Fehler beim Verarbeiten der CSV-Datei:\n" + err.message);
+            }
+        };
+
+        reader.readAsText(file, "UTF-8");
+
+    } catch (err) {
+        alert("Fehler beim Starten des Imports:\n" + err.message);
     }
 }
 
@@ -287,6 +460,8 @@ window.updateAbteilName = updateAbteilName;
 window.updateAbteilInhalt = updateAbteilInhalt;
 window.speichereAkte = speichereAkte;
 window.loescheFahrzeug = loescheFahrzeug;
+window.exportFahrzeugeCSV = exportFahrzeugeCSV;
+window.importFahrzeugeCSV = importFahrzeugeCSV;
 
 document.addEventListener('DOMContentLoaded', () => {
     renderFahrzeugeView();
