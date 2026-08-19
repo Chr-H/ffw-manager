@@ -51,77 +51,120 @@ function parseCSVLine(line, delimiter) {
     return values;
 }
 
-function importLagerCSV(inputElement) {
+function importLagerCSV(inputOrEvent) {
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
         return;
     }
 
-    const file = inputElement.files ? inputElement.files[0] : null;
+    let inputElement = inputOrEvent;
+    if (inputOrEvent && inputOrEvent.target) {
+        inputElement = inputOrEvent.target;
+    }
+
+    const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function (e) {
-        const text = e.target.result;
-        const zeilen = text.split(/\r\n|\n/);
+        let text = e.target.result;
+        
+        if (text.startsWith('\uFEFF')) {
+            text = text.slice(1);
+        }
+
+        const zeilen = text.split(/\r\n|\n/).map(z => z.trim()).filter(z => z.length > 0);
         if (zeilen.length < 2) {
-            alert('Die CSV-Datei enthält keine Daten.');
+            alert("⚠️ Die CSV-Datei enthält keine verwertbaren Daten.");
+            if (inputElement) inputElement.value = '';
             return;
         }
 
         const delim = zeilen[0].includes(';') ? ';' : ',';
-        let aktuelleListe = holeLagerDaten();
+
+        // 1. Spalten-Indizes anhand der Kopfzeile ermitteln
+        const headerCols = parseCSVLine(zeilen[0].toLowerCase(), delim);
+        
+        const idxId = headerCols.findIndex(h => h === "id");
+        const idxArtNr = headerCols.findIndex(h => h.includes("art") || h.includes("nummer"));
+        const idxHersteller = headerCols.findIndex(h => h.includes("herstell"));
+        const idxBez = headerCols.findIndex(h => h.includes("bezeichn") || h.includes("name") || h.includes("artikel"));
+        const idxKat = headerCols.findIndex(h => h.includes("kategori"));
+        const idxGroesse = headerCols.findIndex(h => h.includes("größ") || h.includes("groess"));
+        const idxZustand = headerCols.findIndex(h => h.includes("zustand"));
+        const idxBestand = headerCols.findIndex(h => h === "bestand" || h.includes("ist"));
+        const idxMindest = headerCols.findIndex(h => h.includes("mindest"));
+        const idxSoll = headerCols.findIndex(h => h.includes("soll"));
+
+        let lagerListe = ladeDaten("lager") || [];
         let hinzugefuegt = 0;
         let geaendert = 0;
 
         for (let i = 1; i < zeilen.length; i++) {
-            const zeile = zeilen[i].trim();
-            if (!zeile) continue;
+            const spalten = parseCSVLine(zeilen[i], delim);
 
-            const spalten = parseCSVLine(zeile, delim);
+            const rawId = idxId !== -1 ? (spalten[idxId] || '').trim() : '';
+            const artNr = idxArtNr !== -1 ? (spalten[idxArtNr] || '').trim() : '';
+            const bezeichnung = idxBez !== -1 ? (spalten[idxBez] || '').trim() : '';
 
-            if (spalten.length >= 2) {
-                const rawId = spalten[0] || '';
-                const artikelnummer = spalten[1] || '';
-                const hersteller = spalten[2] || '';
-                const bezeichnung = spalten[3] || spalten[1] || 'Unbenannter Artikel';
-                const kategorie = spalten[4] || '';
-                const groesse = spalten[5] || '';
-                const zustand = (spalten[6] && spalten[6].toLowerCase() === 'gebraucht') ? 'Gebraucht' : 'Neu';
-                const bestand = parseInt(spalten[7], 10) || 0;
-                const mindestbestand = parseInt(spalten[8], 10) || 0;
-                const sollbestand = parseInt(spalten[9], 10) || 0;
+            // Zeile überspringen, wenn weder Art.-Nr. noch Bezeichnung da sind
+            if (!artNr && !bezeichnung) continue;
 
-                let existingIndex = -1;
-                if (rawId) {
-                    existingIndex = aktuelleListe.findIndex(l => String(l.id) === String(rawId));
-                } else if (artikelnummer) {
-                    existingIndex = aktuelleListe.findIndex(l => String(l.artikelnummer).toLowerCase() === String(artikelnummer).toLowerCase());
-                }
+            const hersteller = idxHersteller !== -1 ? (spalten[idxHersteller] || '').trim() : '';
+            const kategorie = idxKat !== -1 ? (spalten[idxKat] || 'Sonstiges').trim() : 'Sonstiges';
+            const groesse = idxGroesse !== -1 ? (spalten[idxGroesse] || '').trim() : '';
+            const zustand = idxZustand !== -1 ? (spalten[idxZustand] || 'Neu').trim() : 'Neu';
+            const bestand = idxBestand !== -1 ? (parseInt(spalten[idxBestand], 10) || 0) : 0;
+            const mindestbestand = idxMindest !== -1 ? (parseInt(spalten[idxMindest], 10) || 0) : 0;
+            const sollbestand = idxSoll !== -1 ? (parseInt(spalten[idxSoll], 10) || 0) : 0;
 
-                const id = (existingIndex !== -1) 
-                    ? aktuelleListe[existingIndex].id 
-                    : (rawId || ('LAGER_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)));
+            // Strikter Abgleich über ID oder Artikelnummer
+            let existingIndex = -1;
+            if (rawId || artNr) {
+                existingIndex = lagerListe.findIndex(l => {
+                    const matchId = rawId !== '' && String(l.id).toLowerCase() === rawId.toLowerCase();
+                    const matchArt = artNr !== '' && (l.artikelnummer || l.artNr || '').toLowerCase() === artNr.toLowerCase();
+                    return matchId || matchArt;
+                });
+            }
 
-                const item = {
-                    id, artikelnummer, hersteller, bezeichnung, name: bezeichnung,
-                    kategorie, groesse, zustand, bestand, mindestbestand, sollbestand
-                };
+            const item = {
+                id: existingIndex !== -1 ? lagerListe[existingIndex].id : (rawId || "LAGER_" + Date.now() + "_" + i),
+                artikelnummer: artNr,
+                bezeichnung: bezeichnung || artNr,
+                hersteller: hersteller,
+                kategorie: kategorie,
+                groesse: groesse,
+                zustand: zustand,
+                bestand: bestand,
+                mindestbestand: mindestbestand,
+                sollbestand: sollbestand
+            };
 
-                if (existingIndex !== -1) {
-                    aktuelleListe[existingIndex] = item;
-                    geaendert++;
-                } else {
-                    aktuelleListe.push(item);
-                    hinzugefuegt++;
-                }
+            if (existingIndex !== -1) {
+                lagerListe[existingIndex] = item;
+                geaendert++;
+            } else {
+                lagerListe.push(item);
+                hinzugefuegt++;
             }
         }
 
-        speichereLagerDaten(aktuelleListe);
-        inputElement.value = '';
-        renderLagerView();
-        alert(`Lager-Import erfolgreich!\n- ${hinzugefuegt} neu angelegt\n- ${geaendert} aktualisiert`);
+        // Speichern und Ansicht neu laden
+        speichereDaten("lager", lagerListe);
+        
+        if (typeof renderLagerView === "function") renderLagerView();
+        else if (typeof filterLager === "function") filterLager();
+        else location.reload();
+
+        if (inputElement) inputElement.value = '';
+
+        alert(`✅ Lager-Import abgeschlossen!\n\n• ${hinzugefuegt} Artikel neu angelegt\n• ${geaendert} Artikel aktualisiert`);
+    };
+
+    reader.onerror = function() {
+        alert("❌ Fehler beim Lesen der CSV-Datei.");
+        if (inputElement) inputElement.value = '';
     };
 
     reader.readAsText(file, 'UTF-8');
