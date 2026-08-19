@@ -288,7 +288,7 @@ function zeigeGeraeteDetails(id) {
         <p><strong>Status:</strong> ${escapeHtml(g.status)}</p>
         <p><strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span></p>
         
-        <!-- AUDIT LOG (WER HAT ERSTELLT / BEARBEITET) -->
+        <!-- AUDIT LOG -->
         <div style="font-size: 0.8rem; color: #555; background: #f8f9fa; border-left: 3px solid #007bff; padding: 6px 8px; margin: 10px 0;">
             <div><strong>Erstellt von:</strong> ${escapeHtml(g.erstelltVon || 'Unbekannt (Altbestand)')}</div>
             <div><strong>Zuletzt bearbeitet:</strong> ${escapeHtml(g.bearbeitetVon || ' Keine Änderungen')}</div>
@@ -310,7 +310,6 @@ function zeigeGeraeteDetails(id) {
 }
 
 function fuegePruefungHinzu(id) {
-    // SCHREIBSCHUTZ-PRÜFUNG
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Prüfungen zu protokollieren.");
         return;
@@ -358,7 +357,6 @@ function fuegePruefungHinzu(id) {
 }
 
 function bearbeiteGeraet(id) {
-    // SCHREIBSCHUTZ-PRÜFUNG
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Geräte zu bearbeiten.");
         return;
@@ -386,7 +384,6 @@ function bearbeiteGeraet(id) {
 }
 
 function loescheGeraet(id) {
-    // SCHREIBSCHUTZ-PRÜFUNG
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Geräte zu löschen.");
         return;
@@ -404,6 +401,9 @@ function loescheGeraet(id) {
     }
 }
 
+// ------------------------------------------
+// CSV-EXPORT FÜR GERÄTEVERWALTUNG
+// ------------------------------------------
 function exportGeraeteCSV() {
     const daten = getGeraete();
 
@@ -428,68 +428,60 @@ function exportGeraeteCSV() {
     ]);
 
     const heute = new Date().toISOString().split('T')[0];
+    const dateiname = `Geraeteliste_FFW_${heute}.csv`;
     
     if (typeof window.downloadCSV === "function") {
-        window.downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
+        window.downloadCSV(dateiname, headers, rows);
     } else {
         const csvLines = [headers.join(";")];
         rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        
         const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `Geraeteliste_FFW_${heute}.csv`;
+        link.setAttribute("download", dateiname);
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    ladeGeraete();
-    filterGeraete();
-});
+// ------------------------------------------
+// CSV-IMPORT FÜR GERÄTEVERWALTUNG
+// ------------------------------------------
+function parseCSVLine(line, delimiter) {
+    let values = [];
+    let cur = '';
+    let inQuotes = false;
 
-document.addEventListener("geraeteGeaendert", () => {
-    filterGeraete();
-});
-
-// ==========================================
-// Schnittstellen für Navigation & Dashboard
-// ==========================================
-
-function renderGeraeteView() {
-    filterGeraete();
-}
-
-function filtereGeraeteNachDashboard(filterTyp) {
-    if (typeof zeigeSeite === 'function') {
-        zeigeSeite('geraete');
-    }
-    
-    const elStat = document.getElementById("filterStatus");
-    if (elStat) {
-        if (filterTyp === 'faellig') {
-            elStat.value = 'FAELLIG';
-        } else if (filterTyp === 'wartung') {
-            elStat.value = 'Wartung';
-        } else if (filterTyp === 'defekt') {
-            elStat.value = 'Defekt';
+    for (let i = 0; i < line.length; i++) {
+        let char = line[i];
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === delimiter && !inQuotes) {
+            values.push(cur.trim().replace(/^"|"$/g, ''));
+            cur = '';
         } else {
-            elStat.value = '';
+            cur += char;
         }
     }
-    
-    filterGeraete();
+    values.push(cur.trim().replace(/^"|"$/g, ''));
+    return values;
 }
-// ==========================================
-// CSV-IMPORT FÜR GERÄTEVERWALTUNG
-// ==========================================
 
-function importGeraeteCSV(event) {
+function importGeraeteCSV(inputOrEvent) {
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
         return;
     }
 
-    const file = event.target ? event.target.files[0] : null;
+    // Flexible Erkennung ob Event oder direktes Input-Element übergeben wurde
+    let inputElement = inputOrEvent;
+    if (inputOrEvent && inputOrEvent.target) {
+        inputElement = inputOrEvent.target;
+    }
+
+    const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
     if (!file) return;
 
     const reader = new FileReader();
@@ -512,15 +504,14 @@ function importGeraeteCSV(event) {
             const zeile = zeilen[i].trim();
             if (!zeile) continue;
 
-            // Zerlegen & Anführungszeichen trimmen
-            const spalten = zeile.split(delim).map(s => s.replace(/^"|"$/g, '').trim());
+            const spalten = parseCSVLine(zeile, delim);
 
-            if (spalten.length >= 3) {
+            if (spalten.length >= 2) {
                 const rawId = spalten[0] || '';
                 const inventar = spalten[1] || '';
-                const bezeichnung = spalten[2] || '';
+                const bezeichnung = spalten[2] || 'Unbenanntes Gerät';
 
-                if (!inventar || !bezeichnung) continue;
+                if (!inventar && !bezeichnung) continue;
 
                 const kategorie = spalten[3] || 'Sonstiges';
                 const hersteller = spalten[4] || '';
@@ -530,10 +521,9 @@ function importGeraeteCSV(event) {
                 const pruefintervall = parseInt(spalten[8], 10) || 12;
                 const naechstePruefung = spalten[9] || berechneNaechstePruefung(letztePruefung, pruefintervall);
 
-                // Prüfen ob Inventarnummer oder ID existiert
                 const existingIndex = geraeteListe.findIndex(g => 
                     (rawId && String(g.id) === String(rawId)) || 
-                    (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase()
+                    (inventar && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase())
                 );
 
                 const item = {
@@ -567,11 +557,46 @@ function importGeraeteCSV(event) {
         geraete = geraeteListe;
         speichereGeraete();
         filterGeraete();
-        if (event.target) event.target.value = '';
+        if (inputElement) inputElement.value = '';
         alert(`Geräte-Import abgeschlossen!\n- ${hinzugefuegt} Geräte neu angelegt\n- ${geaendert} bestehende Geräte aktualisiert`);
     };
 
     reader.readAsText(file, 'UTF-8');
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    ladeGeraete();
+    filterGeraete();
+});
+
+document.addEventListener("geraeteGeaendert", () => {
+    filterGeraete();
+});
+
+// Schnittstellen für Navigation & Dashboard
+function renderGeraeteView() {
+    filterGeraete();
+}
+
+function filtereGeraeteNachDashboard(filterTyp) {
+    if (typeof zeigeSeite === 'function') {
+        zeigeSeite('geraete');
+    }
+    
+    const elStat = document.getElementById("filterStatus");
+    if (elStat) {
+        if (filterTyp === 'faellig') {
+            elStat.value = 'FAELLIG';
+        } else if (filterTyp === 'wartung') {
+            elStat.value = 'Wartung';
+        } else if (filterTyp === 'defekt') {
+            elStat.value = 'Defekt';
+        } else {
+            elStat.value = '';
+        }
+    }
+    
+    filterGeraete();
 }
 
 // Globale Freigaben
@@ -586,5 +611,6 @@ window.fuegePruefungHinzu = fuegePruefungHinzu;
 window.bearbeiteGeraet = bearbeiteGeraet;
 window.loescheGeraet = loescheGeraet;
 window.exportGeraeteCSV = exportGeraeteCSV;
+window.importGeraeteCSV = importGeraeteCSV;
 window.renderGeraeteView = renderGeraeteView;
 window.filtereGeraeteNachDashboard = filtereGeraeteNachDashboard;
