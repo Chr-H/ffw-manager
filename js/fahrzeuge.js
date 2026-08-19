@@ -97,6 +97,10 @@ function neuesFahrzeugSpeichern() {
 }
 
 // 3. Rechte Seite: Fahrzeugakte & Geräteabteile rendern
+// ==========================================
+// GRAFISCHE FAHRZEUGAKTE & EXPORT (ERSETZTER BLOCK)
+// ==========================================
+
 function oeffneFahrzeugAkte(id) {
     aktuellesFahrzeugId = id;
     const container = document.getElementById('fahrzeugAkteContainer');
@@ -112,32 +116,55 @@ function oeffneFahrzeugAkte(id) {
 
     if (!f.abteile) {
         f.abteile = [
-            { name: 'G1 (Geräteraum 1)', inhalt: '' },
-            { name: 'G2 (Geräteraum 2)', inhalt: '' },
-            { name: 'GR (Geräteraum Heck)', inhalt: '' }
+            { name: 'G1 (Geräteraum 1)', pos: 'Links', inhalt: '' },
+            { name: 'G2 (Geräteraum 2)', pos: 'Rechts', inhalt: '' },
+            { name: 'GR (Geräteraum Heck)', pos: 'Heck', inhalt: '' }
         ];
     }
 
-    let abteileHTML = f.abteile.map((a, index) => `
-        <div style="background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid #ddd;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                <input type="text" value="${a.name || ''}" onchange="updateAbteilName(${index}, this.value)" style="font-weight:bold; width:60%; padding:4px;" placeholder="Abteil Name (z.B. G1)">
-                <button type="button" onclick="entferneAbteil(${index})" style="background:#dc3545; color:white; border:none; border-radius:3px; padding:2px 6px; cursor:pointer;">✕</button>
+    // GRAFISCHE DARSTELLUNG DER GERÄTERÄUME (Grid / Kacheln)
+    let abteileHTML = f.abteile.map((a, index) => {
+        let badgeColor = "#0d6efd";
+        if (a.pos === "Links") badgeColor = "#198754";
+        if (a.pos === "Rechts") badgeColor = "#fd7e14";
+        if (a.pos === "Heck") badgeColor = "#6f42c1";
+
+        return `
+            <div class="abteil-kachel" style="background:#ffffff; border:2px solid #cbd5e1; border-top:5px solid ${badgeColor}; border-radius:8px; padding:12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="background:${badgeColor}; color:white; font-size:0.7em; padding:2px 6px; border-radius:3px; font-weight:bold; text-transform:uppercase;">${a.pos || 'Allgemein'}</span>
+                    <button type="button" onclick="entferneAbteil(${index})" style="background:#dc3545; color:white; border:none; border-radius:3px; padding:2px 6px; cursor:pointer;" title="Löschen">✕</button>
+                </div>
+                <div>
+                    <input type="text" value="${a.name || ''}" onchange="updateAbteilName(${index}, this.value)" style="font-weight:bold; width:100%; padding:4px; box-sizing:border-box; border:1px solid #ccc; border-radius:4px;" placeholder="Geräteraum Name">
+                </div>
+                <div style="display:flex; gap:5px; align-items:center;">
+                    <label style="font-size:0.75em; font-weight:bold;">Seite:</label>
+                    <select onchange="updateAbteilPos(${index}, this.value)" style="font-size:0.8em; padding:2px;">
+                        <option value="Links" ${a.pos === 'Links' ? 'selected' : ''}>⬅️ Links (G1/G3/G5)</option>
+                        <option value="Rechts" ${a.pos === 'Rechts' ? 'selected' : ''}>➡️ Rechts (G2/G4/G6)</option>
+                        <option value="Heck" ${a.pos === 'Heck' ? 'selected' : ''}>⬇️ Heck (GR)</option>
+                        <option value="Dach" ${a.pos === 'Dach' ? 'selected' : ''}>⬆️ Dach</option>
+                    </select>
+                </div>
+                <textarea onchange="updateAbteilInhalt(${index}, this.value)" style="width:100%; height:75px; padding:6px; box-sizing:border-box; border:1px solid #ccc; border-radius:4px; font-family:sans-serif; resize:vertical;" placeholder="Beladung / Geräte...">${a.inhalt || ''}</textarea>
             </div>
-            <textarea onchange="updateAbteilInhalt(${index}, this.value)" style="width:100%; height:50px; padding:4px; box-sizing:border-box;" placeholder="Beladung / Geräte...">${a.inhalt || ''}</textarea>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     container.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px;">
-            <h2>📋 Fahrzeugakte bearbeiten</h2>
-            <button onclick="speichereAkte()" style="background:#2e7d32; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-weight:bold;">💾 Alles Speichern</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+            <h2>📋 Fahrzeugakte: ${f.callSign || f.name}</h2>
+            <div style="display:flex; gap:8px;">
+                <button onclick="druckeFahrzeugAkte()" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">🖨️ Akte PDF / Drucken</button>
+                <button onclick="speichereAkte()" style="background:#2e7d32; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">💾 Speichern</button>
+            </div>
         </div>
 
-        <!-- STAMMDATEN BEARBEITEN -->
+        <!-- STAMMDATEN -->
         <div style="background:#f0f4f8; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #cbd5e1;">
             <h3 style="margin-top:0; margin-bottom:10px; font-size:1.05em;">✏️ Stammdaten</h3>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px;">
                 <div>
                     <label style="font-size:0.8em; font-weight:bold; display:block;">Funkrufname / Name:</label>
                     <input type="text" id="akte-callSign" value="${f.callSign || f.name || ''}" style="width:100%; padding:5px; box-sizing:border-box;">
@@ -173,14 +200,85 @@ function oeffneFahrzeugAkte(id) {
             </div>
         </div>
 
-        <!-- GERÄTEABTEILE -->
-        <h3 style="margin-bottom:8px; font-size:1.05em;">📦 Geräteabteile / Geräteräume</h3>
-        <div id="abteile-liste-container">
+        <!-- GRAFISCHER GERÄTERAUM-RASTER -->
+        <h3 style="margin-bottom:8px; font-size:1.05em;">📦 Geräteräume & Beladung</h3>
+        <div id="abteile-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:15px; margin-bottom:12px;">
             ${abteileHTML}
         </div>
-        <button type="button" onclick="fuegeAbteilHinzu()" style="background:#6c757d; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-top:5px;">+ Abteil hinzufügen</button>
+        <button type="button" onclick="fuegeAbteilHinzu()" style="background:#6c757d; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">+ Geräteraum hinzufügen</button>
     `;
 }
+
+// ZUSÄTZLICH DIREKT DARUNTER EINFÜGEN:
+function updateAbteilPos(index, pos) {
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
+    if (f && f.abteile && f.abteile[index]) {
+        f.abteile[index].pos = pos;
+        if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
+        oeffneFahrzeugAkte(aktuellesFahrzeugId);
+    }
+}
+
+function druckeFahrzeugAkte() {
+    if (!aktuellesFahrzeugId) return;
+
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
+
+    if (!f) return;
+
+    const printWindow = window.open('', '_blank');
+    
+    let abteilePrintHTML = (f.abteile || []).map(a => `
+        <div style="border:1px solid #333; border-radius:4px; padding:10px; margin-bottom:10px; page-break-inside: avoid;">
+            <div style="font-weight:bold; background:#eee; padding:4px 8px; margin:-10px -10px 8px -10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+                <span>${a.name || 'Geräteraum'}</span>
+                <span>[${a.pos || 'Allgemein'}]</span>
+            </div>
+            <div style="white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">${a.inhalt || 'Keine Beladung eingetragen.'}</div>
+        </div>
+    `).join('');
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Fahrzeugakte - ${f.callSign || f.name}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
+                h1 { border-bottom: 2px solid #000; padding-bottom: 5px; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+                .box { border: 1px solid #ccc; padding: 8px; border-radius: 4px; }
+                @media print {
+                    button { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>📋 Fahrzeugakte: ${f.callSign || f.name}</h1>
+            <div class="grid">
+                <div class="box"><strong>Fahrzeugtyp:</strong> ${f.typ || '-'}</div>
+                <div class="box"><strong>Kennzeichen:</strong> ${f.kennzeichen || f.licensePlate || '-'}</div>
+                <div class="box"><strong>Baujahr:</strong> ${f.baujahr || '-'}</div>
+                <div class="box"><strong>Status:</strong> ${f.status || 'Einsatzbereit'}</div>
+                <div class="box"><strong>Nächste HU / TÜV:</strong> ${f.tuev || f.nextHU || '-'}</div>
+                <div class="box"><strong>Nächste SP:</strong> ${f.sp || f.nextSP || '-'}</div>
+            </div>
+
+            <h2>📦 Beladung / Geräteraum-Übersicht</h2>
+            ${abteilePrintHTML}
+
+            <script>
+                window.onload = function() { window.print(); }
+            </script>
+        </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+}
+
 
 // 4. Hilfsfunktionen für Geräteabteile
 function updateAbteilName(index, name) {
@@ -462,6 +560,8 @@ window.speichereAkte = speichereAkte;
 window.loescheFahrzeug = loescheFahrzeug;
 window.exportFahrzeugeCSV = exportFahrzeugeCSV;
 window.importFahrzeugeCSV = importFahrzeugeCSV;
+window.druckeFahrzeugAkte = druckeFahrzeugAkte;
+window.updateAbteilPos = updateAbteilPos;
 
 document.addEventListener('DOMContentLoaded', () => {
     renderFahrzeugeView();
