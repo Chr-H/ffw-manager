@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.3)
+// FFW Manager - Geräteverwaltung (v0.6.4)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -66,7 +66,6 @@ function berechneNaechstePruefung(datumStr, intervallMonate) {
 }
 
 function neuesGeraet() {
-    // 1. SCHREIBSCHUTZ-PRÜFUNG
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Geräte anzulegen oder zu bearbeiten.");
         return;
@@ -288,7 +287,6 @@ function zeigeGeraeteDetails(id) {
         <p><strong>Status:</strong> ${escapeHtml(g.status)}</p>
         <p><strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span></p>
         
-        <!-- AUDIT LOG -->
         <div style="font-size: 0.8rem; color: #555; background: #f8f9fa; border-left: 3px solid #007bff; padding: 6px 8px; margin: 10px 0;">
             <div><strong>Erstellt von:</strong> ${escapeHtml(g.erstelltVon || 'Unbekannt (Altbestand)')}</div>
             <div><strong>Zuletzt bearbeitet:</strong> ${escapeHtml(g.bearbeitetVon || ' Keine Änderungen')}</div>
@@ -450,6 +448,8 @@ function exportGeraeteCSV() {
 // CSV-IMPORT FÜR GERÄTEVERWALTUNG
 // ------------------------------------------
 function parseCSVLine(line, delimiter) {
+    line = line.replace(/^\uFEFF/, '');
+    
     let values = [];
     let cur = '';
     let inQuotes = false;
@@ -475,7 +475,6 @@ function importGeraeteCSV(inputOrEvent) {
         return;
     }
 
-    // Flexible Erkennung ob Event oder direktes Input-Element übergeben wurde
     let inputElement = inputOrEvent;
     if (inputOrEvent && inputOrEvent.target) {
         inputElement = inputOrEvent.target;
@@ -486,14 +485,22 @@ function importGeraeteCSV(inputOrEvent) {
 
     const reader = new FileReader();
     reader.onload = function (e) {
-        const text = e.target.result;
+        let text = e.target.result;
+        
+        if (text.startsWith('\uFEFF')) {
+            text = text.slice(1);
+        }
+
         const zeilen = text.split(/\r\n|\n/);
         if (zeilen.length < 2) {
-            alert("Die CSV-Datei enthält keine Daten.");
+            alert("⚠️ Die CSV-Datei enthält keine verwertbaren Daten oder Zeilen.");
+            if (inputElement) inputElement.value = '';
             return;
         }
 
-        const delim = zeilen[0].includes(';') ? ';' : ',';
+        const headerZeile = zeilen[0];
+        const delim = headerZeile.includes(';') ? ';' : ',';
+
         let geraeteListe = ladeDaten("geraete") || [];
         let hinzugefuegt = 0;
         let geaendert = 0;
@@ -509,7 +516,7 @@ function importGeraeteCSV(inputOrEvent) {
             if (spalten.length >= 2) {
                 const rawId = spalten[0] || '';
                 const inventar = spalten[1] || '';
-                const bezeichnung = spalten[2] || 'Unbenanntes Gerät';
+                const bezeichnung = spalten[2] || '';
 
                 if (!inventar && !bezeichnung) continue;
 
@@ -522,14 +529,14 @@ function importGeraeteCSV(inputOrEvent) {
                 const naechstePruefung = spalten[9] || berechneNaechstePruefung(letztePruefung, pruefintervall);
 
                 const existingIndex = geraeteListe.findIndex(g => 
-                    (rawId && String(g.id) === String(rawId)) || 
+                    (rawId && String(g.id).toLowerCase() === String(rawId).toLowerCase()) || 
                     (inventar && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase())
                 );
 
                 const item = {
                     id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
-                    inventarnummer: inventar,
-                    bezeichnung: bezeichnung,
+                    inventarnummer: inventar || `INV-${Date.now()}_${i}`,
+                    bezeichnung: bezeichnung || 'Unbenanntes Gerät',
                     kategorie: kategorie,
                     hersteller: hersteller,
                     standort: standort,
@@ -557,8 +564,15 @@ function importGeraeteCSV(inputOrEvent) {
         geraete = geraeteListe;
         speichereGeraete();
         filterGeraete();
+
         if (inputElement) inputElement.value = '';
-        alert(`Geräte-Import abgeschlossen!\n- ${hinzugefuegt} Geräte neu angelegt\n- ${geaendert} bestehende Geräte aktualisiert`);
+
+        alert(`✅ Import erfolgreich abgeschlossen!\n\n• ${hinzugefuegt} Geräte neu angelegt\n• ${geaendert} Geräte aktualisiert`);
+    };
+
+    reader.onerror = function() {
+        alert("❌ Fehler beim Lesen der CSV-Datei.");
+        if (inputElement) inputElement.value = '';
     };
 
     reader.readAsText(file, 'UTF-8');
