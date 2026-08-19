@@ -479,6 +479,100 @@ function filtereGeraeteNachDashboard(filterTyp) {
     
     filterGeraete();
 }
+// ==========================================
+// CSV-IMPORT FÜR GERÄTEVERWALTUNG
+// ==========================================
+
+function importGeraeteCSV(event) {
+    if (typeof istEditor === "function" && !istEditor()) {
+        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
+        return;
+    }
+
+    const file = event.target ? event.target.files[0] : null;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const text = e.target.result;
+        const zeilen = text.split(/\r\n|\n/);
+        if (zeilen.length < 2) {
+            alert("Die CSV-Datei enthält keine Daten.");
+            return;
+        }
+
+        const delim = zeilen[0].includes(';') ? ';' : ',';
+        let geraeteListe = ladeDaten("geraete") || [];
+        let hinzugefuegt = 0;
+        let geaendert = 0;
+        const protokollUser = hohleBenutzerProtokollText();
+        const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
+
+        for (let i = 1; i < zeilen.length; i++) {
+            const zeile = zeilen[i].trim();
+            if (!zeile) continue;
+
+            // Zerlegen & Anführungszeichen trimmen
+            const spalten = zeile.split(delim).map(s => s.replace(/^"|"$/g, '').trim());
+
+            if (spalten.length >= 3) {
+                const rawId = spalten[0] || '';
+                const inventar = spalten[1] || '';
+                const bezeichnung = spalten[2] || '';
+
+                if (!inventar || !bezeichnung) continue;
+
+                const kategorie = spalten[3] || 'Sonstiges';
+                const hersteller = spalten[4] || '';
+                const standort = spalten[5] || '';
+                const status = spalten[6] || 'Einsatzbereit';
+                const letztePruefung = spalten[7] || '';
+                const pruefintervall = parseInt(spalten[8], 10) || 12;
+                const naechstePruefung = spalten[9] || berechneNaechstePruefung(letztePruefung, pruefintervall);
+
+                // Prüfen ob Inventarnummer oder ID existiert
+                const existingIndex = geraeteListe.findIndex(g => 
+                    (rawId && String(g.id) === String(rawId)) || 
+                    (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase()
+                );
+
+                const item = {
+                    id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
+                    inventarnummer: inventar,
+                    bezeichnung: bezeichnung,
+                    kategorie: kategorie,
+                    hersteller: hersteller,
+                    standort: standort,
+                    status: status,
+                    erstinbetriebnahme: '',
+                    letztePruefung: letztePruefung,
+                    pruefintervall: pruefintervall,
+                    naechstePruefung: naechstePruefung,
+                    historie: existingIndex !== -1 ? (geraeteListe[existingIndex].historie || []) : [],
+                    erstellt: existingIndex !== -1 ? (geraeteListe[existingIndex].erstellt || jetztZeitstempel) : jetztZeitstempel,
+                    erstelltVon: existingIndex !== -1 ? (geraeteListe[existingIndex].erstelltVon || protokollUser) : `${protokollUser} (CSV-Import)`,
+                    bearbeitetVon: `${protokollUser} (CSV-Import am ${jetztZeitstempel})`
+                };
+
+                if (existingIndex !== -1) {
+                    geraeteListe[existingIndex] = item;
+                    geaendert++;
+                } else {
+                    geraeteListe.push(item);
+                    hinzugefuegt++;
+                }
+            }
+        }
+
+        geraete = geraeteListe;
+        speichereGeraete();
+        filterGeraete();
+        if (event.target) event.target.value = '';
+        alert(`Geräte-Import abgeschlossen!\n- ${hinzugefuegt} Geräte neu angelegt\n- ${geaendert} bestehende Geräte aktualisiert`);
+    };
+
+    reader.readAsText(file, 'UTF-8');
+}
 
 // Globale Freigaben
 window.getGeraete = getGeraete;
