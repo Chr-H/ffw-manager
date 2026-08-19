@@ -171,38 +171,56 @@ function importLagerCSV(inputOrEvent) {
 }
 
 function exportLagerCSV() {
-    const daten = holeLagerDaten();
+    const daten = typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []);
+
     if (!Array.isArray(daten) || daten.length === 0) {
         alert("⚠️ Es wurden keine Lagerdaten zum Exportieren gefunden.");
         return;
     }
 
-    const headers = ["ID", "Artikelnummer", "Hersteller", "Bezeichnung", "Kategorie", "Größe", "Zustand", "Bestand", "Mindestbestand", "Sollbestand"];
+    // Saubere und einheitliche Spaltenreihenfolge
+    const headers = [
+        "ID", 
+        "Artikelnummer", 
+        "Bezeichnung", 
+        "Hersteller", 
+        "Kategorie", 
+        "Größe", 
+        "Zustand", 
+        "Bestand", 
+        "Mindestbestand", 
+        "Sollbestand"
+    ];
+
     const rows = daten.map(l => [
         l.id || '',
-        l.artikelnummer || '',
-        l.hersteller || '',
+        l.artikelnummer || l.artNr || '',
         l.bezeichnung || l.name || '',
+        l.hersteller || '',
         l.kategorie || '',
         l.groesse || '',
         l.zustand || 'Neu',
-        l.bestand || 0,
-        l.mindestbestand || 0,
-        l.sollbestand || 0
+        l.bestand !== undefined ? l.bestand : 0,
+        l.mindestbestand !== undefined ? l.mindestbestand : 0,
+        l.sollbestand !== undefined ? l.sollbestand : 0
     ]);
 
     const heute = new Date().toISOString().split('T')[0];
-
+    const dateiname = `Lagerliste_FFW_${heute}.csv`;
+    
     if (typeof window.downloadCSV === "function") {
-        window.downloadCSV(`Lagerbestand_FFW_${heute}.csv`, headers, rows);
+        window.downloadCSV(dateiname, headers, rows);
     } else {
         const csvLines = [headers.join(";")];
         rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        
         const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `Lagerbestand_FFW_${heute}.csv`;
+        link.setAttribute("download", dateiname);
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
 }
 
