@@ -1,33 +1,43 @@
 /* ==========================================
-   Lager-Verwaltung (lager.js) - Vollständige Version
-   Inkl. herstellerunabhängiger Modal-Steuerung
+   Lager-Verwaltung (lager.js) - Vollständige Reparatur-Version
    ========================================== */
 
 (function () {
     'use strict';
 
     // ------------------------------------------
-    // Hilfsfunktionen für Speicherzugriff
+    // Speicher-Mechanismen (Firebase / LocalStorage)
     // ------------------------------------------
     function holeLagerDaten() {
         if (typeof ladeDaten === 'function') {
-            const d = ladeDaten('lager');
-            if (d && Array.isArray(d)) return d;
+            try {
+                const d = ladeDaten('lager');
+                if (d && Array.isArray(d)) return d;
+            } catch (e) {
+                console.warn("ladeDaten('lager') fehlgeschlagen:", e);
+            }
         }
         try {
             const local = localStorage.getItem('lager');
             if (local) return JSON.parse(local) || [];
         } catch (e) {
-            console.error("Fehler beim Laden der Lagerdaten:", e);
+            console.error("Fehler beim Laden aus LocalStorage:", e);
         }
         return [];
     }
 
     function speichereLagerDaten(daten) {
         if (typeof speichereDaten === 'function') {
-            speichereDaten('lager', daten);
-        } else {
+            try {
+                speichereDaten('lager', daten);
+            } catch (e) {
+                console.warn("speichereDaten('lager') fehlgeschlagen:", e);
+            }
+        }
+        try {
             localStorage.setItem('lager', JSON.stringify(daten));
+        } catch (e) {
+            console.error("Fehler beim Speichern in LocalStorage:", e);
         }
     }
 
@@ -41,41 +51,104 @@
     }
 
     function findeLagerContainer() {
-        const moeglicheIDs = [
-            'lager-tabelle',
-            'lager-liste',
-            'lager-table',
-            'lager-content',
-            'lager-container',
-            'lagerContainer',
-            'content'
+        const ids = [
+            'lager-tabelle', 'lager-liste', 'lager-table', 
+            'lager-content', 'lager-container', 'lagerContainer', 
+            'content', 'main-content'
         ];
-        for (let id of moeglicheIDs) {
+        for (let id of ids) {
             const el = document.getElementById(id);
             if (el) return el;
         }
-        return document.querySelector('.lager-container') || document.querySelector('#content');
+        return document.querySelector('.lager-container') || document.querySelector('main');
     }
 
     // ------------------------------------------
-    // Sichere Modal-Steuerung (Funktioniert IMMER)
+    // Sicheres Einblend-System für Modals (Eingabemaske)
     // ------------------------------------------
-    function zeigeModal(modalEl) {
-        if (!modalEl) return;
+    function erstelleModalFallsNichtVorhanden() {
+        if (document.getElementById('lagerAkteModal')) return;
+
+        const modalHTML = `
+        <div class="modal fade" id="lagerAkteModal" tabindex="-1" style="display:none;" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="lagerModalTitle">Artikel bearbeiten</h5>
+                        <button type="button" class="btn-close btn-close-white" onclick="schliesseLagerModal()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="lagerAkteForm" onsubmit="event.preventDefault(); speichereLagerItem();">
+                            <input type="hidden" id="lager-id">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Artikelnummer</label>
+                                    <input type="text" class="form-control" id="lager-artikelnummer">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Hersteller</label>
+                                    <input type="text" class="form-control" id="lager-hersteller" placeholder="z. B. HAIX, Rosenbauer">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Bezeichnung / Name *</label>
+                                <input type="text" class="form-control" id="lager-bezeichnung" required placeholder="z. B. Feuerwehrstiefel">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Kategorie</label>
+                                    <input type="text" class="form-control" id="lager-kategorie" placeholder="z. B. PSA">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Größe</label>
+                                    <input type="text" class="form-control" id="lager-groesse" placeholder="z. B. 42, XL">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Zustand</label>
+                                    <select class="form-select" id="lager-zustand">
+                                        <option value="Neu">Neu</option>
+                                        <option value="Gebraucht">Gebraucht</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Bestand</label>
+                                    <input type="number" class="form-control" id="lager-bestand" value="0" min="0">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Mindestbestand</label>
+                                    <input type="number" class="form-control" id="lager-mindestbestand" value="0" min="0">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Sollbestand</label>
+                                    <input type="number" class="form-control" id="lager-sollbestand" value="0" min="0">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="schliesseLagerModal()">Abbrechen</button>
+                        <button type="button" class="btn btn-success" onclick="speichereLagerItem()">Speichern</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+
+    function zeigeModal() {
+        erstelleModalFallsNichtVorhanden();
+        const modalEl = document.getElementById('lagerAkteModal');
         
-        // 1. Versuche Bootstrap 5
         if (window.bootstrap && window.bootstrap.Modal) {
             let instance = bootstrap.Modal.getInstance(modalEl);
             if (!instance) instance = new bootstrap.Modal(modalEl);
             instance.show();
             return;
         }
-        // 2. Versuche jQuery / Bootstrap 4
-        if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
-            window.jQuery(modalEl).modal('show');
-            return;
-        }
-        // 3. Reines JavaScript Fallback (ohne externe Bibliotheken)
+
+        // Fallback ohne Bootstrap JS
         modalEl.style.display = 'block';
         modalEl.classList.add('show');
         document.body.classList.add('modal-open');
@@ -89,15 +162,13 @@
         }
     }
 
-    function schliesseModal(modalEl) {
+    function schliesseLagerModal() {
+        const modalEl = document.getElementById('lagerAkteModal');
         if (!modalEl) return;
 
         if (window.bootstrap && window.bootstrap.Modal) {
             const instance = bootstrap.Modal.getInstance(modalEl);
             if (instance) instance.hide();
-        }
-        if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
-            window.jQuery(modalEl).modal('hide');
         }
 
         modalEl.style.display = 'none';
@@ -109,7 +180,31 @@
     }
 
     // ------------------------------------------
-    // Hauptfunktion: Rendering der Lager-Tabelle
+    // Artikel anlegen / bearbeiten öffnen
+    // ------------------------------------------
+    function openLagerAkteModal(id = null) {
+        erstelleModalFallsNichtVorhanden();
+
+        const lager = holeLagerDaten();
+        const item = id ? lager.find(i => String(i.id) === String(id)) : null;
+
+        document.getElementById('lagerModalTitle').innerText = item ? 'Artikel bearbeiten' : 'Neuer Artikel';
+        document.getElementById('lager-id').value = item ? item.id : '';
+        document.getElementById('lager-artikelnummer').value = item ? (item.artikelnummer || '') : '';
+        document.getElementById('lager-hersteller').value = item ? (item.hersteller || '') : '';
+        document.getElementById('lager-bezeichnung').value = item ? (item.bezeichnung || item.name || '') : '';
+        document.getElementById('lager-kategorie').value = item ? (item.kategorie || '') : '';
+        document.getElementById('lager-groesse').value = item ? (item.groesse || item.größe || '') : '';
+        document.getElementById('lager-zustand').value = item ? (item.zustand || 'Neu') : 'Neu';
+        document.getElementById('lager-bestand').value = item ? (item.bestand ?? item.menge ?? 0) : 0;
+        document.getElementById('lager-mindestbestand').value = item ? (item.mindestbestand ?? item.mindestmenge ?? 0) : 0;
+        document.getElementById('lager-sollbestand').value = item ? (item.sollbestand ?? 0) : 0;
+
+        zeigeModal();
+    }
+
+    // ------------------------------------------
+    // Hauptfunktion: Tabelle Rendern
     // ------------------------------------------
     function renderLagerView() {
         const container = findeLagerContainer();
@@ -120,7 +215,7 @@
         let html = `
             <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
                 <button class="btn btn-primary" onclick="openLagerAkteModal()">
-                    <i class="bi bi-plus-lg"></i> + Artikel hinzufügen
+                    ➕ Artikel hinzufügen
                 </button>
                 <div>
                     <small class="text-muted">Anzahl Artikel: <strong>${lager.length}</strong></small>
@@ -148,7 +243,7 @@
         `;
 
         if (lager.length === 0) {
-            html += `<tr><td colspan="11" class="text-center text-muted py-4">Keine Artikel im Lager vorhanden.</td></tr>`;
+            html += `<tr><td colspan="11" class="text-center text-muted py-4">Keine Artikel im Lager vorhanden. Nutzen Sie den Button oben oder den CSV-Import.</td></tr>`;
         } else {
             lager.forEach(item => {
                 const bestand = parseInt(item.bestand ?? item.menge ?? 0, 10);
@@ -202,105 +297,6 @@
     }
 
     // ------------------------------------------
-    // Modal anzeigen (Erstellen / Bearbeiten)
-    // ------------------------------------------
-    function openLagerAkteModal(id = null) {
-        const lager = holeLagerDaten();
-        const item = id ? lager.find(i => String(i.id) === String(id)) : null;
-        const modalTitle = item ? 'Artikel bearbeiten' : 'Neuer Artikel';
-        
-        let modalEl = document.getElementById('lagerAkteModal');
-        if (!modalEl) {
-            const modalHTML = `
-            <div class="modal fade" id="lagerAkteModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="lagerModalTitle"></h5>
-                            <button type="button" class="btn-close" onclick="schliesseLagerModal()" aria-label="Schließen"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="lagerAkteForm" onsubmit="event.preventDefault(); speichereLagerItem();">
-                                <input type="hidden" id="lager-id">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Artikelnummer</label>
-                                        <input type="text" class="form-control" id="lager-artikelnummer">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Hersteller</label>
-                                        <input type="text" class="form-control" id="lager-hersteller" placeholder="z. B. Rosenbauer, Weber">
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Bezeichnung / Name *</label>
-                                    <input type="text" class="form-control" id="lager-bezeichnung" required>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Kategorie</label>
-                                        <input type="text" class="form-control" id="lager-kategorie">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Größe</label>
-                                        <input type="text" class="form-control" id="lager-groesse">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Zustand</label>
-                                        <select class="form-select" id="lager-zustand">
-                                            <option value="Neu">Neu</option>
-                                            <option value="Gebraucht">Gebraucht</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Bestand</label>
-                                        <input type="number" class="form-control" id="lager-bestand" value="0" min="0">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Mindestbestand</label>
-                                        <input type="number" class="form-control" id="lager-mindestbestand" value="0" min="0">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Sollbestand</label>
-                                        <input type="number" class="form-control" id="lager-sollbestand" value="0" min="0">
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" onclick="schliesseLagerModal()">Abbrechen</button>
-                            <button type="button" class="btn btn-primary" onclick="speichereLagerItem()">Speichern</button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            modalEl = document.getElementById('lagerAkteModal');
-        }
-
-        document.getElementById('lagerModalTitle').innerText = modalTitle;
-        document.getElementById('lager-id').value = item ? item.id : '';
-        document.getElementById('lager-artikelnummer').value = item ? (item.artikelnummer || '') : '';
-        document.getElementById('lager-hersteller').value = item ? (item.hersteller || '') : '';
-        document.getElementById('lager-bezeichnung').value = item ? (item.bezeichnung || item.name || '') : '';
-        document.getElementById('lager-kategorie').value = item ? (item.kategorie || '') : '';
-        document.getElementById('lager-groesse').value = item ? (item.groesse || item.größe || '') : '';
-        document.getElementById('lager-zustand').value = item ? (item.zustand || 'Neu') : 'Neu';
-        document.getElementById('lager-bestand').value = item ? (item.bestand ?? item.menge ?? 0) : 0;
-        document.getElementById('lager-mindestbestand').value = item ? (item.mindestbestand ?? item.mindestmenge ?? 0) : 0;
-        document.getElementById('lager-sollbestand').value = item ? (item.sollbestand ?? 0) : 0;
-
-        zeigeModal(modalEl);
-    }
-
-    function schliesseLagerModal() {
-        const modalEl = document.getElementById('lagerAkteModal');
-        schliesseModal(modalEl);
-    }
-
-    // ------------------------------------------
     // Speichern & Löschen
     // ------------------------------------------
     function speichereLagerItem() {
@@ -315,7 +311,7 @@
         let lager = holeLagerDaten();
 
         const newItem = {
-            id: id || Date.now().toString(),
+            id: id || ('LAGER_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
             artikelnummer: document.getElementById('lager-artikelnummer').value.trim(),
             hersteller: document.getElementById('lager-hersteller').value.trim(),
             bezeichnung: bezeichnung,
@@ -350,8 +346,77 @@
     }
 
     // ------------------------------------------
-    // CSV Export, Import & Drucken
+    // FEHLERFREIER CSV IMPORT & EXPORT
     // ------------------------------------------
+    function importLagerCSV(event) {
+        const file = event.target ? event.target.files[0] : null;
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const text = e.target.result;
+            const zeilen = text.split(/\r\n|\n/);
+            if (zeilen.length < 2) {
+                alert('Die CSV-Datei enthält keine Daten.');
+                return;
+            }
+
+            let lagerListe = holeLagerDaten();
+            let hinzugefuegt = 0;
+            let geaendert = 0;
+
+            for (let i = 1; i < zeilen.length; i++) {
+                const zeile = zeilen[i].trim();
+                if (!zeile) continue;
+
+                const spalten = zeile.split(';');
+                if (spalten.length >= 4) {
+                    const rawId = spalten[0] ? spalten[0].trim() : '';
+                    const artikelnummer = spalten[1] ? spalten[1].trim() : '';
+                    const hersteller = spalten[2] ? spalten[2].trim() : '';
+                    const bezeichnung = spalten[3] ? spalten[3].trim() : '';
+
+                    if (!bezeichnung) continue; // Überspringe Zeilen ohne Bezeichnung
+
+                    const kategorie = spalten[4] ? spalten[4].trim() : '';
+                    const groesse = spalten[5] ? spalten[5].trim() : '';
+                    const zustand = (spalten[6] && spalten[6].trim().toLowerCase() === 'gebraucht') ? 'Gebraucht' : 'Neu';
+                    const bestand = parseInt(spalten[7], 10) || 0;
+                    const mindestbestand = parseInt(spalten[8], 10) || 0;
+                    const sollbestand = parseInt(spalten[9], 10) || 0;
+
+                    let existingIndex = -1;
+                    if (rawId) {
+                        existingIndex = lagerListe.findIndex(l => String(l.id) === String(rawId));
+                    }
+
+                    // Falls keine ID da ist, erstelle eine neue eindeutige ID
+                    const id = rawId || ('LAGER_IMPORT_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 4));
+
+                    const item = {
+                        id, artikelnummer, hersteller, bezeichnung, name: bezeichnung,
+                        kategorie, groesse, zustand, bestand, mindestbestand, sollbestand
+                    };
+
+                    if (existingIndex !== -1) {
+                        lagerListe[existingIndex] = item;
+                        geaendert++;
+                    } else {
+                        lagerListe.push(item);
+                        hinzugefuegt++;
+                    }
+                }
+            }
+
+            speichereLagerDaten(lagerListe);
+            if (event.target) event.target.value = '';
+            renderLagerView();
+            alert(`Import abgeschlossen!\n- ${hinzugefuegt} neue Artikel hinzugefügt\n- ${geaendert} bestehende Artikel aktualisiert`);
+        };
+
+        reader.readAsText(file, 'UTF-8');
+    }
+
     function exportLagerCSV() {
         const lager = holeLagerDaten();
         if (lager.length === 0) {
@@ -383,66 +448,12 @@
         URL.revokeObjectURL(link.href);
     }
 
-    function importLagerCSV(event) {
-        const file = event.target ? event.target.files[0] : null;
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const text = e.target.result;
-            const zeilen = text.split(/\r\n|\n/);
-            if (zeilen.length < 2) return;
-
-            let lagerListe = holeLagerDaten();
-            let importKount = 0;
-
-            for (let i = 1; i < zeilen.length; i++) {
-                const zeile = zeilen[i].trim();
-                if (!zeile) continue;
-
-                const spalten = zeile.split(';');
-                if (spalten.length >= 3) {
-                    const id = spalten[0] ? spalten[0].trim() : Date.now().toString() + '_' + i;
-                    const artikelnummer = spalten[1] ? spalten[1].trim() : '';
-                    const hersteller = spalten[2] ? spalten[2].trim() : '';
-                    const bezeichnung = spalten[3] ? spalten[3].trim() : '';
-
-                    if (!bezeichnung) continue;
-
-                    const kategorie = spalten[4] ? spalten[4].trim() : '';
-                    const groesse = spalten[5] ? spalten[5].trim() : '';
-                    const zustand = (spalten[6] && spalten[6].trim().toLowerCase() === 'gebraucht') ? 'Gebraucht' : 'Neu';
-                    const bestand = parseInt(spalten[7], 10) || 0;
-                    const mindestbestand = parseInt(spalten[8], 10) || 0;
-                    const sollbestand = parseInt(spalten[9], 10) || 0;
-
-                    const item = {
-                        id, artikelnummer, hersteller, bezeichnung, name: bezeichnung,
-                        kategorie, groesse, zustand, bestand, mindestbestand, sollbestand
-                    };
-
-                    const index = lagerListe.findIndex(l => String(l.id) === String(id));
-                    if (index !== -1) lagerListe[index] = item;
-                    else lagerListe.push(item);
-                    importKount++;
-                }
-            }
-
-            speichereLagerDaten(lagerListe);
-            if (event.target) event.target.value = '';
-            renderLagerView();
-            alert(`${importKount} Artikel erfolgreich importiert/aktualisiert.`);
-        };
-
-        reader.readAsText(file, 'UTF-8');
-    }
-
     function druckeLagerListe() {
         window.print();
     }
 
     // ------------------------------------------
-    // Alle Funktionsnamen global registrieren
+    // Globale Verknüpfungen (alle gängigen Namen)
     // ------------------------------------------
     window.ladeLager = renderLagerView;
     window.renderLagerView = renderLagerView;
