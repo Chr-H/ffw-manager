@@ -1,6 +1,6 @@
 /* ==========================================
    Lager-Verwaltung (lager.js) - Vollständige Version
-   Inkl. Hersteller, Zustand, flexibler Container-Findung & Druckfunktion
+   Inkl. herstellerunabhängiger Modal-Steuerung
    ========================================== */
 
 (function () {
@@ -40,7 +40,6 @@
             .replace(/"/g, '&quot;');
     }
 
-    // Automatische Suche nach dem passenden HTML-Container
     function findeLagerContainer() {
         const moeglicheIDs = [
             'lager-tabelle',
@@ -59,14 +58,62 @@
     }
 
     // ------------------------------------------
+    // Sichere Modal-Steuerung (Funktioniert IMMER)
+    // ------------------------------------------
+    function zeigeModal(modalEl) {
+        if (!modalEl) return;
+        
+        // 1. Versuche Bootstrap 5
+        if (window.bootstrap && window.bootstrap.Modal) {
+            let instance = bootstrap.Modal.getInstance(modalEl);
+            if (!instance) instance = new bootstrap.Modal(modalEl);
+            instance.show();
+            return;
+        }
+        // 2. Versuche jQuery / Bootstrap 4
+        if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
+            window.jQuery(modalEl).modal('show');
+            return;
+        }
+        // 3. Reines JavaScript Fallback (ohne externe Bibliotheken)
+        modalEl.style.display = 'block';
+        modalEl.classList.add('show');
+        document.body.classList.add('modal-open');
+
+        let backdrop = document.getElementById('custom-modal-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'custom-modal-backdrop';
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
+    }
+
+    function schliesseModal(modalEl) {
+        if (!modalEl) return;
+
+        if (window.bootstrap && window.bootstrap.Modal) {
+            const instance = bootstrap.Modal.getInstance(modalEl);
+            if (instance) instance.hide();
+        }
+        if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
+            window.jQuery(modalEl).modal('hide');
+        }
+
+        modalEl.style.display = 'none';
+        modalEl.classList.remove('show');
+        document.body.classList.remove('modal-open');
+
+        const backdrop = document.getElementById('custom-modal-backdrop');
+        if (backdrop) backdrop.remove();
+    }
+
+    // ------------------------------------------
     // Hauptfunktion: Rendering der Lager-Tabelle
     // ------------------------------------------
     function renderLagerView() {
         const container = findeLagerContainer();
-        if (!container) {
-            console.warn("Lager-Container konnte im DOM nicht gefunden werden.");
-            return;
-        }
+        if (!container) return;
 
         const lager = holeLagerDaten();
 
@@ -155,7 +202,7 @@
     }
 
     // ------------------------------------------
-    // Modal zum Erstellen / Bearbeiten
+    // Modal anzeigen (Erstellen / Bearbeiten)
     // ------------------------------------------
     function openLagerAkteModal(id = null) {
         const lager = holeLagerDaten();
@@ -170,10 +217,10 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="lagerModalTitle"></h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                            <button type="button" class="btn-close" onclick="schliesseLagerModal()" aria-label="Schließen"></button>
                         </div>
                         <div class="modal-body">
-                            <form id="lagerAkteForm">
+                            <form id="lagerAkteForm" onsubmit="event.preventDefault(); speichereLagerItem();">
                                 <input type="hidden" id="lager-id">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
@@ -223,7 +270,7 @@
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                            <button type="button" class="btn btn-secondary" onclick="schliesseLagerModal()">Abbrechen</button>
                             <button type="button" class="btn btn-primary" onclick="speichereLagerItem()">Speichern</button>
                         </div>
                     </div>
@@ -245,10 +292,12 @@
         document.getElementById('lager-mindestbestand').value = item ? (item.mindestbestand ?? item.mindestmenge ?? 0) : 0;
         document.getElementById('lager-sollbestand').value = item ? (item.sollbestand ?? 0) : 0;
 
-        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-            const bsModal = new bootstrap.Modal(modalEl);
-            bsModal.show();
-        }
+        zeigeModal(modalEl);
+    }
+
+    function schliesseLagerModal() {
+        const modalEl = document.getElementById('lagerAkteModal');
+        schliesseModal(modalEl);
     }
 
     // ------------------------------------------
@@ -288,13 +337,7 @@
         }
 
         speichereLagerDaten(lager);
-
-        const modalEl = document.getElementById('lagerAkteModal');
-        if (modalEl && typeof bootstrap !== 'undefined') {
-            const bsModal = bootstrap.Modal.getInstance(modalEl);
-            if (bsModal) bsModal.hide();
-        }
-
+        schliesseLagerModal();
         renderLagerView();
     }
 
@@ -307,7 +350,7 @@
     }
 
     // ------------------------------------------
-    // CSV Export & Import & Drucken
+    // CSV Export, Import & Drucken
     // ------------------------------------------
     function exportLagerCSV() {
         const lager = holeLagerDaten();
@@ -398,22 +441,22 @@
         window.print();
     }
 
-    // Global verknüpfen
+    // ------------------------------------------
+    // Alle Funktionsnamen global registrieren
+    // ------------------------------------------
     window.ladeLager = renderLagerView;
     window.renderLagerView = renderLagerView;
     window.openLagerAkteModal = openLagerAkteModal;
+    window.openLagerModal = openLagerAkteModal;
+    window.neuerLagerArtikel = openLagerAkteModal;
+    window.schliesseLagerModal = schliesseLagerModal;
     window.speichereLagerItem = speichereLagerItem;
     window.loescheLagerItem = loescheLagerItem;
     window.exportLagerCSV = exportLagerCSV;
     window.importLagerCSV = importLagerCSV;
     window.druckeLagerListe = druckeLagerListe;
 
-    // Automatischer Aufruf beim Laden und Klick
+    // Automatischer Aufruf
     document.addEventListener('DOMContentLoaded', renderLagerView);
-    document.addEventListener('click', function (e) {
-        if (e.target && e.target.closest && e.target.closest('a, button, li')) {
-            setTimeout(renderLagerView, 50);
-        }
-    });
 
 })();
