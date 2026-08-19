@@ -65,7 +65,7 @@ function importLagerCSV(inputOrEvent) {
     const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
     if (!file) return;
 
-    // FRAGE: Soll der alten Bestand überschrieben werden?
+    // FRAGE: Soll der alte Bestand überschrieben werden?
     const meeresErsetzen = confirm(
         "Möchtest du den vorhandenen Lagerbestand KOMPLETT ÜBERSCHREIBEN?\n\n" +
         "• OK = Bisherigen Bestand löschen und nur die Datei-Artikel laden\n" +
@@ -89,15 +89,23 @@ function importLagerCSV(inputOrEvent) {
 
         const delim = zeilen[0].includes(';') ? ';' : ',';
 
-        // Spalten-Indizes anhand der Kopfzeile dynamisch ermitteln
+        // 1. Spalten-Indizes anhand der Kopfzeile exakt ermitteln
         const headerCols = parseCSVLine(zeilen[0].toLowerCase(), delim);
         
         const idxId = headerCols.findIndex(h => h === "id");
-        const idxArtNr = headerCols.findIndex(h => h.includes("art") || h.includes("nummer"));
+        const idxArtNr = headerCols.findIndex(h => h.includes("art") || h.includes("nummer") || h.includes("numme"));
         const idxHersteller = headerCols.findIndex(h => h.includes("herstell"));
-        const idxBez = headerCols.findIndex(h => h.includes("bezeichn") || h.includes("name") || h.includes("artikel"));
-        const idxKat = headerCols.findIndex(h => h.includes("kategori"));
-        const idxGroesse = headerCols.findIndex(h => h.includes("größ") || h.includes("groess"));
+        
+        // Exakte Erkennung der Bezeichnung (schließt Spalten wie "Artikelnummer" aus)
+        const idxBez = headerCols.findIndex(h => 
+            h.includes("bezeichn") || 
+            h.includes("name") || 
+            h.includes("produkt") || 
+            (h.includes("artikel") && !h.includes("numm"))
+        );
+        
+        const idxKat = headerCols.findIndex(h => h.includes("kategori") || h.includes("kategorie"));
+        const idxGroesse = headerCols.findIndex(h => h.includes("größ") || h.includes("groess") || h.includes("größe"));
         const idxZustand = headerCols.findIndex(h => h.includes("zustand"));
         const idxBestand = headerCols.findIndex(h => h === "bestand" || h.includes("ist"));
         const idxMindest = headerCols.findIndex(h => h.includes("mindest"));
@@ -113,7 +121,9 @@ function importLagerCSV(inputOrEvent) {
 
             const rawId = idxId !== -1 ? (spalten[idxId] || '').trim() : '';
             const artNr = idxArtNr !== -1 ? (spalten[idxArtNr] || '').trim() : '';
-            const bezeichnung = idxBez !== -1 ? (spalten[idxBez] || '').trim() : '';
+            
+            // Fallback: Falls keine Bezeichnung-Spalte gefunden wurde, nimm Spalte 3 (Index 2)
+            let bezeichnung = idxBez !== -1 ? (spalten[idxBez] || '').trim() : (spalten[2] || '').trim();
 
             // Zeile überspringen, wenn weder Art.-Nr. noch Bezeichnung da sind
             if (!artNr && !bezeichnung) continue;
