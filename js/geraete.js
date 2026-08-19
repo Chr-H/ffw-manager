@@ -400,7 +400,7 @@ function loescheGeraet(id) {
 }
 
 // ------------------------------------------
-// CSV-EXPORT FÜR GERÄTEVERWALTUNG
+// CSV-EXPORT (Mit einheitlichem Spaltenaufbau)
 // ------------------------------------------
 function exportGeraeteCSV() {
     const daten = getGeraete();
@@ -410,7 +410,7 @@ function exportGeraeteCSV() {
         return;
     }
 
-    const headers = ["ID", "Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Status", "Letzte Prüfung", "Nächste Prüfung", "Erstellt Von", "Bearbeitet Von"];
+    const headers = ["ID", "Inventarnummer", "Bezeichnung", "Kategorie", "Hersteller", "Standort", "Status", "Letzte Prüfung", "Prüfintervall", "Nächste Prüfung"];
     const rows = daten.map(g => [
         g.id || '',
         g.inventarnummer || '',
@@ -420,9 +420,8 @@ function exportGeraeteCSV() {
         g.standort || '',
         g.status || '',
         g.letztePruefung || '',
-        g.naechstePruefung || '',
-        g.erstelltVon || '',
-        g.bearbeitetVon || ''
+        g.pruefintervall || 12,
+        g.naechstePruefung || ''
     ]);
 
     const heute = new Date().toISOString().split('T')[0];
@@ -445,30 +444,8 @@ function exportGeraeteCSV() {
 }
 
 // ------------------------------------------
-// CSV-IMPORT FÜR GERÄTEVERWALTUNG
+// CSV-IMPORT (Intelligente Spaltenerkennung)
 // ------------------------------------------
-function parseCSVLine(line, delimiter) {
-    line = line.replace(/^\uFEFF/, '');
-    
-    let values = [];
-    let cur = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-        let char = line[i];
-        if (char === '"') {
-            inQuotes = !inQuotes;
-        } else if (char === delimiter && !inQuotes) {
-            values.push(cur.trim().replace(/^"|"$/g, ''));
-            cur = '';
-        } else {
-            cur += char;
-        }
-    }
-    values.push(cur.trim().replace(/^"|"$/g, ''));
-    return values;
-}
-
 function importGeraeteCSV(inputOrEvent) {
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
@@ -491,15 +468,28 @@ function importGeraeteCSV(inputOrEvent) {
             text = text.slice(1);
         }
 
-        const zeilen = text.split(/\r\n|\n/);
+        const zeilen = text.split(/\r\n|\n/).map(z => z.trim()).filter(z => z.length > 0);
         if (zeilen.length < 2) {
-            alert("⚠️ Die CSV-Datei enthält keine verwertbaren Daten oder Zeilen.");
+            alert("⚠️ Die CSV-Datei enthält keine verwertbaren Daten.");
             if (inputElement) inputElement.value = '';
             return;
         }
 
-        const headerZeile = zeilen[0];
-        const delim = headerZeile.includes(';') ? ';' : ',';
+        const delim = zeilen[0].includes(';') ? ';' : ',';
+
+        // Spaltenindex dynamisch über die Kopfzeile ermitteln
+        const headerCols = parseCSVLine(zeilen[0].toLowerCase(), delim);
+        
+        const idxId = headerCols.findIndex(h => h === "id");
+        const idxInv = headerCols.findIndex(h => h.includes("inventar"));
+        const idxBez = headerCols.findIndex(h => h.includes("bezeichn") || h.includes("name") || h.includes("gerät"));
+        const idxKat = headerCols.findIndex(h => h.includes("kategori"));
+        const idxHer = headerCols.findIndex(h => h.includes("herstell"));
+        const idxSta = headerCols.findIndex(h => h.includes("standort"));
+        const idxStat = headerCols.findIndex(h => h.includes("status"));
+        const idxLpz = headerCols.findIndex(h => h.includes("letzte"));
+        const idxInt = headerCols.findIndex(h => h.includes("intervall"));
+        const idxNpz = headerCols.findIndex(h => h.includes("nächste") || h.includes("naechste"));
 
         let geraeteListe = ladeDaten("geraete") || [];
         let hinzugefuegt = 0;
@@ -508,62 +498,57 @@ function importGeraeteCSV(inputOrEvent) {
         const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
 
         for (let i = 1; i < zeilen.length; i++) {
-            const zeile = zeilen[i].trim();
-            if (!zeile) continue;
+            const spalten = parseCSVLine(zeilen[i], delim);
 
-            const spalten = parseCSVLine(zeile, delim);
+            const rawId = idxId !== -1 ? (spalten[idxId] || '').trim() : '';
+            const inventar = idxInv !== -1 ? (spalten[idxInv] || '').trim() : (idxId === -1 ? (spalten[0] || '').trim() : '');
+            const bezeichnung = idxBez !== -1 ? (spalten[idxBez] || '').trim() : (idxId === -1 ? (spalten[1] || '').trim() : '');
 
-            if (spalten.length >= 2) {
-                const rawId = (spalten[0] || '').trim();
-                const inventar = (spalten[1] || '').trim();
-                const bezeichnung = (spalten[2] || '').trim();
+            // Abbrechen, wenn Zeile komplett leer ist
+            if (!inventar && !bezeichnung) continue;
 
-                // Falls Inventarnummer UND Bezeichnung fehlen, Zeile überspringen
-                if (!inventar && !bezeichnung) continue;
+            const kategorie = idxKat !== -1 ? spalten[idxKat] : 'Sonstiges';
+            const hersteller = idxHer !== -1 ? spalten[idxHer] : '';
+            const standort = idxSta !== -1 ? spalten[idxSta] : '';
+            const status = idxStat !== -1 ? spalten[idxStat] : 'Einsatzbereit';
+            const letztePruefung = idxLpz !== -1 ? spalten[idxLpz] : '';
+            const pruefintervall = idxInt !== -1 ? (parseInt(spalten[idxInt], 10) || 12) : 12;
+            const naechstePruefung = idxNpz !== -1 && spalten[idxNpz] ? spalten[idxNpz] : berechneNaechstePruefung(letztePruefung, pruefintervall);
 
-                const kategorie = spalten[3] || 'Sonstiges';
-                const hersteller = spalten[4] || '';
-                const standort = spalten[5] || '';
-                const status = spalten[6] || 'Einsatzbereit';
-                const letztePruefung = spalten[7] || '';
-                const pruefintervall = parseInt(spalten[8], 10) || 12;
-                const naechstePruefung = spalten[9] || berechneNaechstePruefung(letztePruefung, pruefintervall);
+            // Strikter Abgleich: Nur abgleichen, wenn Daten vorhanden sind
+            let existingIndex = -1;
+            if (rawId || inventar) {
+                existingIndex = geraeteListe.findIndex(g => {
+                    const matchId = rawId !== '' && String(g.id).toLowerCase() === rawId.toLowerCase();
+                    const matchInv = inventar !== '' && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase();
+                    return matchId || matchInv;
+                });
+            }
 
-                // Nur abgleichen, wenn ID oder Inventarnummer wirklich befüllt sind
-                let existingIndex = -1;
-                if (rawId !== '' || inventar !== '') {
-                    existingIndex = geraeteListe.findIndex(g => {
-                        const matchId = rawId !== '' && String(g.id).toLowerCase() === rawId.toLowerCase();
-                        const matchInv = inventar !== '' && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase();
-                        return matchId || matchInv;
-                    });
-                }
+            const item = {
+                id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
+                inventarnummer: inventar || `INV-${Date.now()}_${i}`,
+                bezeichnung: bezeichnung || 'Unbenanntes Gerät',
+                kategorie: kategorie || 'Sonstiges',
+                hersteller: hersteller || '',
+                standort: standort || '',
+                status: status || 'Einsatzbereit',
+                erstinbetriebnahme: '',
+                letztePruefung: letztePruefung || '',
+                pruefintervall: pruefintervall,
+                naechstePruefung: naechstePruefung || '',
+                historie: existingIndex !== -1 ? (geraeteListe[existingIndex].historie || []) : [],
+                erstellt: existingIndex !== -1 ? (geraeteListe[existingIndex].erstellt || jetztZeitstempel) : jetztZeitstempel,
+                erstelltVon: existingIndex !== -1 ? (geraeteListe[existingIndex].erstelltVon || protokollUser) : `${protokollUser} (CSV-Import)`,
+                bearbeitetVon: `${protokollUser} (CSV-Import am ${jetztZeitstempel})`
+            };
 
-                const item = {
-                    id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
-                    inventarnummer: inventar || `INV-${Date.now()}_${i}`,
-                    bezeichnung: bezeichnung || 'Unbenanntes Gerät',
-                    kategorie: kategorie,
-                    hersteller: hersteller,
-                    standort: standort,
-                    status: status,
-                    erstinbetriebnahme: '',
-                    letztePruefung: letztePruefung,
-                    pruefintervall: pruefintervall,
-                    naechstePruefung: naechstePruefung,
-                    historie: existingIndex !== -1 ? (geraeteListe[existingIndex].historie || []) : [],
-                    erstellt: existingIndex !== -1 ? (geraeteListe[existingIndex].erstellt || jetztZeitstempel) : jetztZeitstempel,
-                    erstelltVon: existingIndex !== -1 ? (geraeteListe[existingIndex].erstelltVon || protokollUser) : `${protokollUser} (CSV-Import)`,
-                    bearbeitetVon: `${protokollUser} (CSV-Import am ${jetztZeitstempel})`
-                };
-
-                if (existingIndex !== -1) {
-                    geraeteListe[existingIndex] = item;
-                    geaendert++;
-                } else {
-                    geraeteListe.push(item);
-                    hinzugefuegt++;
-                }
+            if (existingIndex !== -1) {
+                geraeteListe[existingIndex] = item;
+                geaendert++;
+            } else {
+                geraeteListe.push(item);
+                hinzugefuegt++;
             }
         }
 
@@ -575,7 +560,7 @@ function importGeraeteCSV(inputOrEvent) {
 
         if (inputElement) inputElement.value = '';
 
-        alert(`✅ Geräte-Import abgeschlossen!\n\n• ${hinzugefuegt} Geräte neu angelegt\n• ${geaendert} bestehende Geräte aktualisiert`);
+        alert(`✅ Import erfolgreich abgeschlossen!\n\n• ${hinzugefuegt} Geräte neu angelegt\n• ${geaendert} Geräte aktualisiert`);
     };
 
     reader.onerror = function() {
