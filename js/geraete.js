@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.5)
+// FFW Manager - Geräteverwaltung (v0.6.6)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -102,7 +102,8 @@ function neuesGeraet() {
     const elKat = document.getElementById("kategorie");
     const elHer = document.getElementById("hersteller");
     const elStat = document.getElementById("status");
-    const elSta = document.getElementById("standort");
+    // WICHTIG: Auslesen von Standort (funktioniert nun für <select> und <input>)
+    const elSta = document.getElementById("standort") || document.getElementById("geraet-standort");
     const elErst = document.getElementById("erstinbetriebnahme");
     const elLpz = document.getElementById("letztePruefung");
     const elInt = document.getElementById("pruefintervall");
@@ -112,7 +113,7 @@ function neuesGeraet() {
     const kategorie = elKat ? elKat.value : "";
     const hersteller = elHer ? elHer.value.trim() : "";
     const status = elStat ? elStat.value : "Einsatzbereit";
-    const standort = elSta ? elSta.value.trim() : "";
+    const standort = elSta ? elSta.value : ""; // Vollständigen String inklusive GR1-GR7 übernehmen!
     const erstinbetriebnahme = elErst ? elErst.value : "";
     const letztePruefung = elLpz ? elLpz.value : "";
     const pruefintervall = elInt ? elInt.value : "12";
@@ -184,7 +185,7 @@ function neuesGeraet() {
 
 function resetFormular() {
     bearbeitungsId = null;
-    const felder = ["inventar", "bezeichnung", "hersteller", "kategorie", "standort", "erstinbetriebnahme", "letztePruefung"];
+    const felder = ["inventar", "bezeichnung", "hersteller", "kategorie", "standort", "geraet-standort", "erstinbetriebnahme", "letztePruefung"];
     felder.forEach(f => {
         const el = document.getElementById(f);
         if (el) el.value = "";
@@ -213,8 +214,9 @@ function filterGeraete() {
     const gefiltert = geraete.filter(g => {
         const bez = (g.bezeichnung || "").toLowerCase();
         const inv = (g.inventarnummer || "").toLowerCase();
+        const std = (g.standort || "").toLowerCase();
 
-        const sucheOK = bez.includes(suchbegriff) || inv.includes(suchbegriff);
+        const sucheOK = bez.includes(suchbegriff) || inv.includes(suchbegriff) || std.includes(suchbegriff);
         const kategorieOK = kategorie === "" || g.kategorie === kategorie;
         
         let statusOK = true;
@@ -396,7 +398,11 @@ function bearbeiteGeraet(id) {
     if (document.getElementById("kategorie")) document.getElementById("kategorie").value = g.kategorie || "";
     if (document.getElementById("hersteller")) document.getElementById("hersteller").value = g.hersteller || "";
     if (document.getElementById("status")) document.getElementById("status").value = g.status || "Einsatzbereit";
-    if (document.getElementById("standort")) document.getElementById("standort").value = g.standort || "";
+    
+    // WICHTIG: Setzt das Standort-Select/Input auf den vollständigen Wert zurück
+    const elSta = document.getElementById("standort") || document.getElementById("geraet-standort");
+    if (elSta) elSta.value = g.standort || "";
+
     if (document.getElementById("erstinbetriebnahme")) document.getElementById("erstinbetriebnahme").value = g.erstinbetriebnahme || "";
     if (document.getElementById("letztePruefung")) document.getElementById("letztePruefung").value = g.letztePruefung || "";
     if (document.getElementById("pruefintervall")) document.getElementById("pruefintervall").value = g.pruefintervall || "12";
@@ -435,7 +441,6 @@ function exportGeraeteCSV() {
         daten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || [];
     }
 
-    // Fallback auf ladeGeraete, falls vorhanden
     if ((!daten || daten.length === 0) && typeof ladeGeraete === "function") {
         daten = ladeGeraete() || [];
     }
@@ -445,7 +450,6 @@ function exportGeraeteCSV() {
         return;
     }
 
-    // 1. Spaltenüberschriften korrigieren ("Inventarnummer" statt "Seriennummer")
     const headers = [
         "ID", 
         "Inventarnummer", 
@@ -458,10 +462,9 @@ function exportGeraeteCSV() {
         "Bemerkung"
     ];
 
-    // 2. Datenzeilen zuordnen
     const rows = daten.map(g => [
         g.id || '',
-        g.inventarnummer || g.inventar || g.seriennummer || '', // Priorität auf inventarnummer
+        g.inventarnummer || g.inventar || g.seriennummer || '',
         g.bezeichnung || g.name || '',
         g.kategorie || g.typ || '',
         g.hersteller || '',
@@ -471,7 +474,6 @@ function exportGeraeteCSV() {
         g.bemerkung || g.notiz || ''
     ]);
 
-    // 3. CSV-Dateiinhalt bauen (mit UTF-8 BOM für korrekte Umlaute in Excel)
     const csvLines = [headers.join(";")];
     rows.forEach(r => {
         csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"));
@@ -480,7 +482,6 @@ function exportGeraeteCSV() {
     const heute = new Date().toISOString().split('T')[0];
     const dateiname = `Geraeteliste_FFW_${heute}.csv`;
 
-    // 4. Direktes Herunterladen erzwingen (kein .txt-Problem mehr)
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
@@ -499,7 +500,6 @@ function exportGeraeteCSV() {
 // ------------------------------------------
 function importGeraeteCSV(inputElement) {
     try {
-        // 0. Schreibschutz-Prüfung
         if (typeof istEditor === "function" && !istEditor()) {
             alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
             if (inputElement && inputElement.target) inputElement.target.value = "";
@@ -507,7 +507,6 @@ function importGeraeteCSV(inputElement) {
             return;
         }
 
-        // Element / Event handhaben
         let el = inputElement;
         if (inputElement && inputElement.target) el = inputElement.target;
 
@@ -517,7 +516,6 @@ function importGeraeteCSV(inputElement) {
             return;
         }
 
-        // 1. Nachfragen: Überschreiben oder Ergänzen?
         const moechteErsetzen = confirm(
             "Möchtest du die vorhandene Geräteliste KOMPLETT ÜBERSCHREIBEN?\n\n" +
             "• OK = Bisherige Geräte löschen und nur neue laden\n" +
@@ -546,7 +544,7 @@ function importGeraeteCSV(inputElement) {
         reader.onload = function(e) {
             try {
                 let text = e.target.result;
-                if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1); // BOM entfernen
+                if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1);
 
                 const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
                 if (zeilen.length < 2) {
@@ -555,7 +553,6 @@ function importGeraeteCSV(inputElement) {
                     return;
                 }
 
-                // Trennzeichen ermitteln (; oder ,)
                 const trenner = zeilen[0].includes(";") ? ";" : ",";
                 const rawHeaders = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
@@ -566,7 +563,6 @@ function importGeraeteCSV(inputElement) {
                     });
                 };
 
-                // Spalten-Zuordnung
                 const idxId = findIndex("id");
                 const idxInv = findIndex("inventarnummer", "invnr", "inv", "seriennummer");
                 const idxBez = findIndex("bezeichnung", "name", "gerät");
@@ -593,7 +589,7 @@ function importGeraeteCSV(inputElement) {
                     const invNr = idxInv !== -1 ? werte[idxInv] : "";
                     const bez = idxBez !== -1 ? werte[idxBez] : "";
 
-                    if (!bez && !invNr) continue; // Wenn weder Name noch Inv-Nr da ist, Zeile überspringen
+                    if (!bez && !invNr) continue;
 
                     let targetIndex = -1;
                     if (!moechteErsetzen) {
@@ -628,14 +624,12 @@ function importGeraeteCSV(inputElement) {
                     }
                 }
 
-                // Speichern & Synchronisieren
                 if (typeof speichereGeraete === "function") speichereGeraete(geraeteDaten);
                 if (typeof speichereDaten === "function") speichereDaten("geraete", geraeteDaten);
                 
                 localStorage.setItem("geraete", JSON.stringify(geraeteDaten));
                 localStorage.setItem("ffw_geraete", JSON.stringify(geraeteDaten));
 
-                // Ansicht aktualisieren
                 if (typeof renderGeraeteView === "function") renderGeraeteView();
                 if (typeof renderGeraete === "function") renderGeraete();
                 if (typeof ladeGeraete === "function") ladeGeraete();
@@ -657,6 +651,7 @@ function importGeraeteCSV(inputElement) {
         alert("❌ Fehler beim Starten des Imports:\n" + err.message);
     }
 }
+
 document.addEventListener("DOMContentLoaded", () => {
     ladeGeraete();
     filterGeraete();
