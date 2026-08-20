@@ -497,131 +497,166 @@ function exportGeraeteCSV() {
 // ------------------------------------------
 // CSV-IMPORT (Intelligente Spaltenerkennung)
 // ------------------------------------------
-function importGeraeteCSV(inputOrEvent) {
-    if (typeof istEditor === "function" && !istEditor()) {
-        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
-        return;
-    }
-
-    let inputElement = inputOrEvent;
-    if (inputOrEvent && inputOrEvent.target) {
-        inputElement = inputOrEvent.target;
-    }
-
-    const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        let text = e.target.result;
-        
-        if (text.startsWith('\uFEFF')) {
-            text = text.slice(1);
-        }
-
-        const zeilen = text.split(/\r\n|\n/).map(z => z.trim()).filter(z => z.length > 0);
-        if (zeilen.length < 2) {
-            alert("⚠️ Die CSV-Datei enthält keine verwertbaren Daten.");
-            if (inputElement) inputElement.value = '';
+function importGeraeteCSV(inputElement) {
+    try {
+        // 0. Schreibschutz-Prüfung
+        if (typeof istEditor === "function" && !istEditor()) {
+            alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
+            if (inputElement && inputElement.target) inputElement.target.value = "";
+            else if (inputElement) inputElement.value = "";
             return;
         }
 
-        const delim = zeilen[0].includes(';') ? ';' : ',';
+        // Element / Event handhaben
+        let el = inputElement;
+        if (inputElement && inputElement.target) el = inputElement.target;
 
-        // Spaltenindex dynamisch über die Kopfzeile ermitteln
-        const headerCols = parseCSVLine(zeilen[0].toLowerCase(), delim);
-        
-        const idxId = headerCols.findIndex(h => h === "id");
-        const idxInv = headerCols.findIndex(h => h.includes("inventar"));
-        const idxBez = headerCols.findIndex(h => h.includes("bezeichn") || h.includes("name") || h.includes("gerät"));
-        const idxKat = headerCols.findIndex(h => h.includes("kategori"));
-        const idxHer = headerCols.findIndex(h => h.includes("herstell"));
-        const idxSta = headerCols.findIndex(h => h.includes("standort"));
-        const idxStat = headerCols.findIndex(h => h.includes("status"));
-        const idxLpz = headerCols.findIndex(h => h.includes("letzte"));
-        const idxInt = headerCols.findIndex(h => h.includes("intervall"));
-        const idxNpz = headerCols.findIndex(h => h.includes("nächste") || h.includes("naechste"));
+        const file = (el && el.files) ? el.files[0] : null;
+        if (!file) {
+            alert("⚠️ Keine Datei ausgewählt.");
+            return;
+        }
 
-        let geraeteListe = ladeDaten("geraete") || [];
-        let hinzugefuegt = 0;
-        let geaendert = 0;
-        const protokollUser = hohleBenutzerProtokollText();
-        const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
+        // 1. Nachfragen: Überschreiben oder Ergänzen?
+        const moechteErsetzen = confirm(
+            "Möchtest du die vorhandene Geräteliste KOMPLETT ÜBERSCHREIBEN?\n\n" +
+            "• OK = Bisherige Geräte löschen und nur neue laden\n" +
+            "• Abbrechen = Neue Geräte zur bestehenden Liste hinzufügen / aktualisieren"
+        );
 
-        for (let i = 1; i < zeilen.length; i++) {
-            const spalten = parseCSVLine(zeilen[i], delim);
-
-            const rawId = idxId !== -1 ? (spalten[idxId] || '').trim() : '';
-            const inventar = idxInv !== -1 ? (spalten[idxInv] || '').trim() : (idxId === -1 ? (spalten[0] || '').trim() : '');
-            const bezeichnung = idxBez !== -1 ? (spalten[idxBez] || '').trim() : (idxId === -1 ? (spalten[1] || '').trim() : '');
-
-            // Abbrechen, wenn Zeile komplett leer ist
-            if (!inventar && !bezeichnung) continue;
-
-            const kategorie = idxKat !== -1 ? spalten[idxKat] : 'Sonstiges';
-            const hersteller = idxHer !== -1 ? spalten[idxHer] : '';
-            const standort = idxSta !== -1 ? spalten[idxSta] : '';
-            const status = idxStat !== -1 ? spalten[idxStat] : 'Einsatzbereit';
-            const letztePruefung = idxLpz !== -1 ? spalten[idxLpz] : '';
-            const pruefintervall = idxInt !== -1 ? (parseInt(spalten[idxInt], 10) || 12) : 12;
-            const naechstePruefung = idxNpz !== -1 && spalten[idxNpz] ? spalten[idxNpz] : berechneNaechstePruefung(letztePruefung, pruefintervall);
-
-            // Strikter Abgleich: Nur abgleichen, wenn Daten vorhanden sind
-            let existingIndex = -1;
-            if (rawId || inventar) {
-                existingIndex = geraeteListe.findIndex(g => {
-                    const matchId = rawId !== '' && String(g.id).toLowerCase() === rawId.toLowerCase();
-                    const matchInv = inventar !== '' && (g.inventarnummer || '').toLowerCase() === inventar.toLowerCase();
-                    return matchId || matchInv;
-                });
-            }
-
-            const item = {
-                id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
-                inventarnummer: rawInvNr ? String(rawInvNr).trim() : "",
-                bezeichnung: bezeichnung || 'Unbenanntes Gerät',
-                kategorie: kategorie || 'Sonstiges',
-                hersteller: hersteller || '',
-                standort: standort || '',
-                status: status || 'Einsatzbereit',
-                erstinbetriebnahme: '',
-                letztePruefung: letztePruefung || '',
-                pruefintervall: pruefintervall,
-                naechstePruefung: naechstePruefung || '',
-                historie: existingIndex !== -1 ? (geraeteListe[existingIndex].historie || []) : [],
-                erstellt: existingIndex !== -1 ? (geraeteListe[existingIndex].erstellt || jetztZeitstempel) : jetztZeitstempel,
-                erstelltVon: existingIndex !== -1 ? (geraeteListe[existingIndex].erstelltVon || protokollUser) : `${protokollUser} (CSV-Import)`,
-                bearbeitetVon: `${protokollUser} (CSV-Import am ${jetztZeitstempel})`
-            };
-
-            if (existingIndex !== -1) {
-                geraeteListe[existingIndex] = item;
-                geaendert++;
+        let geraeteDaten = [];
+        if (!moechteErsetzen) {
+            if (typeof ladeGeraete === "function") {
+                geraeteDaten = ladeGeraete() || [];
+            } else if (typeof ladeDaten === "function") {
+                geraeteDaten = ladeDaten("geraete") || [];
             } else {
-                geraeteListe.push(item);
-                hinzugefuegt++;
+                const raw = localStorage.getItem("geraete") || "[]";
+                try { geraeteDaten = JSON.parse(raw); } catch(e) { geraeteDaten = []; }
             }
         }
 
-        geraete = geraeteListe;
-        speichereGeraete();
+        const reader = new FileReader();
         
-        if (typeof renderGeraeteView === "function") renderGeraeteView();
-        else filterGeraete();
+        reader.onerror = function() {
+            alert("❌ Fehler beim Lesen der Datei.");
+            if (el) el.value = "";
+        };
 
-        if (inputElement) inputElement.value = '';
+        reader.onload = function(e) {
+            try {
+                let text = e.target.result;
+                if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1); // BOM entfernen
 
-        alert(`✅ Import erfolgreich abgeschlossen!\n\n• ${hinzugefuegt} Geräte neu angelegt\n• ${geaendert} Geräte aktualisiert`);
-    };
+                const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
+                if (zeilen.length < 2) {
+                    alert("⚠️ Die CSV-Datei enthält keine verwertbaren Datenzeilen.");
+                    if (el) el.value = "";
+                    return;
+                }
 
-    reader.onerror = function() {
-        alert("❌ Fehler beim Lesen der CSV-Datei.");
-        if (inputElement) inputElement.value = '';
-    };
+                // Trennzeichen ermitteln (; oder ,)
+                const trenner = zeilen[0].includes(";") ? ";" : ",";
+                const rawHeaders = zeilen[0].split(trenner).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
-    reader.readAsText(file, 'UTF-8');
+                const findIndex = (...keywords) => {
+                    return rawHeaders.findIndex(h => {
+                        const cleanH = h.replace(/[^a-z0-9]/g, '');
+                        return keywords.some(kw => cleanH.includes(kw.toLowerCase().replace(/[^a-z0-9]/g, '')));
+                    });
+                };
+
+                // Spalten-Zuordnung
+                const idxId = findIndex("id");
+                const idxInv = findIndex("inventarnummer", "invnr", "inv", "seriennummer");
+                const idxBez = findIndex("bezeichnung", "name", "gerät");
+                const idxKat = findIndex("kategorie", "typ", "kat");
+                const idxHersteller = findIndex("hersteller");
+                const idxStandort = findIndex("standort", "fahrzeug");
+                const idxStatus = findIndex("status");
+                const idxLetzte = findIndex("letzte", "letztepruefung");
+                const idxIntervall = findIndex("intervall", "prüfintervall");
+                const idxNaechste = findIndex("naechste", "nächste", "fälligkeit");
+                const idxBemerkung = findIndex("bemerkung", "notiz");
+
+                let aktualisiert = 0;
+                let neuHinzugefuegt = 0;
+
+                for (let i = 1; i < zeilen.length; i++) {
+                    const werte = zeilen[i]
+                        .split(new RegExp(`${trenner}(?=(?:(?:[^"]*"){2})*[^"]*$)`))
+                        .map(w => w.replace(/^"|"$/g, '').trim());
+
+                    if (werte.length === 0 || werte.every(v => v === "")) continue;
+
+                    const rawId = idxId !== -1 ? werte[idxId] : "";
+                    const invNr = idxInv !== -1 ? werte[idxInv] : "";
+                    const bez = idxBez !== -1 ? werte[idxBez] : "";
+
+                    if (!bez && !invNr) continue; // Wenn weder Name noch Inv-Nr da ist, Zeile überspringen
+
+                    let targetIndex = -1;
+                    if (!moechteErsetzen) {
+                        targetIndex = geraeteDaten.findIndex(g => {
+                            if (!g) return false;
+                            const matchId = rawId && String(g.id).toLowerCase() === rawId.toLowerCase();
+                            const matchInv = invNr && String(g.inventarnummer || g.seriennummer || "").toLowerCase() === invNr.toLowerCase();
+                            return matchId || matchInv;
+                        });
+                    }
+
+                    const neuesGeraet = {
+                        id: (targetIndex !== -1) ? geraeteDaten[targetIndex].id : (rawId || `GER_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`),
+                        inventarnummer: invNr,
+                        bezeichnung: bez,
+                        kategorie: idxKat !== -1 ? werte[idxKat] : "Sonstiges",
+                        hersteller: idxHersteller !== -1 ? werte[idxHersteller] : "",
+                        standort: idxStandort !== -1 ? werte[idxStandort] : "",
+                        status: idxStatus !== -1 ? werte[idxStatus] : "Einsatzbereit",
+                        letztePruefung: idxLetzte !== -1 ? werte[idxLetzte] : "",
+                        pruefintervall: idxIntervall !== -1 ? (parseInt(werte[idxIntervall]) || 12) : 12,
+                        naechstePruefung: idxNaechste !== -1 ? werte[idxNaechste] : "",
+                        bemerkung: idxBemerkung !== -1 ? werte[idxBemerkung] : ""
+                    };
+
+                    if (targetIndex !== -1) {
+                        geraeteDaten[targetIndex] = neuesGeraet;
+                        aktualisiert++;
+                    } else {
+                        geraeteDaten.push(neuesGeraet);
+                        neuHinzugefuegt++;
+                    }
+                }
+
+                // Speichern & Synchronisieren
+                if (typeof speichereGeraete === "function") speichereGeraete(geraeteDaten);
+                if (typeof speichereDaten === "function") speichereDaten("geraete", geraeteDaten);
+                
+                localStorage.setItem("geraete", JSON.stringify(geraeteDaten));
+                localStorage.setItem("ffw_geraete", JSON.stringify(geraeteDaten));
+
+                // Ansicht aktualisieren
+                if (typeof renderGeraeteView === "function") renderGeraeteView();
+                if (typeof renderGeraete === "function") renderGeraete();
+                if (typeof ladeGeraete === "function") ladeGeraete();
+
+                window.dispatchEvent(new Event("geraeteGeaendert"));
+
+                alert(`✅ Geräte-Import erfolgreich!\n\n• ${neuHinzugefuegt} Geräte neu hinzugefügt\n• ${aktualisiert} Geräte aktualisiert`);
+                if (el) el.value = "";
+
+            } catch (err) {
+                alert("❌ Fehler beim Verarbeiten der CSV-Datei:\n" + err.message);
+                if (el) el.value = "";
+            }
+        };
+
+        reader.readAsText(file, "UTF-8");
+
+    } catch (err) {
+        alert("❌ Fehler beim Starten des Imports:\n" + err.message);
+    }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
     ladeGeraete();
     filterGeraete();
