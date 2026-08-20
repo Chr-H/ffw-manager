@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.4)
+// FFW Manager - Geräteverwaltung (v0.6.5)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -31,6 +31,32 @@ function hohleBenutzerProtokollText() {
         return `${name} (${aktuellerBenutzer.rolle.toUpperCase()})`;
     }
     return "Unbekannt / Admin";
+}
+
+// Hilfsfunktion: Parst CSV-Zeilen unter Berücksichtigung von Anführungszeichen
+function parseCSVLine(text, delimiter = ';') {
+    const pattern = new RegExp(
+        "(\\" + delimiter + "|\\r?\\n|\\r|^)" +
+        "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+        "([^\"\\" + delimiter + "\\r\\n]*))",
+        "gi"
+    );
+    const result = [];
+    let matches = null;
+    while ((matches = pattern.exec(text))) {
+        const matchedDelimiter = matches[1];
+        if (matchedDelimiter.length && matchedDelimiter !== delimiter) {
+            break;
+        }
+        let matchedValue;
+        if (matches[2]) {
+            matchedValue = matches[2].replace(new RegExp("\"\"", "g"), "\"");
+        } else {
+            matchedValue = matches[3];
+        }
+        result.push(matchedValue || '');
+    }
+    return result;
 }
 
 function ladeGeraete() {
@@ -399,43 +425,45 @@ function loescheGeraet(id) {
     }
 }
 
-function exportLagerCSV() {
-    const daten = typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []);
+// ------------------------------------------
+// GERÄTE CSV-EXPORT
+// ------------------------------------------
+function exportGeraeteCSV() {
+    const daten = ladeGeraete();
 
     if (!Array.isArray(daten) || daten.length === 0) {
-        alert("⚠️ Es wurden keine Lagerdaten zum Exportieren gefunden.");
+        alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
         return;
     }
 
-    // Saubere und einheitliche Spaltenreihenfolge
     const headers = [
         "ID", 
-        "Artikelnummer", 
+        "Inventarnummer", 
         "Bezeichnung", 
-        "Hersteller", 
         "Kategorie", 
-        "Größe", 
-        "Zustand", 
-        "Bestand", 
-        "Mindestbestand", 
-        "Sollbestand"
+        "Hersteller", 
+        "Standort", 
+        "Status", 
+        "Letzte Prüfung", 
+        "Prüfintervall", 
+        "Nächste Prüfung"
     ];
 
-    const rows = daten.map(l => [
-        l.id || '',
-        l.artikelnummer || l.artNr || '',
-        l.bezeichnung || l.name || '',
-        l.hersteller || '',
-        l.kategorie || '',
-        l.groesse || '',
-        l.zustand || 'Neu',
-        l.bestand !== undefined ? l.bestand : 0,
-        l.mindestbestand !== undefined ? l.mindestbestand : 0,
-        l.sollbestand !== undefined ? l.sollbestand : 0
+    const rows = daten.map(g => [
+        g.id || '',
+        g.inventarnummer || '',
+        g.bezeichnung || '',
+        g.kategorie || '',
+        g.hersteller || '',
+        g.standort || '',
+        g.status || 'Einsatzbereit',
+        g.letztePruefung || '',
+        g.pruefintervall || 12,
+        g.naechstePruefung || ''
     ]);
 
     const heute = new Date().toISOString().split('T')[0];
-    const dateiname = `Lagerliste_FFW_${heute}.csv`;
+    const dateiname = `Geraeteliste_FFW_${heute}.csv`;
     
     if (typeof window.downloadCSV === "function") {
         window.downloadCSV(dateiname, headers, rows);

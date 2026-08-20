@@ -1,5 +1,11 @@
 function importLagerCSV(inputElement) {
     try {
+        // 0. Schreibschutz-Prüfung
+        if (typeof istEditor === "function" && !istEditor()) {
+            alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
+            return;
+        }
+
         // Falls ein Event übergeben wurde (z.B. event.target)
         let el = inputElement;
         if (inputElement && inputElement.target) el = inputElement.target;
@@ -8,7 +14,7 @@ function importLagerCSV(inputElement) {
         if (!file) return;
 
         // 1. Nachfragen, ob der Bestand ERSETZT oder ERGÄNZT werden soll
-        const meeresErsetzen = confirm(
+        const moechteErsetzen = confirm(
             "Möchtest du den vorhandenen Lagerbestand KOMPLETT ÜBERSCHREIBEN?\n\n" +
             "• OK = Bisherigen Bestand löschen und nur die neuen Artikel laden\n" +
             "• Abbrechen = Artikel zum bestehenden Bestand hinzufügen / aktualisieren"
@@ -16,7 +22,7 @@ function importLagerCSV(inputElement) {
 
         // Datenbestand laden oder leeren
         let lagerDaten = [];
-        if (!meeresErsetzen) {
+        if (!moechteErsetzen) {
             if (typeof getLager === "function") {
                 lagerDaten = getLager() || [];
             } else {
@@ -36,6 +42,7 @@ function importLagerCSV(inputElement) {
                 const zeilen = text.split(/\r\n|\n/).filter(z => z.trim() !== "");
                 if (zeilen.length < 2) {
                     alert("Die Datei enthält keine verwertbaren Daten.");
+                    if (el) el.value = "";
                     return;
                 }
 
@@ -50,10 +57,9 @@ function importLagerCSV(inputElement) {
                     });
                 };
 
-                // SPALTEN-MAPPING (Korrekt getrennt!)
+                // SPALTEN-MAPPING
                 const idxId = findIndex("id");
                 const idxArtNr = findIndex("artikelnumme", "artikelnummer", "artnr", "artikelnr");
-                // "artikel" darf HIER nur matchen, wenn es NICHT "artikelnummer" ist:
                 let idxBez = rawHeaders.findIndex(h => h.includes("bezeichn") || h.includes("name") || (h.includes("artikel") && !h.includes("numm")));
                 const idxHersteller = findIndex("hersteller", "herstell");
                 const idxKat = findIndex("kategorie", "kat");
@@ -62,7 +68,7 @@ function importLagerCSV(inputElement) {
                 const idxBestand = findIndex("bestand", "menge", "ist");
                 const idxSoll = findIndex("mindest", "soll");
 
-                // Fallbacks falls Spaltennamen abweichen (Starre Positionszuweisung: A=0, B=1, C=2, D=3...)
+                // Fallbacks falls Spaltennamen abweichen (Starre Positionszuweisung)
                 const finalArtNr = idxArtNr !== -1 ? idxArtNr : 1;
                 const finalBez = idxBez !== -1 ? idxBez : 2;
 
@@ -89,9 +95,9 @@ function importLagerCSV(inputElement) {
                     const parsedBestand = parseFloat((idxBestand !== -1 ? werte[idxBestand] : "0").replace(',', '.')) || 0;
                     const parsedMindest = parseFloat((idxSoll !== -1 ? werte[idxSoll] : "0").replace(',', '.')) || 0;
 
-                    // Suche nach bestehendem Artikel (falls nicht alles überschrieben wird)
+                    // Suche nach bestehendem Artikel
                     let targetIndex = -1;
-                    if (!meeresErsetzen) {
+                    if (!moechteErsetzen) {
                         targetIndex = lagerDaten.findIndex(item => {
                             if (!item) return false;
                             const matchId = rawId && String(item.id).toLowerCase() === rawId.toLowerCase();
@@ -148,6 +154,7 @@ function importLagerCSV(inputElement) {
 
             } catch (err) {
                 alert("Fehler beim Lager-Import:\n" + err.message);
+                if (el) el.value = "";
             }
         };
 
