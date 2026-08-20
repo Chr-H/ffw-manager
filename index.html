@@ -131,7 +131,9 @@
                     <h2>🛠️ Geräteverwaltung</h2>
                     <div style="display: flex; gap: 10px;" class="no-print">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('importGeraeteInput').click()">📥 CSV Import</button>
-                        <input type="file" id="geraeteImportInput" accept=".csv" onchange="importGeraeteCSV(this)">
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">
+                                 📥 CSV Import
+                                </button>
                         <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
                         <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
                     </div>
