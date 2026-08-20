@@ -465,20 +465,22 @@ function exportGeraeteCSV() {
     const heute = new Date().toISOString().split('T')[0];
     const dateiname = `Geraeteliste_FFW_${heute}.csv`;
     
-    if (typeof window.downloadCSV === "function") {
-        window.downloadCSV(dateiname, headers, rows);
-    } else {
-        const csvLines = [headers.join(";")];
-        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
-        
-        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", dateiname);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+    // --- AB HIER: Direktes Erzeugen der CSV (ohne externe Helferlein) ---
+    const csvLines = [headers.join(";")];
+    rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+    
+    const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", dateiname); // Erzwingt .csv und den Dateinamen
+    document.body.appendChild(link);
+    link.click();
+    
+    // Aufräumen
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // ------------------------------------------
@@ -565,7 +567,7 @@ function importGeraeteCSV(inputOrEvent) {
 
             const item = {
                 id: existingIndex !== -1 ? geraeteListe[existingIndex].id : (rawId || "GER-" + Date.now() + "_" + i),
-                inventarnummer: inventar || `INV-${Date.now()}_${i}`,
+                inventarnummer: rawInvNr ? String(rawInvNr).trim() : "",
                 bezeichnung: bezeichnung || 'Unbenanntes Gerät',
                 kategorie: kategorie || 'Sonstiges',
                 hersteller: hersteller || '',
