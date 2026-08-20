@@ -149,7 +149,23 @@
                         <input id="bezeichnung" type="text" placeholder="Bezeichnung">
                         <select id="kategorie"><option value="">Kategorie auswählen</option></select>
                         <input id="hersteller" type="text" placeholder="Hersteller">
-                        <input id="standort" type="text" placeholder="Standort">
+                        <label for="geraet-standort">Standort / Geräteraum:</label>
+                            <select id="geraet-standort" class="form-control">
+                            <option value="">-- Standort wählen --</option>
+                            <option value="Lager">Lager</option>
+                        <option value="Gerätehaus">Gerätehaus</option>
+    
+                        <!-- Fahrzeug 1: Florian Albertsried 44/1 -->
+                        <optgroup label="Florian Albertsried 44/1">
+                            <option value="Florian Albertsried 44/1 GR1">Florian Albertsried 44/1 - GR1 (links)</option>
+                            <option value="Florian Albertsried 44/1 GR2">Florian Albertsried 44/1 - GR2 (rechts)</option>
+                            <option value="Florian Albertsried 44/1 GR3">Florian Albertsried 44/1 - GR3 (hinten)</option>
+                            <option value="Florian Albertsried 44/1 GR4">Florian Albertsried 44/1 - GR4 (Mitte)</option>
+                            <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option>
+                            <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Gruppenführer)</option>
+                            <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Maschinist)</option>
+                        </optgroup>
+                    </select>
                         <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
                         <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
                         <select id="pruefintervall" title="Prüfintervall">

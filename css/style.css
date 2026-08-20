@@ -292,6 +292,25 @@ body {
 .print-footer {
     display: none;
 }
+@media print {
+    /* Zeige das Grafik-Raster und die Historie beim Drucken explizit an */
+    .fzg-schema, #fahrzeugAkteContainer {
+        display: grid !important;
+        page-break-inside: avoid;
+    }
+    
+    .gr-box {
+        border: 1px solid #000 !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Hintergründe für den Druck erzwingen */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
 
 /* ===========================================
    8. Responsive Design & Mobile Anpassungen
@@ -442,4 +461,63 @@ body {
         margin: 2px !important;
         vertical-align: middle !important;
     }
+}
+/* ===========================================
+   9. Fahrzeugakte & Geräteraum-Grafik
+=========================================== */
+
+/* Raster-Layout für das Fahrzeug (Grid) */
+.fzg-schema {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr 2fr 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    gap: 4px;
+    width: 100%;
+    max-width: 650px;
+    height: 320px;
+    border: 2px solid #333;
+    background-color: #f8f9fa;
+    padding: 6px;
+    box-sizing: border-box !important;
+    margin-bottom: 20px;
+    margin-top: 10px;
+}
+
+/* Einzelne Geräteraum-Kacheln */
+.gr-box {
+    background: #ffffff;
+    border: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+    transition: background 0.2s, border-color 0.2s;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.gr-box:hover {
+    background: #e3f2fd;
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+/* Zuordnung der Geräteräume im Raster */
+.gr6 { grid-column: 1; grid-row: 1 / span 2; }
+.gr7 { grid-column: 1; grid-row: 3 / span 2; }
+.gr5 { grid-column: 2; grid-row: 1 / span 4; }
+.gr1 { grid-column: 3 / span 2; grid-row: 1; }
+.gr4 { grid-column: 3; grid-row: 2 / span 2; }
+.gr3 { grid-column: 4; grid-row: 2 / span 2; }
+.gr2 { grid-column: 3 / span 2; grid-row: 4; }
+
+/* Senkrechter Text für Kabine (GR5) */
+.text-vertikal {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    letter-spacing: 1px;
 }
