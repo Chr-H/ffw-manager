@@ -209,60 +209,143 @@
             </section>
 
             <!-- 3. FAHRZEUGVERWALTUNG -->
-            <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>🚒 Fahrzeugverwaltung</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button>
-                        <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)">
-                        <button type="button" class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+<section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🚒 Fahrzeugverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button>
+            <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)">
+            <button type="button" class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+        </div>
+    </div>
+
+    <!-- Fahrzeug anlegen -->
+    <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>➕ Neues Fahrzeug anlegen</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <input id="fz-funkruf" type="text" placeholder="Funkrufname">
+            <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
+            <input id="fz-typ" type="text" placeholder="Fahrzeugtyp">
+            <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
+            <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
+            <input id="fz-sp" type="date" title="Nächste SP">
+            <select id="fz-status">
+                <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                <option value="Wartung">🟡 In Werkstatt / Wartung</option>
+                <option value="Defekt">🔴 Außer Dienst / Defekt</option>
+            </select>
+            <button type="button" onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button>
+        </div>
+    </div>
+
+    <!-- Hauptbereich: Tabelle & Fahrzeugakte -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; align-items:start;">
+        
+        <!-- Fahrzeugliste Tabelle -->
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <div class="table-responsive">
+                <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th class="no-print">Aktionen</th>
+                            <th>Funkrufname</th>
+                            <th>Typ</th>
+                            <th>Kennzeichen</th>
+                            <th>TÜV/HU</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fahrzeugeListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Fahrzeugakte mit Geräteraum-Schema & Historie -->
+        <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
+            <h2>📋 Fahrzeugakte</h2>
+            
+            <div id="fahrzeugAkteInhalt">
+                <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+            </div>
+
+            <!-- Vorlage für die Fahrzeugakte (wird dynamisch befüllt) -->
+            <template id="fahrzeugAkteTemplate">
+                <div style="border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 id="akte-titel" style="margin:0;">-</h3>
+                    <small id="akte-subtitel" style="color:#666;">-</small>
+                </div>
+
+                <!-- 1. GERÄTERAUM-SCHEMA -->
+                <div style="margin-bottom: 25px;">
+                    <h4>🚒 Geräteraum-Belegungsplan</h4>
+                    <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p>
+                    
+                    <div class="fzg-schema">
+                        <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')">
+                            <span>GR6</span>
+                            <small>Gruppenführer</small>
+                        </div>
+                        <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')">
+                            <span>GR7</span>
+                            <small>Maschinist</small>
+                        </div>
+                        <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')">
+                            <span class="text-vertikal">GR5 Kabine</span>
+                        </div>
+                        <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')">
+                            <span>GR1</span>
+                            <small>links</small>
+                        </div>
+                        <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')">
+                            <span>GR4</span>
+                            <small>Mitte</small>
+                        </div>
+                        <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')">
+                            <span>GR3</span>
+                            <small>hinten</small>
+                        </div>
+                        <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')">
+                            <span>GR2</span>
+                            <small>rechts</small>
+                        </div>
                     </div>
                 </div>
 
-                <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <h3>➕ Neues Fahrzeug anlegen</h3>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                        <input id="fz-funkruf" type="text" placeholder="Funkrufname">
-                        <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
-                        <input id="fz-typ" type="text" placeholder="Fahrzeugtyp">
-                        <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
-                        <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
-                        <input id="fz-sp" type="date" title="Nächste SP">
-                        <select id="fz-status">
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                            <option value="Wartung">🟡 In Werkstatt / Wartung</option>
-                            <option value="Defekt">🔴 Außer Dienst / Defekt</option>
-                        </select>
-                        <button type="button" onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button>
-                    </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:start;">
-                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                        <div class="table-responsive">
-                            <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
-                                <thead>
-                                    <tr>
-                                        <th class="no-print">Aktionen</th>
-                                        <th>Funkrufname</th>
-                                        <th>Typ</th>
-                                        <th>Kennzeichen</th>
-                                        <th>TÜV/HU</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="fahrzeugeListe"></tbody>
-                            </table>
+                <!-- 2. HISTORIE & INSTANDSETZUNG -->
+                <div>
+                    <h4>📜 Historie & Reparaturen</h4>
+                    
+                    <!-- Formular für neuen Eintrag -->
+                    <div style="background:#f8f9fa; padding:12px; border-radius:6px; border:1px solid #e0e0e0; margin-bottom:15px;">
+                        <h5 style="margin-top:0; margin-bottom:8px;">➕ Eintrag hinzufügen</h5>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                            <select id="hist-typ">
+                                <option value="Reparatur">🛠️ Reparatur</option>
+                                <option value="Instandsetzung">🔧 Instandsetzung / Wartung</option>
+                                <option value="Ausfall">🚨 Ausfall</option>
+                                <option value="Sonstiges">📝 Sonstiges</option>
+                            </select>
+                            <input type="date" id="hist-datum">
+                        </div>
+                        <input type="text" id="hist-titel" placeholder="Titel (z. B. TÜV bestanden)" style="width:100%; margin-bottom:8px; box-sizing:border-box;">
+                        <textarea id="hist-beschreibung" placeholder="Beschreibung / Werkstatt..." style="width:100%; height:50px; margin-bottom:8px; box-sizing:border-box;"></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <input type="number" id="hist-kosten" step="0.01" placeholder="Kosten in €" style="width:120px;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="speichereHistorieEintrag()">Eintrag speichern</button>
                         </div>
                     </div>
 
-                    <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
-                        <h2>📋 Fahrzeugakte</h2>
-                        <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+                    <!-- Liste der bestehenden Einträge -->
+                    <div id="historieListe" style="max-height: 250px; overflow-y: auto;">
+                        <p style="color:#777; font-style:italic;">Keine Einträge vorhanden.</p>
                     </div>
                 </div>
-            </section>
+            </template>
+        </div>
+
+    </div>
+</section>
 
             <!-- 4. PSA BEREICH -->
             <section id="seite-psa" class="seite-ansicht" style="display: none;">
