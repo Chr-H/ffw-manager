@@ -507,8 +507,8 @@ body {
 }
 
 /* Zuordnung der Geräteräume im Raster */
-.gr6 { grid-column: 1; grid-row: 1 / span 2; }
-.gr7 { grid-column: 1; grid-row: 3 / span 2; }
+.gr6 { grid-column: 1; grid-row: 3 / span 2; }
+.gr7 { grid-column: 1; grid-row: 1 / span 2; }
 .gr5 { grid-column: 2; grid-row: 1 / span 4; }
 .gr1 { grid-column: 3 / span 2; grid-row: 1; }
 .gr4 { grid-column: 3; grid-row: 2 / span 2; }
