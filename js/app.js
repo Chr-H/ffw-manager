@@ -155,37 +155,6 @@ function downloadCSV(filename, headers, rows) {
 }
 
 /**
- * Export-Funktion für Geräte
- */
-function exportGeraeteCSV() {
-    let daten = window.geraeteDaten || [];
-    
-    if ((!daten || daten.length === 0) && typeof ladeDaten === "function") {
-        daten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || [];
-    }
-
-    if (!Array.isArray(daten) || daten.length === 0) {
-        alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
-        return;
-    }
-
-    const headers = ["ID", "Bezeichnung", "Kategorie / Typ", "Fahrzeug / Standort", "Status", "Nächste Prüfung", "Seriennummer", "Bemerkung"];
-    const rows = daten.map(g => [
-        g.id || '',
-        g.bezeichnung || g.name || '',
-        g.kategorie || g.typ || '',
-        g.standort || g.fahrzeug || '',
-        g.status || '',
-        g.naechstePruefung || g.pruefdatum || '',
-        g.inventar || g.seriennummer || g.inventarnummer || '',
-        g.bemerkung || g.notiz || ''
-    ]);
-
-    const heute = new Date().toISOString().split('T')[0];
-    downloadCSV(`Geraeteliste_FFW_${heute}.csv`, headers, rows);
-}
-
-/**
  * Export-Funktion für PSA
  */
 function exportPSACSV() {

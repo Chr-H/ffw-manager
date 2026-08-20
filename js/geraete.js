@@ -429,56 +429,67 @@ function loescheGeraet(id) {
 // GERÄTE CSV-EXPORT
 // ------------------------------------------
 function exportGeraeteCSV() {
-    const daten = ladeGeraete();
+    let daten = window.geraeteDaten || [];
+    
+    if ((!daten || daten.length === 0) && typeof ladeDaten === "function") {
+        daten = ladeDaten("geraete") || ladeDaten("ffw_geraete") || [];
+    }
+
+    // Fallback auf ladeGeraete, falls vorhanden
+    if ((!daten || daten.length === 0) && typeof ladeGeraete === "function") {
+        daten = ladeGeraete() || [];
+    }
 
     if (!Array.isArray(daten) || daten.length === 0) {
         alert("⚠️ Es wurden keine Gerätedaten zum Exportieren gefunden.");
         return;
     }
 
+    // 1. Spaltenüberschriften korrigieren ("Inventarnummer" statt "Seriennummer")
     const headers = [
         "ID", 
         "Inventarnummer", 
         "Bezeichnung", 
-        "Kategorie", 
+        "Kategorie / Typ", 
         "Hersteller", 
-        "Standort", 
+        "Fahrzeug / Standort", 
         "Status", 
-        "Letzte Prüfung", 
-        "Prüfintervall", 
-        "Nächste Prüfung"
+        "Nächste Prüfung", 
+        "Bemerkung"
     ];
 
+    // 2. Datenzeilen zuordnen
     const rows = daten.map(g => [
         g.id || '',
-        g.inventarnummer || '',
-        g.bezeichnung || '',
-        g.kategorie || '',
+        g.inventarnummer || g.inventar || g.seriennummer || '', // Priorität auf inventarnummer
+        g.bezeichnung || g.name || '',
+        g.kategorie || g.typ || '',
         g.hersteller || '',
-        g.standort || '',
+        g.standort || g.fahrzeug || '',
         g.status || 'Einsatzbereit',
-        g.letztePruefung || '',
-        g.pruefintervall || 12,
-        g.naechstePruefung || ''
+        g.naechstePruefung || g.pruefdatum || '',
+        g.bemerkung || g.notiz || ''
     ]);
+
+    // 3. CSV-Dateiinhalt bauen (mit UTF-8 BOM für korrekte Umlaute in Excel)
+    const csvLines = [headers.join(";")];
+    rows.forEach(r => {
+        csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"));
+    });
 
     const heute = new Date().toISOString().split('T')[0];
     const dateiname = `Geraeteliste_FFW_${heute}.csv`;
-    
-    // --- AB HIER: Direktes Erzeugen der CSV (ohne externe Helferlein) ---
-    const csvLines = [headers.join(";")];
-    rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
-    
+
+    // 4. Direktes Herunterladen erzwingen (kein .txt-Problem mehr)
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", dateiname); // Erzwingt .csv und den Dateinamen
+    link.setAttribute("download", dateiname);
     document.body.appendChild(link);
     link.click();
     
-    // Aufräumen
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 }
