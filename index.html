@@ -127,17 +127,20 @@
 
             <!-- 2. GERÄTE BEREICH -->
             <section id="seite-geraete" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>🛠️ Geräteverwaltung</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importGeraeteInput').click()">📥 CSV Import</button>
-                        <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">
-                                 📥 CSV Import
-                                </button>
-                        <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
-                    </div>
-                </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🛠️ Geräteverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <!-- 1. Das unsichtbare Datei-Auswahlfeld -->
+            <input type="file" id="csvGeraeteFileInput" accept=".csv" style="display: none;" onchange="importGeraeteCSV(this)">
+
+            <!-- 2. Der EINZIGE, hübsche Import-Button -->
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">📥 CSV Import</button>
+
+            <!-- Export & Drucken -->
+            <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+        </div>
+    </div>
 
                 <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                     <h3>➕ Gerät anlegen / bearbeiten</h3>
