@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.6)
+// FFW Manager - Geräteverwaltung (v0.6.7)
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
@@ -102,7 +102,6 @@ function neuesGeraet() {
     const elKat = document.getElementById("kategorie");
     const elHer = document.getElementById("hersteller");
     const elStat = document.getElementById("status");
-    // WICHTIG: Auslesen von Standort (funktioniert nun für <select> und <input>)
     const elSta = document.getElementById("standort") || document.getElementById("geraet-standort");
     const elErst = document.getElementById("erstinbetriebnahme");
     const elLpz = document.getElementById("letztePruefung");
@@ -113,7 +112,7 @@ function neuesGeraet() {
     const kategorie = elKat ? elKat.value : "";
     const hersteller = elHer ? elHer.value.trim() : "";
     const status = elStat ? elStat.value : "Einsatzbereit";
-    const standort = elSta ? elSta.value : ""; // Vollständigen String inklusive GR1-GR7 übernehmen!
+    const standort = elSta ? elSta.value : "";
     const erstinbetriebnahme = elErst ? elErst.value : "";
     const letztePruefung = elLpz ? elLpz.value : "";
     const pruefintervall = elInt ? elInt.value : "12";
@@ -170,7 +169,7 @@ function neuesGeraet() {
             letztePruefung: letztePruefung,
             pruefintervall: parseInt(pruefintervall),
             naechstePruefung: naechstePruefung,
-            historie: letztePruefung ? [{ datum: letztePruefung, ergebnis: "Initialprüfung", pruefer: protokollUser }] : [],
+            historie: letztePruefung ? [{ datum: letztePruefung, ergebnis: "Ohne Mängel", pruefart: "Initialprüfung", pruefer: protokollUser }] : [],
             erstellt: jetztZeitstempel,
             erstelltVon: `${protokollUser} (am ${jetztZeitstempel})`,
             bearbeitetVon: `${protokollUser} (am ${jetztZeitstempel})`
@@ -291,10 +290,13 @@ function zeigeGeraeteDetails(id) {
     } else {
         historie.slice().reverse().forEach(h => {
             const hDatum = formatiereDatum(h.datum);
+            const ergColor = h.ergebnis === "Ohne Mängel" ? "#2e7d32" : (h.ergebnis === "Geringe Mängel" ? "#f57c00" : "#d32f2f");
+            
             historieHtml += `
-                <li style="margin-bottom: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 4px;">
-                    <strong>📅 ${hDatum}</strong> - <span style="color:#2e7d32;">${escapeHtml(h.ergebnis || 'Geprüft')}</span>
-                    <br><small>Prüfer: ${escapeHtml(h.pruefer || 'Unbekannt')} ${h.bemerkung ? '| Note: ' + escapeHtml(h.bemerkung) : ''}</small>
+                <li style="margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                    <div><strong>📅 ${hDatum}</strong> – <span style="color:${ergColor}; font-weight:bold;">${escapeHtml(h.ergebnis || 'Geprüft')}</span></div>
+                    <div style="font-size: 0.85rem; color: #444;"><strong>Art:</strong> ${escapeHtml(h.pruefart || 'Regelprüfung')} | <strong>Prüfer:</strong> ${escapeHtml(h.pruefer || 'Unbekannt')}</div>
+                    ${h.bemerkung ? `<div style="font-size: 0.85rem; background:#fff8e1; padding:3px 6px; border-radius:3px; margin-top:2px;">📝 <em>${escapeHtml(h.bemerkung)}</em></div>` : ''}
                 </li>
             `;
         });
@@ -321,16 +323,41 @@ function zeigeGeraeteDetails(id) {
         </div>
 
         <hr style="margin:15px 0;">
-        <h4>📜 Prüfhistorie</h4>
-        <ul style="list-style:none; padding-left:0; margin:10px 0; max-height: 180px; overflow-y: auto;">
+        <h4>📜 Prüfhistorie & Protokolle</h4>
+        <ul style="list-style:none; padding-left:0; margin:10px 0; max-height: 200px; overflow-y: auto;">
             ${historieHtml}
         </ul>
 
-        <div style="background:#f5f5f5; padding:10px; border-radius:6px; margin-top:10px;">
-            <strong style="font-size:0.9rem;">+ Neue Prüfung eintragen</strong>
-            <input type="date" id="neuesPruefDatum" value="${heuteISO}" style="width:100%; margin:4px 0; padding:4px;">
-            <input type="text" id="prueferName" placeholder="Prüfer Name" style="width:100%; margin:4px 0; padding:4px;">
-            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${safeId}')">Prüfung protokollieren</button>
+        <div style="background:#f8f9fa; padding:12px; border:1px solid #ddd; border-radius:6px; margin-top:10px;">
+            <strong style="font-size:0.95rem; display:block; margin-bottom:8px;">📝 Neue Prüfung / Protokoll eintragen</strong>
+            
+            <label style="font-size:0.8rem;">Prüfdatum:</label>
+            <input type="date" id="neuesPruefDatum" value="${heuteISO}" style="width:100%; margin-bottom:6px; padding:4px;">
+            
+            <label style="font-size:0.8rem;">Prüfungsart (z. B. DGUV Leiterprüfung):</label>
+            <select id="neuesPruefArt" style="width:100%; margin-bottom:6px; padding:4px;">
+                <option value="Sicht- und Funktionsprüfung">Sicht- und Funktionsprüfung</option>
+                <option value="Sichtprüfung">Sichtprüfung</option>
+                <option value="Druckprüfung">Druckprüfung</option>
+                <option value="Jahresprüfung (DGUV / Leiter)">Jahresprüfung (DGUV / Leiter)</option>
+                <option value="Belastungsprüfung">Belastungsprüfung</option>
+                <option value="Elektrische Prüfung (DGUV V3)">Elektrische Prüfung (DGUV V3)</option>
+            </select>
+
+            <label style="font-size:0.8rem;">Ergebnis:</label>
+            <select id="neuesPruefErgebnis" style="width:100%; margin-bottom:6px; padding:4px;">
+                <option value="Ohne Mängel">🟢 Ohne Mängel (Einsatzbereit)</option>
+                <option value="Geringe Mängel">🟡 Geringe Mängel (Einsatzbereit)</option>
+                <option value="Schwere Mängel / Gesperrt">🔴 Schwere Mängel (Außer Dienst)</option>
+            </select>
+
+            <label style="font-size:0.8rem;">Prüfer Name:</label>
+            <input type="text" id="prueferName" placeholder="Name des Prüfers" style="width:100%; margin-bottom:6px; padding:4px;">
+
+            <label style="font-size:0.8rem;">Mängel & Anmerkungen:</label>
+            <textarea id="neuesPruefBemerkung" placeholder="z. B. Leichte Kratzer am Holm, Sichtprüfung i. O." style="width:100%; height:50px; margin-bottom:6px; padding:4px;"></textarea>
+
+            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${safeId}')">💾 Prüfung speichern</button>
         </div>
     `;
 }
@@ -342,10 +369,16 @@ function fuegePruefungHinzu(id) {
     }
 
     const elDatum = document.getElementById("neuesPruefDatum");
+    const elArt = document.getElementById("neuesPruefArt");
+    const elErgebnis = document.getElementById("neuesPruefErgebnis");
     const elPruefer = document.getElementById("prueferName");
+    const elBemerkung = document.getElementById("neuesPruefBemerkung");
 
     const datum = elDatum ? elDatum.value : "";
+    const pruefart = elArt ? elArt.value : "Sichtprüfung";
+    const ergebnis = elErgebnis ? elErgebnis.value : "Ohne Mängel";
     let pruefer = elPruefer ? elPruefer.value.trim() : "";
+    const bemerkung = elBemerkung ? elBemerkung.value.trim() : "";
     
     if (!pruefer) {
         pruefer = hohleBenutzerProtokollText();
@@ -365,8 +398,10 @@ function fuegePruefungHinzu(id) {
 
         g.historie.push({
             datum: datum,
-            ergebnis: "Erfolgreich geprüft",
-            pruefer: pruefer
+            pruefart: pruefart,
+            ergebnis: ergebnis,
+            pruefer: pruefer,
+            bemerkung: bemerkung
         });
 
         const protokollUser = hohleBenutzerProtokollText();
@@ -374,6 +409,11 @@ function fuegePruefungHinzu(id) {
 
         g.letztePruefung = datum;
         g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
+        
+        if (ergebnis === "Schwere Mängel / Gesperrt") {
+            g.status = "Defekt";
+        }
+
         g.bearbeitetVon = `${protokollUser} (Prüfung am ${jetztZeitstempel})`;
 
         speichereGeraete();
@@ -399,7 +439,6 @@ function bearbeiteGeraet(id) {
     if (document.getElementById("hersteller")) document.getElementById("hersteller").value = g.hersteller || "";
     if (document.getElementById("status")) document.getElementById("status").value = g.status || "Einsatzbereit";
     
-    // WICHTIG: Setzt das Standort-Select/Input auf den vollständigen Wert zurück
     const elSta = document.getElementById("standort") || document.getElementById("geraet-standort");
     if (elSta) elSta.value = g.standort || "";
 
@@ -410,7 +449,13 @@ function bearbeiteGeraet(id) {
     const btn = document.querySelector(".geraete-form button") || document.querySelector("button[onclick='neuesGeraet()']");
     if (btn) btn.innerHTML = "💾 Änderungen speichern";
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Pragmatische Lösung: Sanftes Scrollen direkt zum Formular
+    const zielFormular = document.querySelector(".geraete-form") || document.getElementById("inventar");
+    if (zielFormular) {
+        zielFormular.scrollIntoView({ behavior: "smooth", block: "center" });
+        zielFormular.classList.add("highlight-form");
+        setTimeout(() => zielFormular.classList.remove("highlight-form"), 1500);
+    }
 }
 
 function loescheGeraet(id) {

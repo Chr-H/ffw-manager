@@ -521,3 +521,11 @@ body {
     transform: rotate(180deg);
     letter-spacing: 1px;
 }
+@keyframes formHighlight {
+    0% { background-color: #fff9c4; transform: scale(1.01); }
+    100% { background-color: transparent; transform: scale(1); }
+}
+
+.highlight-form {
+    animation: formHighlight 1.5s ease-out;
+}
