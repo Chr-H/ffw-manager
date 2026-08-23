@@ -341,6 +341,165 @@ function importFahrzeugeCSV(inputOrEvent) {
         alert("Fehler beim Import: " + err.message);
     }
 }
+// CSV-Export für die Historie/Reparaturen eines einzelnen Fahrzeugs
+function exportFahrzeugHistorieCSV(fahrzeugId) {
+    const daten = typeof holeFahrzeugDaten === "function" ? holeFahrzeugDaten() : (ladeDaten("fahrzeuge") || []);
+    const fahrzeug = daten.find(f => f.id === fahrzeugId);
+
+    if (!fahrzeug) {
+        alert("⚠️ Fahrzeug nicht gefunden.");
+        return;
+    }
+
+    // Historie-Array aus dem Fahrzeugobjekt auslesen (je nach Ihrer Datenstruktur historie/reparaturen/pruefungen)
+    const historie = fahrzeug.historie || fahrzeug.reparaturen || fahrzeug.wartungen || [];
+
+    if (!Array.isArray(historie) || historie.length === 0) {
+        alert("⚠️ Keine Historie/Reparaturen für dieses Fahrzeug vorhanden.");
+        return;
+    }
+
+    const headers = [
+        "Datum", 
+        "Kategorie / Typ", 
+        "Beschreibung / Maßnahme", 
+        "Durchgeführt von / Werkstatt", 
+        "Kosten (€)", 
+        "Kilometerstand", 
+        "Status"
+    ];
+
+    const rows = historie.map(h => [
+        h.datum || '',
+        h.typ || h.kategorie || 'Reparatur',
+        h.beschreibung || h.tätigkeit || '',
+        h.werkstatt || h.durchgefuehrtVon || '',
+        h.kosten || '0',
+        h.kmStand || h.kilometer || '',
+        h.status || 'Erledigt'
+    ]);
+
+    const fzgName = (fahrzeug.name || fahrzeug.funkrufname || 'Fahrzeug').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const heute = new Date().toISOString().split('T')[0];
+    const dateiname = `Akte_${fzgName}_Historie_${heute}.csv`;
+
+    const csvLines = [headers.join(";")];
+    rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+
+    const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+    
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.style.display = "none";
+    link.download = dateiname;
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+// Vollständige Einzel-Fahrzeugakte als Druck/PDF erzeugen
+// Vollständige Einzel-Fahrzeugakte als Druck/PDF erzeugen
+function druckeEinzelFahrzeugAkte(fahrzeugId) {
+    const daten = typeof holeFahrzeugDaten === "function" ? holeFahrzeugDaten() : (ladeDaten("fahrzeuge") || []);
+    const f = daten.find(item => item.id === fahrzeugId);
+
+    if (!f) {
+        alert("⚠️ Fahrzeugakte nicht gefunden.");
+        return;
+    }
+
+    const historie = f.historie || f.reparaturen || f.wartungen || [];
+    const heute = new Date().toLocaleDateString('de-DE');
+
+    let historieHtml = '';
+    if (historie.length === 0) {
+        historieHtml = `<tr><td colspan="4" style="text-align:center; color:#777;">Keine Reparaturen oder Wartungen eingetragen.</td></tr>`;
+    } else {
+        historie.forEach(h => {
+            historieHtml += `
+            <tr>
+                <td>${h.datum || '-'}</td>
+                <td><strong>${h.typ || 'Allgemein'}</strong> - ${h.titel || ''}</td>
+                <td>${h.beschreibung || '-'}</td>
+                <td>${h.kosten ? Number(h.kosten).toFixed(2) + ' €' : '0.00 €'}</td>
+            </tr>`;
+        });
+    }
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <title>Fahrzeugakte - ${f.callSign || f.name}</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 25px; color: #222; }
+            .header { border-bottom: 3px solid #b22222; padding-bottom: 10px; margin-bottom: 20px; }
+            h1 { margin: 0; color: #b22222; font-size: 1.8em; }
+            .subtitle { font-size: 1.1em; color: #555; margin-top: 5px; }
+            .grid { display: flex; gap: 20px; margin-bottom: 25px; }
+            .box { flex: 1; border: 1px solid #ddd; padding: 12px; background: #f9f9f9; border-radius: 4px; }
+            .box h3 { margin-top: 0; font-size: 1em; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 0.85em; }
+            th { background-color: #eee; }
+            .footer { margin-top: 30px; font-size: 0.8em; color: #777; text-align: right; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🚒 Fahrzeugakte: ${f.callSign || f.name || 'Unbekannt'}</h1>
+            <div class="subtitle">FFW Albertsried | Stand: ${heute}</div>
+        </div>
+
+        <div class="grid">
+            <div class="box">
+                <h3>Stammdaten</h3>
+                <strong>Typ:</strong> ${f.typ || '-'}<br>
+                <strong>Kennzeichen:</strong> ${f.licensePlate || f.kennzeichen || '-'}<br>
+                <strong>Baujahr:</strong> ${f.baujahr || '-'}
+            </div>
+            <div class="box">
+                <h3>Prüftermine & Status</h3>
+                <strong>Nächste HU / TÜV:</strong> ${f.nextHU || f.tuev || '-'}<br>
+                <strong>Nächste SP:</strong> ${f.nextSP || f.sp || '-'}<br>
+                <strong>Status:</strong> ${f.status || 'Einsatzbereit'}
+            </div>
+        </div>
+
+        <h3>Reparatur- & Wartungshistorie</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Datum</th>
+                    <th style="width: 30%;">Kategorie & Titel</th>
+                    <th>Beschreibung / Maßnahme</th>
+                    <th style="width: 15%;">Kosten</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${historieHtml}
+            </tbody>
+        </table>
+
+        <div class="footer">Gedruckt am ${heute} über FFW Manager</div>
+    </body>
+    </html>`;
+
+    const druckFenster = window.open('', '_blank');
+    druckFenster.document.write(html);
+    druckFenster.document.close();
+    
+    setTimeout(() => {
+        druckFenster.focus();
+        druckFenster.print();
+    }, 250);
+}
+
 
 // Global registrieren
 window.renderFahrzeugeView = renderFahrzeugeView;
@@ -352,6 +511,8 @@ window.loescheHistorieEintrag = loescheHistorieEintrag;
 window.loescheFahrzeug = loescheFahrzeug;
 window.exportFahrzeugeCSV = exportFahrzeugeCSV;
 window.importFahrzeugeCSV = importFahrzeugeCSV;
+window.exportFahrzeugHistorieCSV = exportFahrzeugHistorieCSV;
+window.druckeEinzelFahrzeugAkte = druckeEinzelFahrzeugAkte;
 
 document.addEventListener('DOMContentLoaded', () => {
     renderFahrzeugeView();
