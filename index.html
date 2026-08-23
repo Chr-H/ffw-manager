@@ -164,6 +164,7 @@
                             <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option>
                             <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Gruppenführer)</option>
                             <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Maschinist)</option>
+                            <option value="Florian Albertsried 44/1 GR8">Florian Albertsried 44/1 - GR8 (Dach)</option>
                         </optgroup>
                     </select>
                         <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
@@ -303,40 +304,50 @@
     </div>
 
                 <!-- 1. GERÄTERAUM-SCHEMA -->
-                <div style="margin-bottom: 25px;">
-                    <h4>🚒 Geräteraum-Belegungsplan</h4>
-                    <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p>
-                    
-                    <div class="fzg-schema">
-                        <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')">
-                            <span>GR6</span>
-                            <small>Maschinist</small>
-                        </div>
-                        <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')">
-                            <span>GR7</span>
-                            <small>Gruppenführer</small>
-                        </div>
-                        <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')">
-                            <span class="text-vertikal">GR5 Kabine</span>
-                        </div>
-                        <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')">
-                            <span>GR1</span>
-                            <small>rechts</small>
-                        </div>
-                        <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')">
-                            <span>GR4</span>
-                            <small>Mitte</small>
-                        </div>
-                        <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')">
-                            <span>GR3</span>
-                            <small>hinten</small>
-                        </div>
-                        <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')">
-                            <span>GR2</span>
-                            <small>links</small>
-                        </div>
-                    </div>
-                </div>
+<div style="margin-bottom: 25px;">
+    <h4>🚒 Geräteraum-Belegungsplan</h4>
+    <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p>
+    
+    <!-- Wrapper für Zentrierung & Ausrichtung -->
+    <div class="fahrzeug-layout-container" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        
+        <div class="fzg-schema">
+            <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')">
+                <span>GR6</span>
+                <small>Maschinist</small>
+            </div>
+            <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')">
+                <span>GR7</span>
+                <small>Gruppenführer</small>
+            </div>
+            <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')">
+                <span class="text-vertikal">GR5 Kabine</span>
+            </div>
+            <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')">
+                <span>GR1</span>
+                <small>rechts</small>
+            </div>
+            <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')">
+                <span>GR4</span>
+                <small>Mitte</small>
+            </div>
+            <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')">
+                <span>GR3</span>
+                <small>hinten</small>
+            </div>
+            <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')">
+                <span>GR2</span>
+                <small>links</small>
+            </div>
+        </div>
+
+        <!-- GR8 Feld direkt unter dem Fahrzeug-Schema -->
+        <div class="gr-box gr8-dach-box" onclick="zeigeGeraeteAusRaum('GR8')">
+        <strong>GR8 Aussen/DACH</strong>
+        </div>
+
+    </div>
+</div>
 
                 <!-- 2. HISTORIE & INSTANDSETZUNG -->
                 <div>

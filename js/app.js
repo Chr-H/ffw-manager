@@ -8,14 +8,14 @@
 function zeigeSeite(seiteId) {
     if (!seiteId) return;
 
-    // 1. Parameter bereinigen (falls 'seite-benutzer' statt 'benutzer' übergeben wurde)
+    // 1. Parameter bereinigen
     const modul = seiteId.replace(/^seite-/, '');
 
     // 2. Rechte-Prüfung vorschalten
     if (typeof window.pruefeSeitenZugriff === "function") {
         if (!window.pruefeSeitenZugriff(modul)) {
             alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
-            return; // Bricht ab, wenn keine Berechtigung vorliegt
+            return;
         }
     }
 
@@ -91,11 +91,10 @@ function zeigeSeite(seiteId) {
     }
 }
 
-// Explizit global verfügbar machen für HTML inline onclicks
 window.zeigeSeite = zeigeSeite;
 
 /**
- * Platzhalter für Module, die sich noch in Entwicklung befinden
+ * Platzhalter für Module in Entwicklung
  */
 function zeigInEntwicklung(modulName) {
     const zielId = 'seite-' + modulName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -115,12 +114,33 @@ window.zeigInEntwicklung = zeigInEntwicklung;
 
 
 // ==========================================
-// Universelle Export- & Hilfsfunktionen (CSV / Excel)
+// Universelle Export- & Hilfsfunktionen (CSV / Excel / LocalStorage)
 // ==========================================
 
-/**
- * Universeller CSV-Download mit UTF-8-BOM für korrekte Umlaute in MS Excel
- */
+function ladeDaten(key) {
+    try {
+        const daten = localStorage.getItem('ffw_' + key);
+        return daten ? JSON.parse(daten) : [];
+    } catch (e) {
+        console.error(`Fehler beim Laden von ffw_${key}:`, e);
+        return [];
+    }
+}
+
+function speichereDaten(key, daten) {
+    try {
+        localStorage.setItem('ffw_' + key, JSON.stringify(daten));
+        if (typeof aktualisiereDashboard === 'function') {
+            aktualisiereDashboard();
+        }
+    } catch (e) {
+        console.error(`Fehler beim Speichern von ffw_${key}:`, e);
+    }
+}
+
+window.ladeDaten = ladeDaten;
+window.speichereDaten = speichereDaten;
+
 function downloadCSV(filename, headers, rows) {
     if (!rows || rows.length === 0) {
         alert("⚠️ Keine Daten zum Exportieren vorhanden.");
@@ -139,7 +159,6 @@ function downloadCSV(filename, headers, rows) {
         csvLines.push(escapedRow.join(";"));
     });
 
-    // \uFEFF erzwingt UTF-8 in Excel
     const csvContent = "\uFEFF" + csvLines.join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     
@@ -154,11 +173,8 @@ function downloadCSV(filename, headers, rows) {
     URL.revokeObjectURL(url);
 }
 
-/**
- * Export-Funktion für PSA
- */
 function exportPSACSV() {
-    const daten = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
+    const daten = ladeDaten("psa");
     if (!daten || daten.length === 0) {
         alert("⚠️ Keine PSA-Daten zum Exportieren vorhanden!");
         return;
@@ -180,16 +196,13 @@ function exportPSACSV() {
     downloadCSV(`PSA_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
 }
 
-/**
- * Export-Funktion für Prüfungen
- */
 function exportPruefungenCSV() {
-    const geraete = typeof ladeDaten === "function" ? ladeDaten("geraete") : [];
-    const psa = typeof ladeDaten === "function" ? ladeDaten("psa") : [];
+    const geraete = ladeDaten("geraete");
+    const psa = ladeDaten("psa");
     
     const allePruefungen = [
-        ...geraete.map(g => ({ typ: 'Gerät', bez: g.bezeichnung, id: g.inventarnummer || g.seriennummer, datum: g.naechstePruefung, status: g.status })),
-        ...psa.map(p => ({ typ: 'PSA', bez: `${p.traeger || p.person || 'Unbekannt'} - ${p.bezeichnung || p.teil}`, id: p.seriennummer, datum: p.naechstePruefung, status: p.status }))
+        ...geraete.map(g => ({ typ: 'Gerät', bez: g.bezeichnung || 'Gerät', id: g.inventarnummer || g.seriennummer || '-', datum: g.naechstePruefung, status: g.status })),
+        ...psa.map(p => ({ typ: 'PSA', bez: `${p.traeger || p.person || 'Unbekannt'} - ${p.bezeichnung || p.teil}`, id: p.seriennummer || '-', datum: p.naechstePruefung, status: p.status }))
     ];
 
     if (allePruefungen.length === 0) {
@@ -223,7 +236,6 @@ function druckeListe(titel, elementId) {
 
     const druckKopie = tabelle.cloneNode(true);
 
-    // Aktions-Spalten & no-print aus Druckkopie entfernen
     druckKopie.querySelectorAll('tr').forEach(row => {
         Array.from(row.cells).forEach(cell => {
             if (cell.querySelector('button') || cell.classList.contains('no-print')) {
@@ -314,13 +326,12 @@ window.installiereApp = installiereApp;
 
 function aktualisiereDashboard() {
     try {
-        // WICHTIG: Nutze ladeDaten / ladePersonalData statt harter Key-Namen
-        const geraete = typeof ladeDaten === 'function' ? ladeDaten('geraete') : (JSON.parse(localStorage.getItem('ffw_geraete')) || []);
-        const mitglieder = typeof ladePersonalData === 'function' ? ladePersonalData() : (JSON.parse(localStorage.getItem('ffw_personal')) || []);
-        const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : (JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || []);
-        const lager = typeof ladeDaten === 'function' ? ladeDaten('lager') : (JSON.parse(localStorage.getItem('ffw_lager')) || []);
-        const psa = typeof ladeDaten === 'function' ? ladeDaten('psa') : (JSON.parse(localStorage.getItem('ffw_psa')) || []);
-        const pruefungen = typeof ladeDaten === 'function' ? ladeDaten('pruefungen') : (JSON.parse(localStorage.getItem('ffw_pruefungen')) || []);
+        const geraete = ladeDaten('geraete');
+        const mitglieder = ladeDaten('personal');
+        const fahrzeuge = ladeDaten('fahrzeuge');
+        const lager = ladeDaten('lager');
+        const psa = ladeDaten('psa');
+        const pruefungen = ladeDaten('pruefungen');
 
         const heute = new Date();
         
@@ -346,8 +357,6 @@ function aktualisiereDashboard() {
         setTileValue('stat-modul-psa', `${psa.length} Personen`);
         setTileValue('stat-modul-pruefungen', `${faellig + ueberfaellig} fällig`);
         setTileValue('stat-modul-lager', `${lager.length} Artikel`);
-        
-        // Greift jetzt zuverlässig auf ffw_personal zu:
         setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
     } catch (e) {
         console.error("Fehler beim Aktualisieren des Dashboards:", e);
@@ -426,7 +435,7 @@ function beantrageZulassungForm(event) {
     const art = document.getElementById('antrag-art').value;
     const grund = document.getElementById('antrag-grund').value;
 
-    const antraege = JSON.parse(localStorage.getItem('ffw_antraege')) || [];
+    const antraege = ladeDaten('antraege');
     antraege.push({
         id: 'antrag_' + Date.now(),
         datum: new Date().toISOString(),
@@ -436,7 +445,7 @@ function beantrageZulassungForm(event) {
         status: 'Ausstehend'
     });
 
-    localStorage.setItem('ffw_antraege', JSON.stringify(antraege));
+    speichereDaten('antraege', antraege);
 
     alert("✅ Antrag erfolgreich eingereicht! Ein Administrator wird Ihre Anfrage prüfen.");
     initZulassungLayout();
@@ -551,18 +560,12 @@ function exportiereSystemBackupGesichert() {
         einstellungen: JSON.parse(localStorage.getItem('ffw_einstellungen')) || {}
     };
 
-    if (darfLesen('geraete')) backupData.geraete = JSON.parse(localStorage.getItem('ffw_geraete')) || [];
-    if (darfLesen('fahrzeuge')) backupData.fahrzeuge = JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [];
-    if (darfLesen('lager')) backupData.lager = JSON.parse(localStorage.getItem('ffw_lager')) || [];
-    if (darfLesen('pruefungen')) backupData.pruefungen = JSON.parse(localStorage.getItem('ffw_pruefungen')) || [];
-    
-    if (darfLesen('personal')) {
-        backupData.mitglieder = JSON.parse(localStorage.getItem('ffw_mitglieder')) || [];
-    }
-
-    if (darfLesen('psa')) {
-        backupData.psa = JSON.parse(localStorage.getItem('ffw_psa')) || [];
-    }
+    if (darfLesen('geraete')) backupData.geraete = ladeDaten('geraete');
+    if (darfLesen('fahrzeuge')) backupData.fahrzeuge = ladeDaten('fahrzeuge');
+    if (darfLesen('lager')) backupData.lager = ladeDaten('lager');
+    if (darfLesen('pruefungen')) backupData.pruefungen = ladeDaten('pruefungen');
+    if (darfLesen('personal')) backupData.personal = ladeDaten('personal');
+    if (darfLesen('psa')) backupData.psa = ladeDaten('psa');
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const dlAnchor = document.createElement('a');
@@ -578,17 +581,17 @@ window.exportiereSystemBackupGesichert = exportiereSystemBackupGesichert;
 
 
 // ==========================================
-// Firebase-Anbindung (mit Verfügbarkeits-Prüfung)
+// Firebase-Anbindung
 // ==========================================
 
 if (typeof firebase !== 'undefined') {
     const firebaseConfig = {
-        apiKey: "DEIN_API_KEY",
-        authDomain: "DEIN_PROJECT.firebaseapp.com",
-        projectId: "DEIN_PROJECT_ID",
-        storageBucket: "DEIN_PROJECT.appspot.com",
-        messagingSenderId: "DEINE_SENDER_ID",
-        appId: "DEINE_APP_ID"
+        apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
+        authDomain: "ffw-albertsried.firebaseapp.com",
+        projectId: "ffw-albertsried",
+        storageBucket: "ffw-albertsried.appspot.com",
+        messagingSenderId: "45591494617",
+        appId: "1:45591494617:web:46ddf894c840871212e3c8"
     };
 
     if (!firebase.apps.length) {
@@ -597,7 +600,6 @@ if (typeof firebase !== 'undefined') {
 
     const db = firebase.firestore();
 
-    // Offline-Unterstützung (Persistenz) aktivieren
     db.enablePersistence({ synchronizeTabs: true })
         .catch((err) => {
             if (err.code === 'failed-precondition') {
@@ -628,11 +630,11 @@ function initAuswertungenLayout() {
         return true;
     };
 
-    const geraete = darfLesen('geraete') ? (JSON.parse(localStorage.getItem('ffw_geraete')) || []) : [];
-    const mitglieder = darfLesen('personal') ? (JSON.parse(localStorage.getItem('ffw_mitglieder')) || []) : [];
-    const psa = darfLesen('psa') ? (JSON.parse(localStorage.getItem('ffw_psa')) || []) : [];
-    const fahrzeuge = darfLesen('fahrzeuge') ? (JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || []) : [];
-    const pruefungen = darfLesen('pruefungen') ? (JSON.parse(localStorage.getItem('ffw_pruefungen')) || []) : [];
+    const geraete = darfLesen('geraete') ? ladeDaten('geraete') : [];
+    const mitglieder = darfLesen('personal') ? ladeDaten('personal') : [];
+    const psa = darfLesen('psa') ? ladeDaten('psa') : [];
+    const fahrzeuge = darfLesen('fahrzeuge') ? ladeDaten('fahrzeuge') : [];
+    const pruefungen = darfLesen('pruefungen') ? ladeDaten('pruefungen') : [];
 
     const heute = new Date();
     const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
@@ -699,9 +701,6 @@ const ROLLEN_CONFIG = {
     }
 };
 
-/**
- * Holt den aktiven Benutzer und prüft sicher dessen Rolle
- */
 function holeAktuelleRolle() {
     let user = null;
     try {
@@ -721,90 +720,41 @@ function holeAktuelleRolle() {
     return ROLLEN_CONFIG[rolle] ? rolle : 'gast';
 }
 
-/**
- * Zentrale Rechteprüfung
- */
 function hatRecht(recht) {
     const rolle = holeAktuelleRolle();
     const rechteDef = ROLLEN_CONFIG[rolle];
 
     if (!rechteDef) return false;
 
-    // Admin hat Vollzugriff
     if (rechteDef.schreibrechte && rechteDef.schreibrechte.includes('*')) {
         return true;
     }
 
-    // Prüfe Seiten- oder Schreibberechtigung
     const hatSeitenRecht = rechteDef.seiten && rechteDef.seiten.includes(recht);
     const hatSchreibRecht = rechteDef.schreibrechte && rechteDef.schreibrechte.includes(recht);
 
     return hatSeitenRecht || hatSchreibRecht;
 }
 
-/**
- * Anmelde-Funktion (Speichert den Benutzer im Speicher)
- */
 function anmeldenBenutzer(benutzerdaten) {
     if (!benutzerdaten || !benutzerdaten.rolle) {
         console.error("Ungültige Benutzerdaten übergeben.");
         return;
     }
     
-    // Einheitlichen Key für aktiven Benutzer schreiben
     localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify(benutzerdaten));
-    
-    // Veraltete Keys aufräumen
     localStorage.removeItem('ffw_user');
-    
     location.reload();
 }
 
-/**
- * Abmelde-Funktion (Setzt den Status sicher auf Gast zurück)
- */
 function abmelden() {
-    // Entfernt bestehende Logins
     localStorage.removeItem('ffw_aktiver_benutzer');
     localStorage.removeItem('ffw_user');
     sessionStorage.clear();
-
-    // Definierten Gast-Status setzen
-    localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify({
-        benutzername: 'Gast',
-        rolle: 'gast'
-    }));
-
     location.reload();
 }
 
-// Global verfügbar machen
 window.holeAktuelleRolle = holeAktuelleRolle;
-window.pruefeSeitenZugriff = hatRecht;
 window.hatRecht = hatRecht;
 window.anmeldenBenutzer = anmeldenBenutzer;
 window.abmelden = abmelden;
-
-
-// ==========================================
-// Netzwerk- & Online-Status-Anzeige
-// ==========================================
-
-function updateOnlineStatus() {
-    const statusEl = document.getElementById('network-status');
-    if (!statusEl) return;
-
-    if (navigator.onLine) {
-        statusEl.innerHTML = '🟢 Online (Synchronisiert)';
-        statusEl.style.background = '#e8f5e9';
-        statusEl.style.color = '#2e7d32';
-    } else {
-        statusEl.innerHTML = '🟠 Offline (Daten werden lokal gespeichert)';
-        statusEl.style.background = '#fff3e0';
-        statusEl.style.color = '#ef6c00';
-    }
-}
-
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-document.addEventListener('DOMContentLoaded', updateOnlineStatus);

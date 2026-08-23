@@ -529,3 +529,41 @@ body {
 .highlight-form {
     animation: formHighlight 1.5s ease-out;
 }
+/* --- Ergänzung für GR8 Dach/Aussen --- */
+
+.fahrzeug-layout-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.gr8-dach-box {
+    width: 100%;
+    max-width: 320px;
+    padding: 10px 15px;
+    background-color: #ffffff;
+    border: 2px solid #333333;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-sizing: border-box;
+}
+
+.gr8-dach-box:hover {
+    background-color: #e9ecef;
+    border-color: #007bff;
+    color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gr8-dach-box.active {
+    background-color: #007bff;
+    color: #ffffff;
+    border-color: #0056b3;
+}
