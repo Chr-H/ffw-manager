@@ -1,484 +1,584 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>FFW Manager - Albertsried</title> 
-     
-    <!-- CSS-Dateien --> 
-    <link rel="stylesheet" href="css/style.css?v=6"> 
-    <link rel="stylesheet" href="css/layout.css?v=6"> 
-    <link rel="stylesheet" href="css/geraete.css?v=6"> 
-     
-    <link rel="manifest" href="manifest.json"> 
-    <meta name="theme-color" content="#B71C1C"> 
-     
-    <!-- Favicons --> 
-    <link rel="icon" type="image/png" href="emblem-192.png"> 
-    <link rel="apple-touch-icon" sizes="180x180" href="emblem-192.png"> 
-</head> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFW Manager - Albertsried</title>
+    
+    <!-- CSS-Dateien -->
+    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/layout.css?v=6">
+    <link rel="stylesheet" href="css/geraete.css?v=6">
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#B71C1C">
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="emblem-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="emblem-192.png">
+</head>
 
-<body> 
+<body>
 
-    <!-- Kopfbereich --> 
+    <!-- Kopfbereich -->
+    <header class="header" style="background: #B71C1C; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="logo" style="display: flex; align-items: center; gap: 12px;">
+            <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;">
+            <h1 style="margin: 0; font-size: 1.3rem; color: white;">Freiwillige Feuerwehr Albertsried</h1>
+        </div>
 
-    <header class="header" style="background: #B71C1C; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"> 
-        <div class="logo" style="display: flex; align-items: center; gap: 12px;"> 
-            <img src="emblem-192.png" alt="FFW Albertsried Wappen" style="height: 38px; width: auto;"> 
-            <h1 style="margin: 0; font-size: 1.3rem; color: white;">Freiwillige Feuerwehr Albertsried</h1> 
-        </div> 
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none;" onclick="installiereApp()">📲 App installieren</button>
+            <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 6px 10px;">🏠 Zurück</button>
+            <button onclick="rechteBeantragen()" style="background: #ffc107; color: black; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">🔑 Rechte anfragen</button>
 
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;"> 
+            <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">🟢 Online</div>
 
-            <button id="pwaInstallBtn" class="btn btn-secondary" style="display: none;" onclick="installiereApp()">📲 App installieren</button> 
-
-            <button id="btn-mobil-zurueck" onclick="zeigeSeite('dashboard')" style="display:none; padding: 6px 10px;">🏠 Zurück</button> 
-
-            <button onclick="rechteBeantragen()" style="background: #ffc107; color: black; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">🔑 Rechte anfragen</button> 
-
-            <div id="network-status" style="font-size: 0.85em; padding: 5px 10px; border-radius: 4px; font-weight: bold; background: #e8f5e9; color: #2e7d32;">🟢 Online</div> 
-
-            <div id="user-header-info" style="display: flex; align-items: center; gap: 10px;"> 
-                <span id="user-role-badge" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 0.85em;">👤 Rolle: <strong id="aktueller-benutzer-rolle">Gast</strong></span> 
-
-                <button id="btn-login-logout" onclick="zeigLoginModalOderAbmelden()" style="background: white; color: #B71C1C; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Anmelden</button> 
-            </div> 
-        </div> 
-    </header> 
-
-    <div class="container"> 
-        <!-- Navigation --> 
-        <aside class="sidebar"> 
-            <nav> 
-                <ul> 
-                    <li><button type="button" onclick="zeigeSeite('dashboard')">🏠 Dashboard</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('geraete')">🔧 Geräte</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('fahrzeuge')">🚒 Fahrzeuge</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('psa')">🧯 PSA</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('pruefungen')">📋 Prüfungen</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('lager')">📦 Lager</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('personal')">👥 Personal</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('auswertungen')">📊 Auswertungen</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('benutzer')">🔐 Rechte & Benutzer</button></li> 
-                    <li><button type="button" onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</button></li> 
-                </ul> 
-            </nav> 
-        </aside> 
-
-        <!-- Hauptinhaltsbereich --> 
-        <main class="content"> 
-
-            <!-- 1. DASHBOARD --> 
-            <section id="seite-dashboard" class="seite-ansicht"> 
-                <section class="welcome"> 
-                    <h1>👋 Willkommen im FFW Manager</h1> 
-                    <p>Schön, dass du da bist.</p> 
-                    <p id="heute"></p> 
-                </section> 
-
-                <section class="status"> 
-
-                    <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;"> 
-                        <h3>🔴 Prüfungen</h3> 
-                        <p id="stat-pruefungen-ueberfaellig">0 überfällig</p> 
-                    </div> 
-
-                    <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;"> 
-                        <h3>🟡 Wartung & Fristen</h3> 
-                        <p id="stat-wartung-faellig">0 fällig</p> 
-                    </div> 
-
-                    <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;"> 
-                        <h3>🟢 Einsatzbereit</h3> 
-                        <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p> 
-                    </div> 
-
-                    <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;"> 
-                        <h3>⚫ Außer Dienst / Defekt</h3> 
-                        <p id="stat-defekt">0 inaktiv</p> 
-                    </div> 
-                </section> 
-
-                <h2>Module</h2> 
-                 
-                <div class="cards"> 
-                    <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;"> 
-                        <h2>🔧 Geräte</h2> 
-                        <p id="stat-modul-geraete" class="card-geraete-count">0 Geräte</p> 
-                    </div> 
-                    <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;"> 
-                        <h2>🚒 Fahrzeuge</h2> 
-                        <p id="stat-modul-fahrzeuge">0 Fahrzeuge</p> 
-                    </div> 
-                    <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;"> 
-                        <h2>🧯 PSA</h2> 
-                        <p id="stat-modul-psa">0 PSA's</p> 
-                    </div> 
-                    <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;"> 
-                        <h2>📋 Prüfungen</h2> 
-                        <p id="stat-modul-pruefungen">0 fällig</p> 
-                    </div> 
-                    <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;"> 
-                        <h2>📦 Lager</h2> 
-                        <p id="stat-modul-lager">0 Artikel</p> 
-                    </div> 
-                    <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;"> 
-                        <h2>👥 Personal</h2> 
-                        <p id="stat-modul-personal">0 Mitglieder</p> 
-                    </div> 
-                    <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;"> 
-                        <h2>🔐 Rechte & Benutzer</h2> 
-                        <p>Zugang & Rollen</p> 
-                    </div> 
-                </div> 
-            </section> 
-
-            <!-- 2. GERÄTE BEREICH --> 
-            <section id="seite-geraete" class="seite-ansicht" style="display: none;"> 
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"> 
-                    <h2>🛠️ Geräteverwaltung</h2> 
-                    <div style="display: flex; gap: 10px;" class="no-print"> 
-                        <input type="file" id="csvGeraeteFileInput" accept=".csv" style="display: none;" onchange="importGeraeteCSV(this)"> 
-                        <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">📥 CSV Import</button> 
-                        <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button> 
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button> 
-                    </div> 
-                </div> 
-
-                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);"> 
-                    <h3>➕ Gerät anlegen / bearbeiten</h3> 
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;"> 
-                        <input id="inventar" type="text" placeholder="Inventarnummer"> 
-                        <input id="bezeichnung" type="text" placeholder="Bezeichnung"> 
-                        <select id="kategorie"><option value="">Kategorie auswählen</option></select> 
-                        <input id="hersteller" type="text" placeholder="Hersteller"> 
-                        <label for="geraet-standort">Standort / Geräteraum:</label> 
-                        <select id="geraet-standort" class="form-control"> 
-                            <option value="">-- Standort wählen --</option> 
-                            <option value="Lager">Lager</option> 
-                            <option value="Gerätehaus">Gerätehaus</option> 
-                            <optgroup label="Florian Albertsried 44/1"> 
-                                <option value="Florian Albertsried 44/1 GR1">Florian Albertsried 44/1 - GR1 (rechts)</option> 
-                                <option value="Florian Albertsried 44/1 GR2">Florian Albertsried 44/1 - GR2 (links)</option> 
-                                <option value="Florian Albertsried 44/1 GR3">Florian Albertsried 44/1 - GR3 (hinten)</option> 
-                                <option value="Florian Albertsried 44/1 GR4">Florian Albertsried 44/1 - GR4 (Mitte)</option> 
-                                <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option> 
-                                <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Gruppenführer)</option> 
-                                <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Maschinist)</option> 
-                            </optgroup> 
-                        </select> 
-                        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme"> 
-                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung"> 
-                        <select id="pruefintervall" title="Prüfintervall"> 
-                            <option value="12">12 Monate (Jährlich)</option> 
-                            <option value="24">24 Monate (2 Jahre)</option> 
-                            <option value="6">6 Monate (Halbjährlich)</option> 
-                            <option value="1">1 Monat (Monatlich)</option> 
-                        </select> 
-                        <select id="status"> 
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option> 
-                            <option value="Wartung">🟡 Wartung</option> 
-                            <option value="Defekt">🔴 Defekt</option> 
-                            <option value="Außer Dienst">⚫ Außer Dienst</option> 
-                        </select> 
-                        <button type="button" onclick="neuesGeraet()">➕ Gerät speichern</button> 
-                    </div> 
-                </div> 
-
-                <hr style="margin:20px 0;"> 
-
-                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px; flex-wrap: wrap;"> 
-                    <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()"> 
-                    <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select> 
-                    <select id="filterStatus" onchange="filterGeraete()"> 
-                        <option value="">Alle Status</option> 
-                        <option value="Einsatzbereit">🟢 Einsatzbereit</option> 
-                        <option value="Wartung">🟡 Wartung</option> 
-                        <option value="Defekt">🔴 Defekt</option> 
-                        <option value="Außer Dienst">⚫ Außer Dienst</option> 
-                    </select> 
-                </div> 
-
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:start;"> 
-                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);"> 
-                        <div class="table-responsive"> 
-                            <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;"> 
-                                <thead> 
-                                    <tr> 
-                                        <th class="no-print">Aktionen</th> 
-                                        <th>Inv.-Nr.</th> 
-                                        <th>Bezeichnung</th> 
-                                        <th>Kategorie</th> 
-                                        <th>Hersteller</th> 
-                                        <th>Status</th> 
-                                    </tr> 
-                                </thead> 
-                                <tbody id="geraeteListe"></tbody> 
-                            </table> 
-                        </div> 
-                    </div> 
-
-                    <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;"> 
-                        <h2>📋 Geräteakte</h2> 
-                        <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p> 
-                    </div> 
-                </div> 
-            </section> 
-
-            <!-- 3. FAHRZEUGVERWALTUNG --> 
-            <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;"> 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"> 
-                    <h2>🚒 Fahrzeugverwaltung</h2> 
-                    <div style="display: flex; gap: 10px;" class="no-print"> 
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button> 
-                        <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)"> 
-                        <button type="button" class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button> 
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button> 
-                    </div> 
-                </div> 
-
-                <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);"> 
-                    <h3>➕ Neues Fahrzeug anlegen</h3> 
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;"> 
-                        <input id="fz-funkruf" type="text" placeholder="Funkrufname"> 
-                        <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen"> 
-                        <input id="fz-typ" type="text" placeholder="Fahrzeugtyp"> 
-                        <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;"> 
-                        <input id="fz-tuev" type="date" title="Nächster TÜV / HU"> 
-                        <input id="fz-sp" type="date" title="Nächste SP"> 
-                        <select id="fz-status"> 
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option> 
-                            <option value="Wartung">🟡 In Werkstatt / Wartung</option> 
-                            <option value="Defekt">🔴 Außer Dienst / Defekt</option> 
-                        </select> 
-                        <button type="button" onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button> 
-                    </div> 
-                </div> 
-
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; align-items:start;"> 
-                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);"> 
-                        <div class="table-responsive"> 
-                            <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;"> 
-                                <thead> 
-                                    <tr> 
-                                        <th class="no-print">Aktionen</th> 
-                                        <th>Funkrufname</th> 
-                                        <th>Typ</th> 
-                                        <th>Kennzeichen</th> 
-                                        <th>TÜV/HU</th> 
-                                        <th>Status</th> 
-                                    </tr> 
-                                </thead> 
-                                <tbody id="fahrzeugeListe"></tbody> 
-                            </table> 
-                        </div> 
-                    </div> 
-
-                    <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;"> 
-                        <h2>📋 Fahrzeugakte</h2> 
-                        <div id="fahrzeugAkteInhalt"> 
-                            <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p> 
-                        </div> 
-
-                        <template id="fahrzeugAkteTemplate"> 
-                            <div style="border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px;"> 
-                                <h3 id="akte-titel" style="margin:0;">-</h3> 
-                                <small id="akte-subtitel" style="color:#666;">-</small> 
-                            </div> 
-
-                            <div style="margin-bottom: 25px;"> 
-                                <h4>🚒 Geräteraum-Belegungsplan</h4> 
-                                <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p> 
-                                 
-                                <div class="fzg-schema"> 
-                                    <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')"> 
-                                        <span>GR6</span> 
-                                        <small>Maschinist</small> 
-                                    </div> 
-                                    <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')"> 
-                                        <span>GR7</span> 
-                                        <small>Gruppenführer</small> 
-                                    </div> 
-                                    <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')"> 
-                                        <span class="text-vertikal">GR5 Kabine</span> 
-                                    </div> 
-                                    <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')"> 
-                                        <span>GR1</span> 
-                                        <small>rechts</small> 
-                                    </div> 
-                                    <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')"> 
-                                        <span>GR4</span> 
-                                        <small>Mitte</small> 
-                                    </div> 
-                                    <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')"> 
-                                        <span>GR3</span> 
-                                        <small>hinten</small> 
-                                    </div> 
-                                    <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')"> 
-                                        <span>GR2</span> 
-                                        <small>links</small> 
-                                    </div> 
-                                </div> 
-                            </div> 
-
-                            <div> 
-                                <h4>📜 Historie & Reparaturen</h4> 
-                                <div style="background:#f8f9fa; padding:12px; border-radius:6px; border:1px solid #e0e0e0; margin-bottom:15px;"> 
-                                    <h5 style="margin-top:0; margin-bottom:8px;">➕ Eintrag hinzufügen</h5> 
-                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;"> 
-                                        <select id="hist-typ"> 
-                                            <option value="Reparatur">🛠️ Reparatur</option> 
-                                            <option value="Instandsetzung">🔧 Instandsetzung / Wartung</option> 
-                                            <option value="Ausfall">🚨 Ausfall</option> 
-                                            <option value="Sonstiges">📝 Sonstiges</option> 
-                                        </select> 
-                                        <input type="date" id="hist-datum"> 
-                                    </div> 
-                                    <input type="text" id="hist-titel" placeholder="Titel (z. B. TÜV bestanden)" style="width:100%; margin-bottom:8px; box-sizing:border-box;"> 
-                                    <textarea id="hist-beschreibung" placeholder="Beschreibung / Werkstatt..." style="width:100%; height:50px; margin-bottom:8px; box-sizing:border-box;"></textarea> 
-                                    <div style="display:flex; justify-content:space-between; align-items:center;"> 
-                                        <input type="number" id="hist-kosten" step="0.01" placeholder="Kosten in €" style="width:120px;"> 
-                                        <button type="button" class="btn btn-sm btn-primary" onclick="speichereHistorieEintrag()">Eintrag speichern</button> 
-                                    </div> 
-                                </div> 
-
-                                <div id="historieListe" style="max-height: 250px; overflow-y: auto;"> 
-                                    <p style="color:#777; font-style:italic;">Keine Einträge vorhanden.</p> 
-                                </div> 
-                            </div> 
-                        </template> 
-                    </div> 
-                </div> 
-            </section> 
-
-            <!-- 4. PSA BEREICH --> 
-            <section id="seite-psa" class="seite-ansicht" style="display: none;"> 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"> 
-                    <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2> 
-                    <div style="display: flex; gap: 10px;" class="no-print"> 
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importPSAInput').click()">📥 CSV Import</button> 
-                        <input type="file" id="importPSAInput" style="display:none;" accept=".csv" onchange="importPSACSV(this)"> 
-                        <button type="button" class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button> 
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button> 
-                    </div> 
-                </div> 
-                <div id="psa-container" class="table-responsive"></div> 
-            </section> 
-
-            <!-- 5. PRÜFUNGEN BEREICH --> 
-            <section id="seite-pruefungen" class="seite-ansicht" style="display: none;"> 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"> 
-                    <h2>📋 Anstehende Prüfungen</h2> 
-                    <div style="display: flex; gap: 10px;" class="no-print"> 
-                        <button type="button" class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button> 
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-container')">🖨️ Prüfbericht drucken / PDF</button> 
-                    </div> 
-                </div> 
-                <div id="pruefungen-container" class="liste-container table-responsive"></div> 
-            </section> 
-
-            <!-- 6. LAGER BEREICH --> 
-            <section id="seite-lager" class="seite-ansicht" style="display: none;"> 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"> 
-                    <h2>📦 Lagerverwaltung</h2> 
-                    <div style="display: flex; gap: 10px;" class="no-print"> 
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📥 CSV Import</button> 
-                        <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)"> 
-                        <button type="button" class="btn btn-secondary" onclick="exportLagerCSV()">📊 CSV Export</button> 
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Lagerliste', 'lager-container')">🖨️ Liste drucken / PDF</button> 
-                    </div> 
-                </div> 
-                <div id="lager-container" class="table-responsive"></div> 
-            </section> 
-
-            <!-- 7. PERSONAL BEREICH --> 
-            <section id="seite-personal" class="seite-ansicht" style="display: none;"> 
-                <h2>👥 Personalverwaltung</h2> 
-                <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;"> 
-                    <input type="text" id="personal-suche" placeholder="Suche nach Name, Spind..." oninput="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;"> 
-                    <select id="personal-filter-funktion" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;"> 
-                        <option value="">Alle Funktionen</option> 
-                        <option value="Kommandant">Kommandant</option> 
-                        <option value="stellv. Kommandant">stellv. Kommandant</option> 
-                        <option value="Gruppenführer">Gruppenführer</option> 
-                        <option value="Gerätewart">Gerätewart</option> 
-                        <option value="Maschinist">Maschinist</option> 
-                        <option value="Atemschutzträger">Atemschutzträger</option> 
-                    </select> 
-                    <select id="personal-filter-g26" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;"> 
-                        <option value="">G26.3 Status (Alle)</option> 
-                        <option value="gueltig">Gültig</option> 
-                        <option value="abgelaufen">Abgelaufen</option> 
-                    </select> 
-                    <button class="btn btn-primary" onclick="oeffneMitgliedModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Neues Mitglied</button> 
-                </div> 
-
-                <div class="table-responsive" style="width:100%; overflow-x:auto;"> 
-                    <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse;"> 
-                        <thead class="table-dark"> 
-                            <tr> 
-                                <th>Spind</th> 
-                                <th>Name</th> 
-                                <th>Dienstgrad</th> 
-                                <th>Funktionen</th> 
-                                <th>G26.3</th> 
-                                <th>Lehrgänge</th> 
-                                <th>Bemerkung</th> 
-                                <th>Aktionen</th> 
-                            </tr> 
-                        </thead> 
-                        <tbody id="personal-tabelle-body"></tbody> 
-                    </table> 
-                </div> 
-            </section> 
-
-            <!-- AUSWERTUNGEN --> 
-            <section id="seite-auswertungen" class="seite-ansicht" style="display: none;"> 
-                <h2>📊 Auswertungen</h2> 
-                <p>In Entwicklung...</p> 
-            </section> 
-
-            <!-- 8. RECHTE & BENUTZER BEREICH --> 
-            <div id="seite-benutzer" class="seite-ansicht" style="display: none;"> 
-                <h2>🔐 Benutzer- & Rechteverwaltung</h2> 
-                <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;"> 
-                    <h3>🔑 Zugang / Rolle beantragen</h3> 
-                    <form id="requestAccessForm" onsubmit="beantrageZugang(event)"> 
-                        <div class="form-group" style="margin-bottom: 15px;"> 
-                            <label for="reqName" style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label> 
-                            <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;"> 
-                        </div> 
-                        <div class="form-group" style="margin-bottom: 15px;"> 
-                            <label for="reqEmail" style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label> 
-                            <input type="text" id="reqEmail" class="form-control" required placeholder="max.mustermann@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;"> 
-                        </div> 
-                        <div class="form-group" style="margin-bottom: 15px;"> 
-                            <label for="reqPin" style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label> 
-                            <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;"> 
-                        </div> 
-                        <div class="form-group" style="margin-bottom: 15px;"> 
-                            <label for="reqWunschRolle" style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label> 
-                            <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;"> 
-                                <option value="viewer">Leserechte (z. B. Mannschaft)</option> 
-                                <option value="editor">Schreibrechte (z. B. Gerätewart)</option> 
-                                <option value="admin">Administrator</option> 
-                            </select> 
-                        </div> 
-                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">Zugang beantragen</button> 
-                    </form> 
-                    <div id="requestStatusMessage"></div>
-                </div>
+            <div id="user-header-info" style="display: flex; align-items: center; gap: 10px;">
+                <span id="user-role-badge" style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; font-size: 0.85em;">👤 Rolle: <strong id="aktueller-benutzer-rolle">Gast</strong></span>
+                <button id="btn-login-logout" onclick="zeigLoginModalOderAbmelden()" style="background: white; color: #B71C1C; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Anmelden</button>
             </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Navigation -->
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><button type="button" onclick="zeigeSeite('dashboard')">🏠 Dashboard</button></li>
+                    <li><button type="button" onclick="zeigeSeite('geraete')">🔧 Geräte</button></li>
+                    <li><button type="button" onclick="zeigeSeite('fahrzeuge')">🚒 Fahrzeuge</button></li>
+                    <li><button type="button" onclick="zeigeSeite('psa')">🧯 PSA</button></li>
+                    <li><button type="button" onclick="zeigeSeite('pruefungen')">📋 Prüfungen</button></li>
+                    <li><button type="button" onclick="zeigeSeite('lager')">📦 Lager</button></li>
+                    <li><button type="button" onclick="zeigeSeite('personal')">👥 Personal</button></li>
+                    <li><button type="button" onclick="zeigeSeite('auswertungen')">📊 Auswertungen</button></li>
+                    <li><button type="button" onclick="zeigeSeite('benutzer')">🔐 Rechte & Benutzer</button></li>
+                    <li><button type="button" onclick="zeigeSeite('einstellungen')">⚙️ Einstellungen</button></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Hauptinhaltsbereich -->
+        <main class="content">
+
+            <!-- 1. DASHBOARD -->
+            <section id="seite-dashboard" class="seite-ansicht">
+                <section class="welcome">
+                    <h1>👋 Willkommen im FFW Manager</h1>
+                    <p>Schön, dass du da bist.</p>
+                    <p id="heute"></p>
+                </section>
+
+                <section class="status">
+                    <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
+                        <h3>🔴 Prüfungen</h3>
+                        <p id="stat-pruefungen-ueberfaellig">0 überfällig</p>
+                    </div>
+                    <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;">
+                        <h3>🟡 Wartung & Fristen</h3>
+                        <p id="stat-wartung-faellig">0 fällig</p>
+                    </div>
+                    <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
+                        <h3>🟢 Einsatzbereit</h3>
+                        <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p>
+                    </div>
+                    <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
+                        <h3>⚫ Außer Dienst / Defekt</h3>
+                        <p id="stat-defekt">0 inaktiv</p>
+                    </div>
+                </section>
+
+                <h2>Module</h2>
+                
+                <div class="cards">
+                    <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
+                        <h2>🔧 Geräte</h2>
+                        <p id="stat-modul-geraete" class="card-geraete-count">0 Geräte</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;">
+                        <h2>🚒 Fahrzeuge</h2>
+                        <p id="stat-modul-fahrzeuge">0 Fahrzeuge</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;">
+                        <h2>🧯 PSA</h2>
+                        <p id="stat-modul-psa">0 PSA's</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
+                        <h2>📋 Prüfungen</h2>
+                        <p id="stat-modul-pruefungen">0 fällig</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
+                        <h2>📦 Lager</h2>
+                        <p id="stat-modul-lager">0 Artikel</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
+                        <h2>👥 Personal</h2>
+                        <p id="stat-modul-personal">0 Mitglieder</p>
+                    </div>
+                    <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
+                        <h2>🔐 Rechte & Benutzer</h2>
+                        <p>Zugang & Rollen</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. GERÄTE BEREICH -->
+            <section id="seite-geraete" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🛠️ Geräteverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <!-- 1. Das unsichtbare Datei-Auswahlfeld -->
+            <input type="file" id="csvGeraeteFileInput" accept=".csv" style="display: none;" onchange="importGeraeteCSV(this)">
+
+            <!-- 2. Der EINZIGE, hübsche Import-Button -->
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">📥 CSV Import</button>
+
+            <!-- Export & Drucken -->
+            <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+        </div>
+    </div>
+
+                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <h3>➕ Gerät anlegen / bearbeiten</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                        <input id="inventar" type="text" placeholder="Inventarnummer">
+                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
+                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
+                        <input id="hersteller" type="text" placeholder="Hersteller">
+                        <label for="geraet-standort">Standort / Geräteraum:</label>
+                            <select id="geraet-standort" class="form-control">
+                            <option value="">-- Standort wählen --</option>
+                            <option value="Lager">Lager</option>
+                        <option value="Gerätehaus">Gerätehaus</option>
+    
+                        <!-- Fahrzeug 1: Florian Albertsried 44/1 -->
+                        <optgroup label="Florian Albertsried 44/1">
+                            <option value="Florian Albertsried 44/1 GR1">Florian Albertsried 44/1 - GR1 (rechts)</option>
+                            <option value="Florian Albertsried 44/1 GR2">Florian Albertsried 44/1 - GR2 (links)</option>
+                            <option value="Florian Albertsried 44/1 GR3">Florian Albertsried 44/1 - GR3 (hinten)</option>
+                            <option value="Florian Albertsried 44/1 GR4">Florian Albertsried 44/1 - GR4 (Mitte)</option>
+                            <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option>
+                            <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Gruppenführer)</option>
+                            <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Maschinist)</option>
+                        </optgroup>
+                    </select>
+                        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
+                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
+                        <select id="pruefintervall" title="Prüfintervall">
+                            <option value="12">12 Monate (Jährlich)</option>
+                            <option value="24">24 Monate (2 Jahre)</option>
+                            <option value="6">6 Monate (Halbjährlich)</option>
+                            <option value="1">1 Monat (Monatlich)</option>
+                        </select>
+                        <select id="status">
+                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                            <option value="Wartung">🟡 Wartung</option>
+                            <option value="Defekt">🔴 Defekt</option>
+                            <option value="Außer Dienst">⚫ Außer Dienst</option>
+                        </select>
+                        <button type="button" onclick="neuesGeraet()">➕ Gerät speichern</button>
+                    </div>
+                </div>
+
+                <hr style="margin:20px 0;">
+
+                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px; flex-wrap: wrap;">
+                    <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
+                    <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
+                    <select id="filterStatus" onchange="filterGeraete()">
+                        <option value="">Alle Status</option>
+                        <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                        <option value="Wartung">🟡 Wartung</option>
+                        <option value="Defekt">🔴 Defekt</option>
+                        <option value="Außer Dienst">⚫ Außer Dienst</option>
+                    </select>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:start;">
+                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                        <div class="table-responsive">
+                            <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th class="no-print">Aktionen</th>
+                                        <th>Inv.-Nr.</th>
+                                        <th>Bezeichnung</th>
+                                        <th>Kategorie</th>
+                                        <th>Hersteller</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="geraeteListe"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="geraeteDetails" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:250px;">
+                        <h2>📋 Geräteakte</h2>
+                        <p style="color:#777;">Bitte links ein Gerät auswählen (👁️ klicken).</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. FAHRZEUGVERWALTUNG -->
+<section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🚒 Fahrzeugverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button>
+            <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)">
+            <button type="button" class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+        </div>
+    </div>
+
+    <!-- Fahrzeug anlegen -->
+    <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>➕ Neues Fahrzeug anlegen</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <input id="fz-funkruf" type="text" placeholder="Funkrufname">
+            <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
+            <input id="fz-typ" type="text" placeholder="Fahrzeugtyp">
+            <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
+            <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
+            <input id="fz-sp" type="date" title="Nächste SP">
+            <select id="fz-status">
+                <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                <option value="Wartung">🟡 In Werkstatt / Wartung</option>
+                <option value="Defekt">🔴 Außer Dienst / Defekt</option>
+            </select>
+            <button type="button" onclick="neuesFahrzeugSpeichern()">➕ Fahrzeug speichern</button>
+        </div>
+    </div>
+
+    <!-- Hauptbereich: Tabelle & Fahrzeugakte -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; align-items:start;">
+        
+        <!-- Fahrzeugliste Tabelle -->
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <div class="table-responsive">
+                <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th class="no-print">Aktionen</th>
+                            <th>Funkrufname</th>
+                            <th>Typ</th>
+                            <th>Kennzeichen</th>
+                            <th>TÜV/HU</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fahrzeugeListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Fahrzeugakte mit Geräteraum-Schema & Historie -->
+        <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
+            <h2>📋 Fahrzeugakte</h2>
+            
+            <div id="fahrzeugAkteInhalt">
+                <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+            </div>
+
+            <!-- Vorlage für die Fahrzeugakte (wird dynamisch befüllt) -->
+            <template id="fahrzeugAkteTemplate">
+                <div style="border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 id="akte-titel" style="margin:0;">-</h3>
+                    <small id="akte-subtitel" style="color:#666;">-</small>
+                </div>
+
+                <!-- 1. GERÄTERAUM-SCHEMA -->
+                <div style="margin-bottom: 25px;">
+                    <h4>🚒 Geräteraum-Belegungsplan</h4>
+                    <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p>
+                    
+                    <div class="fzg-schema">
+                        <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')">
+                            <span>GR6</span>
+                            <small>Maschinist</small>
+                        </div>
+                        <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')">
+                            <span>GR7</span>
+                            <small>Gruppenführer</small>
+                        </div>
+                        <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')">
+                            <span class="text-vertikal">GR5 Kabine</span>
+                        </div>
+                        <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')">
+                            <span>GR1</span>
+                            <small>rechts</small>
+                        </div>
+                        <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')">
+                            <span>GR4</span>
+                            <small>Mitte</small>
+                        </div>
+                        <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')">
+                            <span>GR3</span>
+                            <small>hinten</small>
+                        </div>
+                        <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')">
+                            <span>GR2</span>
+                            <small>links</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. HISTORIE & INSTANDSETZUNG -->
+                <div>
+                    <h4>📜 Historie & Reparaturen</h4>
+                    
+                    <!-- Formular für neuen Eintrag -->
+                    <div style="background:#f8f9fa; padding:12px; border-radius:6px; border:1px solid #e0e0e0; margin-bottom:15px;">
+                        <h5 style="margin-top:0; margin-bottom:8px;">➕ Eintrag hinzufügen</h5>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                            <select id="hist-typ">
+                                <option value="Reparatur">🛠️ Reparatur</option>
+                                <option value="Instandsetzung">🔧 Instandsetzung / Wartung</option>
+                                <option value="Ausfall">🚨 Ausfall</option>
+                                <option value="Sonstiges">📝 Sonstiges</option>
+                            </select>
+                            <input type="date" id="hist-datum">
+                        </div>
+                        <input type="text" id="hist-titel" placeholder="Titel (z. B. TÜV bestanden)" style="width:100%; margin-bottom:8px; box-sizing:border-box;">
+                        <textarea id="hist-beschreibung" placeholder="Beschreibung / Werkstatt..." style="width:100%; height:50px; margin-bottom:8px; box-sizing:border-box;"></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <input type="number" id="hist-kosten" step="0.01" placeholder="Kosten in €" style="width:120px;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="speichereHistorieEintrag()">Eintrag speichern</button>
+                        </div>
+                    </div>
+
+                    <!-- Liste der bestehenden Einträge -->
+                    <div id="historieListe" style="max-height: 250px; overflow-y: auto;">
+                        <p style="color:#777; font-style:italic;">Keine Einträge vorhanden.</p>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+    </div>
+</section>
+
+            <!-- 4. PSA BEREICH -->
+            <section id="seite-psa" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importPSAInput').click()">📥 CSV Import</button>
+                        <input type="file" id="importPSAInput" style="display:none;" accept=".csv" onchange="importPSACSV(this)">
+                        <button type="button" class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
+                        <button type="button" class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
+                    </div>
+                </div>
+                <div id="psa-container" class="table-responsive"></div>
+            </section>
+
+            <!-- 5. PRÜFUNGEN BEREICH -->
+            <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2>📋 Anstehende Prüfungen</h2>
+                    <div style="display: flex; gap: 10px;" class="no-print">
+                        <button type="button" class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
+                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Prüfprotokoll Geräte & PSA', 'pruefungen-container')">🖨️ Prüfbericht drucken / PDF</button>
+                    </div>
+                </div>
+                <div id="pruefungen-container" class="liste-container table-responsive"></div>
+            </section>
+
+            <!-- 6. LAGER BEREICH -->
+            <section id="seite-lager" class="seite-ansicht" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h2>📦 Lagerverwaltung</h2>
+                <div style="display: flex; gap: 10px;" class="no-print">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('importLagerInput').click()">📥 CSV Import</button>
+            <input type="file" id="importLagerInput" style="display:none;" accept=".csv" onchange="importLagerCSV(this)">
+            <button type="button" class="btn btn-secondary" onclick="exportLagerCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Lagerliste', 'lager-container')">🖨️ Liste drucken / PDF</button>
+        </div>
+    </div>
+    <div id="lager-container" class="table-responsive"></div>
+</section>
+
+            <!-- 7. PERSONAL BEREICH -->
+            <section id="seite-personal" class="seite-ansicht" style="display: none;">
+                <h2>👥 Personalverwaltung</h2>
+
+                <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <input type="text" id="personal-suche" placeholder="Suche nach Name, Spind..." oninput="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+                    
+                    <select id="personal-filter-funktion" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+                        <option value="">Alle Funktionen</option>
+                        <option value="Kommandant">Kommandant</option>
+                        <option value="stellv. Kommandant">stellv. Kommandant</option>
+                        <option value="Gruppenführer">Gruppenführer</option>
+                        <option value="Gerätewart">Gerätewart</option>
+                        <option value="Maschinist">Maschinist</option>
+                        <option value="Atemschutzträger">Atemschutzträger</option>
+                    </select>
+
+                    <select id="personal-filter-g26" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+                        <option value="">G26.3 Status (Alle)</option>
+                        <option value="gueltig">Gültig</option>
+                        <option value="abgelaufen">Abgelaufen</option>
+                    </select>
+
+                    <button class="btn btn-primary" onclick="oeffneMitgliedModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Neues Mitglied</button>
+                </div>
+
+                <div class="table-responsive" style="width:100%; overflow-x:auto;">
+                    <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Spind</th>
+                                <th>Name</th>
+                                <th>Dienstgrad</th>
+                                <th>Funktionen</th>
+                                <th>G26.3</th>
+                                <th>Lehrgänge</th>
+                                <th>Bemerkung</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personal-tabelle-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- AUSWERTUNGEN -->
+            <section id="seite-auswertungen" class="seite-ansicht" style="display: none;">
+                <h2>📊 Auswertungen</h2>
+                <p>In Entwicklung...</p>
+            </section>
+
+            <!-- 8. RECHTE & BENUTZER BEREICH -->
+            <div id="seite-benutzer" class="seite-ansicht" style="display: none;">
+                <h2>🔐 Benutzer- & Rechteverwaltung</h2>
+                <div id="registration-form-container" class="card" style="max-width: 450px; margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background: #fff;">
+                    <h3>🔑 Zugang / Rolle beantragen</h3>
+                    <form id="requestAccessForm" onsubmit="beantrageZugang(event)">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqName" style="display:block; margin-bottom: 5px; font-weight: bold;">Vollständiger Name:</label>
+                            <input type="text" id="reqName" class="form-control" required placeholder="z. B. Max Mustermann" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqEmail" style="display:block; margin-bottom: 5px; font-weight: bold;">E-Mail-Adresse / Benutzername:</label>
+                            <input type="text" id="reqEmail" class="form-control" required placeholder="max.mustermann@feuerwehr.de" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqPin" style="display:block; margin-bottom: 5px; font-weight: bold;">Eigene persönliche PIN wählen:</label>
+                            <input type="password" id="reqPin" class="form-control" required placeholder="4- bis 6-stellige Zahl" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="reqWunschRolle" style="display:block; margin-bottom: 5px; font-weight: bold;">Gewünschte Rolle / Begründung:</label>
+                            <select id="reqWunschRolle" class="form-control" style="width: 100%; padding: 8px;">
+                                <option value="viewer">Leserechte (z. B. Mannschaft)</option>
+                                <option value="editor">Schreibrechte (z. B. Gerätewart)</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">Zugang beantragen</button>
+                    </form>
+                    <div id="requestStatusMessage" style="margin-top: 15px; font-weight: bold;"></div>
+                </div>
+                <div id="benutzer-verwaltung-container" style="margin-top: 30px;"></div>
+            </div>
+
+            <!-- 9. EINSTELLUNGEN -->
+            <section id="seite-einstellungen" class="seite-ansicht" style="display: none;">
+                <h2>⚙️ Einstellungen</h2>
+                <p>In Entwicklung...</p>
+            </section>
+
         </main>
     </div>
 
-    <!-- JavaScript-Dateien (KRITISCH FÜR FUNKTION & DATENANZEIGE) -->
-    <script src="js/app.js?v=6"></script>
-    <script src="js/geraete.js?v=6"></script>
-    <script src="js/fahrzeuge.js?v=6"></script>
-    <script src="js/psa.js?v=6"></script>
-    <script src="js/lager.js?v=6"></script>
-    <script src="js/personal.js?v=6"></script>
+    <!-- Modal für Mitglieder -->
+    <div id="mitglied-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; margin: 3% auto; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-top:0;">Mitglied verwalten</h3>
+            <form id="mitglied-form" onsubmit="speichereMitglied(event)">
+                <input type="hidden" id="mitglied-id">
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:3px; font-weight:bold;">Spind-Nr.:</label>
+                    <input type="text" id="mitglied-spind" placeholder="z. B. 12" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="text" id="mitglied-vorname" placeholder="Vorname *" required style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <input type="text" id="mitglied-nachname" placeholder="Nachname *" required style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:3px; font-weight:bold;">Dienstgrad:</label>
+                    <input type="text" id="mitglied-dienstgrad" placeholder="z. B. Hauptfeuerwehrmann" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:3px; font-weight:bold;">G26.3 Datum:</label>
+                    <input type="date" id="mitglied-g26datum" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:3px; font-weight:bold;">Lehrgänge:</label>
+                    <input type="text" id="mitglied-lehrgaenge" placeholder="z. B. TM1, AGT" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; margin-bottom:3px; font-weight:bold;">Bemerkung:</label>
+                    <textarea id="mitglied-bemerkung" rows="3" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-weight:bold; display:block; margin-bottom:5px;">Funktionen:</label>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <label><input type="checkbox" class="cb-funktion" value="Kommandant"> Kommandant</label>
+                        <label><input type="checkbox" class="cb-funktion" value="stellv. Kommandant"> stellv. Kommandant</label>
+                        <label><input type="checkbox" class="cb-funktion" value="Gruppenführer"> Gruppenführer</label>
+                        <label><input type="checkbox" class="cb-funktion" value="Gerätewart"> Gerätewart</label>
+                        <label><input type="checkbox" class="cb-funktion" value="Maschinist"> Maschinist</label>
+                        <label><input type="checkbox" class="cb-funktion" value="Atemschutzträger"> Atemschutzträger</label>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="schliesseMitgliedModal()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">Abbrechen</button>
+                    <button type="submit" style="padding:8px 12px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer;">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
+            authDomain: "ffw-manager-19fbd.firebaseapp.com",
+            projectId: "ffw-manager-19fbd",
+            storageBucket: "ffw-manager-19fbd.firebasestorage.app",
+            messagingSenderId: "45591494617",
+            appId: "1:45591494617:web:46ddf894c840871212e3c8"
+        };
+
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            window.db = firebase.firestore();
+        }
+    </script>
+
+    <!-- Anwendungsskripte am Dateiende laden -->
+    <script src="js/storage.js?v=7"></script>
+    <script src="js/kategorien.js?v=7"></script>
+    <script src="js/geraete.js?v=7"></script>
+    <script src="js/fahrzeuge.js?v=7"></script>
+    <script src="js/personal.js?v=7"></script>
+    <script src="js/psa.js?v=7"></script>
+    <script src="js/lager.js?v=7"></script>
+    <script src="js/pruefungen.js?v=7"></script>
+    <script src="js/benutzer.js?v=7"></script>
+    <script src="js/import.js?v=7"></script>
+    <script src="js/app.js?v=7"></script>
+
 </body>
 </html>
