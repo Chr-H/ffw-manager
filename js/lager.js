@@ -192,6 +192,7 @@ function importLagerCSV(inputOrEvent) {
     reader.readAsText(file, 'UTF-8');
 }
 
+// NEU & KORRIGIERT:
 function exportLagerCSV() {
     const daten = typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []);
 
@@ -200,7 +201,6 @@ function exportLagerCSV() {
         return;
     }
 
-    // Saubere und einheitliche Spaltenreihenfolge
     const headers = [
         "ID", 
         "Artikelnummer", 
@@ -237,12 +237,25 @@ function exportLagerCSV() {
         rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
         
         const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", dateiname);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        
+        if (navigator.msSaveBlob) { 
+            navigator.msSaveBlob(blob, dateiname);
+        } else {
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.href = url;
+            link.style.display = "none";
+            link.download = dateiname; // Zwingt den Browser zur .csv Vorgabe + Dateinamen
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
     }
 }
 

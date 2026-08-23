@@ -524,20 +524,34 @@ function exportGeraeteCSV() {
         csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"));
     });
 
+    // Dateiname mit heutigem Datum im Format YYYY-MM-DD
     const heute = new Date().toISOString().split('T')[0];
     const dateiname = `Geraeteliste_FFW_${heute}.csv`;
 
+    // Blob explizit als text/csv mit UTF-8 BOM definieren
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
     
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", dateiname);
-    document.body.appendChild(link);
-    link.click();
-    
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Robuste Download-Ausführung
+    if (navigator.msSaveBlob) { 
+        // Für ältere Edge/IE Browser
+        navigator.msSaveBlob(blob, dateiname);
+    } else {
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        link.href = url;
+        link.style.display = "none";
+        link.download = dateiname; // Zwingt den Browser zur Namens- und Endungsvorgabe
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // Timeout stellt sicher, dass der Browser den Download abgeschlossen hat, bevor der Link entfernt wird
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
 }
 
 // ------------------------------------------
