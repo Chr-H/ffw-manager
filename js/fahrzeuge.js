@@ -499,6 +499,24 @@ function druckeEinzelFahrzeugAkte(fahrzeugId) {
         druckFenster.print();
     }, 250);
 }
+// Wrapper-Funktionen zur Behebung der Namensabweichungen:
+
+function exportFahrzeugEinzelnCSV() {
+    if (!aktuellesFahrzeugId) {
+        alert("⚠️ Bitte zuerst ein Fahrzeug auswählen.");
+        return;
+    }
+    exportFahrzeugHistorieCSV(aktuellesFahrzeugId);
+}
+
+function druckeFahrzeugAkte() {
+    if (!aktuellesFahrzeugId) {
+        alert("⚠️ Bitte zuerst ein Fahrzeug auswählen.");
+        return;
+    }
+    druckeEinzelFahrzeugAkte(aktuellesFahrzeugId);
+}
+
 
 
 // Global registrieren
@@ -513,6 +531,8 @@ window.exportFahrzeugeCSV = exportFahrzeugeCSV;
 window.importFahrzeugeCSV = importFahrzeugeCSV;
 window.exportFahrzeugHistorieCSV = exportFahrzeugHistorieCSV;
 window.druckeEinzelFahrzeugAkte = druckeEinzelFahrzeugAkte;
+window.druckeFahrzeugAkte = druckeFahrzeugAkte;
+
 
 document.addEventListener('DOMContentLoaded', () => {
     renderFahrzeugeView();
