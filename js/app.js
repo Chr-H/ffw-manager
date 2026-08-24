@@ -180,14 +180,18 @@ function exportPSACSV() {
         return;
     }
 
-    const headers = ["Spind", "Träger", "Ausrüstung", "Größe", "Seriennummer", "Ausgabedatum", "Nächste Prüfung", "Status"];
+    // Erweiterter Header
+    const headers = ["Spind", "Träger", "Hersteller", "Typ", "Ausrüstung", "Größe", "Zubehör", "Seriennummer / Inv-Nr", "Ausgabedatum", "Nächste Prüfung", "Status"];
     
     const rows = daten.map(p => [
         p.spind || "",
         p.traeger || p.name || "",
+        p.hersteller || "-",
+        p.typ || "-",
         p.bezeichnung || p.ausruestung || p.teil || "",
         p.groesse || "",
-        p.seriennummer || "",
+        p.zubehoer || "-",
+        p.seriennummer || p.inventarnummer || "-", // Bricht ohne Nr. nicht mehr ab
         p.ausgabeDatum || p.ausgabedatum || "",
         p.naechstePruefung || "",
         p.status || "Einsatzbereit"

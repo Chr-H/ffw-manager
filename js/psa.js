@@ -199,14 +199,17 @@ function renderPSAView() {
             <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
                     <tr style="background:#f4f6f8; text-align:left; border-bottom:2px solid #e0e0e0;">
-                        <th style="padding:10px;">Aktionen</th>
-                        <th style="padding:10px;">Spind</th>
-                        <th style="padding:10px;">Träger</th>
-                        <th style="padding:10px;">Ausrüstung</th>
-                        <th style="padding:10px;">Größe</th>
-                        <th style="padding:10px;">Status</th>
-                        <th style="padding:10px;">Nächste Prüfung</th>
-                    </tr>
+    <th style="padding:10px;">Aktionen</th>
+    <th style="padding:10px;">Spind</th>
+    <th style="padding:10px;">Träger</th>
+    <th style="padding:10px;">Hersteller</th>
+    <th style="padding:10px;">Typ</th>
+    <th style="padding:10px;">Ausrüstung</th>
+    <th style="padding:10px;">Größe</th>
+    <th style="padding:10px;">Zubehör</th>
+    <th style="padding:10px;">Status</th>
+    <th style="padding:10px;">Nächste Prüfung</th>
+</tr>
                 </thead>
                 <tbody id="psa-tabelle-body"></tbody>
             </table>
@@ -274,12 +277,15 @@ function filterPSA() {
                     <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${safeId}')">🗑️</button>
                 </td>
                 <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + escapeHtml(item.spind) : '-'}</strong></td>
-                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || item.name || 'Unbekannt')}</td>
-                <td style="padding:10px;">${escapeHtml(item.bezeichnung || '-')}</td>
-                <td style="padding:10px;">${escapeHtml(item.groesse || '-')}</td>
-                <td style="padding:10px;">${statusBadge}</td>
-                <td style="padding:10px;">${formatiereDatum(item.naechstePruefung)}</td>
-            </tr>
+        <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || item.name || 'Unbekannt')}</td>
+        <td style="padding:10px;">${escapeHtml(item.hersteller || '-')}</td>
+        <td style="padding:10px;">${escapeHtml(item.typ || '-')}</td>
+        <td style="padding:10px;">${escapeHtml(item.bezeichnung || '-')}</td>
+        <td style="padding:10px;">${escapeHtml(item.groesse || '-')}</td>
+        <td style="padding:10px;">${escapeHtml(item.zubehoer || '-')}</td>
+        <td style="padding:10px;">${statusBadge}</td>
+        <td style="padding:10px;">${formatiereDatum(item.naechstePruefung)}</td>
+    </tr>
         `;
     });
 
@@ -430,7 +436,7 @@ function addPSAHistorieEintrag(event, id) {
 
 // 4. Modal zum Anlegen/Bearbeiten
 function openPSAModal(id = null) {
-    let item = { id: '', traeger: '', spind: '', bezeichnung: '', groesse: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
+    let item = { id: '', traeger: '', spind: '', hersteller: '', typ: '', bezeichnung: '', groesse: '', zubehoer: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
 
     if (id && id !== 'null' && id !== 'undefined') {
         const found = getPSA().find(p => p && p.id === id);
@@ -443,57 +449,78 @@ function openPSAModal(id = null) {
         <div id="psa-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
             <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
                 <h3>${item.id ? '✏️ PSA bearbeiten' : '➕ PSA zuweisen / anlegen'}</h3>
-                <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:2;">
-                            <label><strong>Name des Trägers *</strong></label>
-                            <input type="text" id="psa-traeger" value="${escapeHtml(item.traeger || item.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Spind-Nr.</strong></label>
-                            <input type="text" id="psa-spind" value="${escapeHtml(item.spind)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
-                        </div>
-                    </div>
-                    <div>
-                        <label><strong>Ausrüstungsteil *</strong></label>
-                        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
-                        <datalist id="psa-ausruestung-liste">
-                            <option value="Feuerwehrüberjacke">
-                            <option value="Feuerwehrüberhose">
-                            <option value="Feuerwehrhelm">
-                            <option value="Feuerwehrstiefel">
-                            <option value="Feuerwehrschutzhandschuhe">
-                            <option value="Atemschutzmaske">
-                            <option value="Feuerwehrhaltegurt">
-                            <option value="Warnweste">
-                            <option value="Dienstkleidung / Latzhose">
-                        </datalist>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label><strong>Größe / Konfektion</strong></label>
-                            <input type="text" id="psa-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Serien- / Inventarnr.</strong></label>
-                            <input type="text" id="psa-seriennummer" value="${escapeHtml(item.seriennummer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102">
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label><strong>Ausgabedatum</strong></label>
-                            <input type="date" id="psa-ausgabeDatum" value="${escapeHtml(item.ausgabeDatum)}" style="width:100%; padding:8px; margin-top:4px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Nächste Prüfung</strong></label>
-                            <input type="date" id="psa-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
-                        </div>
-                    </div>
-                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-                        <button type="button" class="btn" onclick="closePSAModal()" style="background:#ccc;">Abbrechen</button>
-                        <button type="submit" class="btn btn-primary">💾 Speichern</button>
-                    </div>
-                </form>
+               <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+    <div style="display:flex; gap:10px;">
+        <div style="flex:2;">
+            <label><strong>Name des Trägers *</strong></label>
+            <input type="text" id="psa-traeger" value="${escapeHtml(item.traeger || item.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
+        </div>
+        <div style="flex:1;">
+            <label><strong>Spind-Nr.</strong></label>
+            <input type="text" id="psa-spind" value="${escapeHtml(item.spind)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
+        </div>
+    </div>
+
+    <!-- NEU: Hersteller & Typ -->
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+            <label><strong>Hersteller</strong></label>
+            <input type="text" id="psa-hersteller" value="${escapeHtml(item.hersteller)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Rosenbauer">
+        </div>
+        <div style="flex:1;">
+            <label><strong>Typ / Modell</strong></label>
+            <input type="text" id="psa-typ" value="${escapeHtml(item.typ)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. FIRE FIT II">
+        </div>
+    </div>
+
+    <div>
+        <label><strong>Ausrüstungsteil *</strong></label>
+        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
+        <datalist id="psa-ausruestung-liste">
+            <option value="Feuerwehrüberjacke">
+            <option value="Feuerwehrüberhose">
+            <option value="Feuerwehrhelm">
+            <option value="Feuerwehrstiefel">
+            <option value="Feuerwehrschutzhandschuhe">
+            <option value="Atemschutzmaske">
+            <option value="Feuerwehrhaltegurt">
+            <option value="Warnweste">
+            <option value="Dienstkleidung / Latzhose">
+        </datalist>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+            <label><strong>Größe / Konfektion</strong></label>
+            <input type="text" id="psa-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
+        </div>
+        <div style="flex:1;">
+            <label><strong>Serien- / Inventarnr.</strong></label>
+            <input type="text" id="psa-seriennummer" value="${escapeHtml(item.seriennummer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102 (optional)">
+        </div>
+    </div>
+
+    <!-- NEU: Zubehör -->
+    <div>
+        <label><strong>Zubehör / Anbauteile</strong></label>
+        <input type="text" id="psa-zubehoer" value="${escapeHtml(item.zubehoer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Nackenschutz, Helmleuchte">
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+            <label><strong>Ausgabedatum</strong></label>
+            <input type="date" id="psa-ausgabeDatum" value="${escapeHtml(item.ausgabeDatum)}" style="width:100%; padding:8px; margin-top:4px;">
+        </div>
+        <div style="flex:1;">
+            <label><strong>Nächste Prüfung</strong></label>
+            <input type="date" id="psa-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
+        </div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+        <button type="button" class="btn" onclick="closePSAModal()" style="background:#ccc;">Abbrechen</button>
+        <button type="submit" class="btn btn-primary">💾 Speichern</button>
+    </div>
+</form>
             </div>
         </div>
     `;
@@ -521,9 +548,12 @@ function savePSAFromModal(event, existingId) {
         traeger: traegerWert,
         name: traegerWert,
         spind: document.getElementById('psa-spind').value.trim(),
+        hersteller: document.getElementById('psa-hersteller')?.value.trim() || '',
+        typ: document.getElementById('psa-typ')?.value.trim() || '',
         bezeichnung: document.getElementById('psa-bezeichnung').value.trim(),
         kategorie: 'PSA',
         groesse: document.getElementById('psa-groesse').value.trim(),
+        zubehoer: document.getElementById('psa-zubehoer')?.value.trim() || '',
         seriennummer: document.getElementById('psa-seriennummer').value.trim(),
         ausgabeDatum: document.getElementById('psa-ausgabeDatum').value,
         naechstePruefung: document.getElementById('psa-naechstePruefung').value,
