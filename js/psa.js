@@ -18,27 +18,32 @@ function getPSA() {
 }
 
 function speicherePSA(psaListe) {
-    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
-    const u = userString ? JSON.parse(userString) : null;
-    // Standardmäßig 'admin' annehmen, wenn keine Rolle im Speicher hinterlegt ist:
-    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'admin');
-    const darfSchreiben = (rolle === 'admin' || rolle === 'editor');
+    // 1. Zentrale Rechteprüfung nutzen
+    const darfSchreiben = (typeof istEditor === 'function') ? istEditor() : true;
 
     if (!darfSchreiben) {
-        alert("⚠️ Keine Berechtigung zum Speichern (Aktuelle Rolle: " + rolle + ").");
+        alert("⚠️ Keine Berechtigung zum Speichern.");
         return false;
     }
 
     try {
-        localStorage.setItem('ffw_psa_daten', JSON.stringify(psaListe));
+        const bereinigteDaten = Array.isArray(psaListe) ? psaListe : [];
+
+        // 2. Einheitlichen Schlüssel ('ffw_psa') nutzen!
+        localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
         
+        // 3. In Firebase/Storage sichern
         if (typeof speichereDaten === 'function') {
-            speichereDaten('psa', psaListe);
+            speichereDaten('psa', bereinigteDaten);
+        } else if (typeof speicherePsaData === 'function') {
+            speicherePsaData(bereinigteDaten);
         }
         
+        // Event auslösen
         document.dispatchEvent(new Event("psaGeaendert"));
         return true;
     } catch (e) {
+        console.error("PSA Speicherfehler:", e);
         alert("❌ Fehler beim Speichern im Browser-Speicher.");
         return false;
     }

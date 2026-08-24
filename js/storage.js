@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Speicher & Cloud-Sync (v1.3 Repariert)
+// FFW Manager - Speicher & Cloud-Sync (v1.4 Repariert)
 // ==========================================
 
 // 1. Daten aus dem Speicher laden (Fallback auf LocalStorage)
@@ -14,22 +14,14 @@ function ladeDaten(schluessel) {
 }
 
 // Spezifische Helper-Funktionen für Personal
-function ladePersonalData() {
-    return ladeDaten('personal');
-}
-
-function speicherePersonalData(daten) {
-    speichereDaten('personal', daten);
-}
+function ladePersonalData() { return ladeDaten('personal'); }
+function speicherePersonalData(daten) { speichereDaten('personal', daten); }
 
 function speichereMitgliedData(mitglied) {
     let alle = ladePersonalData();
     const index = alle.findIndex(m => m.id === mitglied.id);
-    if (index >= 0) {
-        alle[index] = mitglied;
-    } else {
-        alle.push(mitglied);
-    }
+    if (index >= 0) alle[index] = mitglied;
+    else alle.push(mitglied);
     speicherePersonalData(alle);
 }
 
@@ -39,11 +31,29 @@ function loescheMitgliedData(id) {
     speicherePersonalData(alle);
 }
 
+// Spezifische Helper-Funktionen für PSA
+function ladePsaData() { return ladeDaten('psa'); }
+function speicherePsaData(daten) { speichereDaten('psa', daten); }
+
+function speicherePsaEintrag(psaItem) {
+    let alle = ladePsaData();
+    const index = alle.findIndex(p => p.id === psaItem.id);
+    if (index >= 0) alle[index] = psaItem;
+    else alle.push(psaItem);
+    speicherePsaData(alle);
+}
+
+function loeschePsaEintrag(id) {
+    let alle = ladePsaData();
+    alle = alle.filter(p => p.id !== id);
+    speicherePsaData(alle);
+}
+
 // 2. Daten lokal & in Firebase Cloud speichern
 function speichereDaten(schluessel, daten) {
     const bereinigteDaten = Array.isArray(daten) ? daten : [];
     
-    // Immer ZUERST lokal im Browser sichern (Verhindert Datenverlust)
+    // Immer ZUERST lokal sichern
     localStorage.setItem('ffw_' + schluessel, JSON.stringify(bereinigteDaten));
 
     // In Firebase Cloud speichern
@@ -55,14 +65,13 @@ function speichereDaten(schluessel, daten) {
         .then(() => console.log(`[Cloud] ${schluessel} erfolgreich hochgeladen.`))
         .catch(err => {
             console.error(`Firebase Speicherfehler bei ${schluessel}:`, err);
-            // Keine störenden Alerts bei temporären Verbindungsproblemen
         });
     }
 }
 
 let cloudSyncGestartet = false;
 
-// 3. Live-Synchronisation mit Firebase (Sicher gegen 400er Fehler & Überschreiben)
+// 3. Live-Synchronisation mit Firebase (Sicher gegen Überschreiben lokaler Neuerungen)
 function starteCloudSync() {
     if (typeof db === 'undefined' || db === null) return;
     if (cloudSyncGestartet) return; 
@@ -74,32 +83,37 @@ function starteCloudSync() {
         db.collection('ffw_data').doc(schluessel)
             .onSnapshot(
                 (doc) => {
-                    // NUR aktualisieren, wenn das Dokument in Firestore WIRKLICH Daten enthält
+                    // Ignoriere Snapshots, die durch eigene lokale Änderungen ausgelöst wurden (Pending Writes)
+                    if (doc.metadata && doc.metadata.hasPendingWrites) {
+                        return;
+                    }
+
                     if (doc.exists && doc.data() && Array.isArray(doc.data().eintraege)) {
                         const cloudDaten = doc.data().eintraege;
-                        
-                        // Wenn Cloud leer ist, aber lokal Daten da sind, NICHT überschreiben!
                         const lokaleDaten = ladeDaten(schluessel);
+
+                        // Wenn Cloud weniger Daten hat als lokal (und lokal nicht leer ist), Schutzgreifung
                         if (cloudDaten.length === 0 && lokaleDaten.length > 0) {
                             console.warn(`[Cloud Sync] Cloud-Dokument für ${schluessel} ist leer. Lokale Daten werden geschützt.`);
                             return;
                         }
 
-                        // 1. Im lokalen Speicher ablegen
+                        // Im lokalen Speicher ablegen
                         localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
                         
-                        // 2. Live-Aktualisierung der UI-Ansichten
+                        // Live-Aktualisierung der UI-Ansichten
                         switch (schluessel) {
+                            case 'psa':
+                                if (typeof renderPSAView === 'function') renderPSAView();
+                                else if (typeof filterPSA === 'function') filterPSA();
+                                else if (typeof ladePsaTabelle === 'function') ladePsaTabelle();
+                                break;
                             case 'geraete':
                                 if (typeof filterGeraete === 'function') filterGeraete();
                                 else if (typeof renderGeraeteView === 'function') renderGeraeteView();
                                 break;
                             case 'fahrzeuge':
                                 if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
-                                break;
-                            case 'psa':
-                                if (typeof renderPSAView === 'function') renderPSAView();
-                                else if (typeof filterPSA === 'function') filterPSA();
                                 break;
                             case 'lager':
                                 if (typeof renderLagerView === 'function') renderLagerView();
@@ -120,55 +134,21 @@ function starteCloudSync() {
                     }
                 }, 
                 (err) => {
-                    // Fängt den 400 Bad Request Fehler ab, ohne dass die App abstürzt
                     console.error(`Cloud-Sync Stream-Fehler bei ${schluessel}:`, err);
                 }
             );
     });
 }
 
-// 4. Initialisierung & Testdaten
+// 4. Initialisierung
 document.addEventListener("DOMContentLoaded", () => {
     starteCloudSync();
-
-    // Standard-Fahrzeug anlegen, falls Speicher leer ist
-    const vorhandeneFahrzeuge = ladeDaten("fahrzeuge");
-    if (!vorhandeneFahrzeuge || vorhandeneFahrzeuge.length === 0) {
-        speichereDaten('fahrzeuge', [
-            {
-                id: "VEH-1",
-                name: "LF 20/16",
-                callSign: "Florian Musterstadt 40/1",
-                licensePlate: "M-FF 112",
-                status: "Einsatzbereit",
-                nextHU: "2026-10",
-                nextSP: "2027-04",
-                description: "Löschgruppenfahrzeug mit 2000l Tank"
-            }
-        ]);
-    }
-
-    // Standard-Personal anlegen, falls Speicher leer ist
-    const vorhandenesPersonal = ladeDaten("personal");
-    if (!vorhandenesPersonal || vorhandenesPersonal.length === 0) {
-        speichereDaten('personal', [
-            {
-                id: "PERS-1",
-                spind: "01",
-                vorname: "Max",
-                nachname: "Mustermann",
-                dienstgrad: "Hauptfeuerwehrmann",
-                funktionen: ["Atemschutzgeräteträger", "Maschinist"],
-                g26datum: "2027-05-15",
-                lehrgaenge: "Truppführer, AGT, Maschinist",
-                bemerkung: "Zugführer II. Zug"
-            }
-        ]);
-    }
-
-    setTimeout(() => {
-        if (typeof db === 'undefined' || db === null) {
-            console.warn("Achtung: Firebase ist nicht verbunden!");
-        }
-    }, 2000);
 });
+
+// Globale Freigaben
+window.ladeDaten = ladeDaten;
+window.speichereDaten = speichereDaten;
+window.ladePsaData = ladePsaData;
+window.speicherePsaData = speicherePsaData;
+window.speicherePsaEintrag = speicherePsaEintrag;
+window.loeschePsaEintrag = loeschePsaEintrag;
