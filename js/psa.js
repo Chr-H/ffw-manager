@@ -23,7 +23,7 @@ function speicherePSA(psaListe) {
     // 3. Nur speichern, wenn Rechte vorhanden sind
     speichereDaten('psa', psaListe);
     document.dispatchEvent(new Event("psaGeaendert"));
-} // <-- Diese Klammer hat gefehlt!
+}
 
 // Safe HTML Escaping
 function escapeHtml(text) {
@@ -35,107 +35,11 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
-// ==========================================
-// PSA Modul - Rechte & Rendering
-// ==========================================
-
-function renderPSAView() {
-    const ziel = document.getElementById('seite-psa');
-    if (!ziel) return;
-
-    // Lese- & Schreibrechte prüfen
-    const darfSchreiben = typeof window.hatRecht === "function" 
-        ? window.hatRecht('psa_schreiben') 
-        : false;
-
-    const psaListe = getPSA();
-
-    let html = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>🥾 Persönliche Schutzausrüstung (PSA)</h2>
-            ${darfSchreiben ? `
-                <button onclick="oeffnePSAModal()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                    + Neue PSA anlegen
-                </button>
-            ` : `<span style="color: #666; font-style: italic;">🔒 Sie besitzen nur Leserechte für dieses Modul.</span>`}
-        </div>
-
-        <div style="background: white; border-radius: 8px; border: 1px solid #ddd; overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                <thead>
-                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                        <th style="padding: 12px 15px;">Bezeichnung / Artikel</th>
-                        <th style="padding: 12px 15px;">Kategorie</th>
-                        <th style="padding: 12px 15px;">Größe</th>
-                        <th style="padding: 12px 15px;">Zugewiesen an</th>
-                        <th style="padding: 12px 15px;">Zustand</th>
-                        <th style="padding: 12px 15px;">Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    if (psaListe.length === 0) {
-        html += `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #777;">Keine PSA-Einträge vorhanden.</td></tr>`;
-    } else {
-        psaListe.forEach((p, index) => {
-            html += `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 12px 15px; font-weight: bold;">${escapeHtml(p.bezeichnung || p.name || '-')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.kategorie || '-')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.groesse || '-')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.zugewiesenAn || p.traeger || 'Lager / Unzugewiesen')}</td>
-                    <td style="padding: 12px 15px;">${escapeHtml(p.zustand || 'In Ordnung')}</td>
-                    <td style="padding: 12px 15px; display: flex; gap: 6px;">
-                        <button onclick="zeigePSAAkte('${p.id || index}')" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-                            📄 Akte
-                        </button>
-                        ${darfSchreiben ? `
-                            <button onclick="bearbeitePSA('${p.id || index}')" style="background: #ffc107; color: #333; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-                                ✏️ Bearbeiten
-                            </button>
-                            <button onclick="loeschePSA(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-                                🗑️ Löschen
-                            </button>
-                        ` : ''}
-                    </td>
-                </tr>
-            `;
-        });
-    }
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-        <div id="psa-akte-bereich" style="margin-top: 30px;"></div>
-    `;
-
-    ziel.innerHTML = html;
-}
-
-function loeschePSA(index) {
-    if (typeof window.hatRecht === "function" && !window.hatRecht('psa_schreiben')) {
-        alert("⚠️ Keine Berechtigung zum Löschen vorhanden!");
-        return;
-    }
-
-    if (!confirm("Möchten Sie diesen PSA-Eintrag wirklich löschen?")) return;
-
-    const liste = getPSA();
-    liste.splice(index, 1);
-    speicherePSA(liste);
-    renderPSAView();
-}
-
-window.renderPSAView = renderPSAView;
-window.loeschePSA = loeschePSA;
 
 // Robuste Datumsformatierung & Überfälligkeitsprüfung
 function formatiereDatum(datumStr) {
     if (!datumStr) return '-';
     
-    // Vermeidung von Zeitzonenverschiebungen bei 'YYYY-MM-DD'
     const parts = datumStr.split('-');
     let d;
     if (parts.length === 3) {
@@ -163,7 +67,8 @@ function formatiereDatum(datumStr) {
 
 // 1. Hauptansicht rendern
 function renderPSAView() {
-    const container = document.getElementById('psa-container') || 
+    const container = document.getElementById('seite-psa') ||
+                      document.getElementById('psa-container') || 
                       document.getElementById('psaContainer') || 
                       document.getElementById('psaListe') || 
                       document.getElementById('psa') || 
@@ -175,7 +80,7 @@ function renderPSAView() {
     container.innerHTML = `
         <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>🧑‍🚒 PSA-Verwaltung</h2>
-            <button class="btn btn-primary" onclick="openPSAModal()">+ PSA ausgeben / anlegen</button>
+            <button class="btn btn-primary" onclick="openPSAModal()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">+ PSA ausgeben / anlegen</button>
         </div>
 
         <!-- Filter- & Suchleiste -->
@@ -216,31 +121,21 @@ function renderPSAView() {
         </div>
     `;
 
-    // Verzögerter Aufruf, damit der Browser den tbody im DOM sicher erkennt
     setTimeout(() => {
-        if (typeof filterPSA === 'function') {
-            filterPSA();
-        }
+        filterPSA();
     }, 50);
 }
 
-// 2. Filter-Funktion (Aktualisiert für 10 Spalten)
+// 2. Filter-Funktion & Tabellenbefüllung
 function filterPSA() {
     let tbody = document.getElementById('psa-tabelle-body');
     if (!tbody) return;
 
-    // Sicherer Helfer für HTML-Escaping
     const safeStr = (str) => {
         if (!str && str !== 0) return '-';
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "<")
-            .replace(/>/g, ">")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        return escapeHtml(str);
     };
 
-    // Daten holen
     let psaListe = [];
     try {
         psaListe = typeof getPSA === 'function' ? getPSA() : [];
@@ -298,9 +193,9 @@ function filterPSA() {
                 <td style="padding:10px;">${safeStr(item.seriennummer)}</td>
                 <td style="padding:10px;">${safeStr(datum)}</td>
                 <td style="padding:8px 10px;" onclick="event.stopPropagation();">
-                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')">📂</button>
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')">🗑️</button>
+                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">📂</button>
+                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">✏️</button>
+                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">🗑️</button>
                 </td>
             </tr>
         `;
@@ -308,6 +203,7 @@ function filterPSA() {
 
     tbody.innerHTML = rowsHtml;
 }
+
 // 3. PSA-Akte (Detailansicht)
 function openPSAAkteModal(id) {
     const item = getPSA().find(p => p && p.id === id);
@@ -362,7 +258,7 @@ function openPSAAkteModal(id) {
                             <option value="Defekt" ${item.status === 'Defekt' ? 'selected' : ''}>🔴 Defekt</option>
                             <option value="Ausgemustert" ${item.status === 'Ausgemustert' ? 'selected' : ''}>⚪ Ausgemustert</option>
                         </select>
-                        <button class="btn btn-primary" onclick="speicherePSAStatus('${safeId}')">Status aktualisieren</button>
+                        <button class="btn btn-primary" onclick="speicherePSAStatus('${safeId}')" style="background:#0d6efd; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Status aktualisieren</button>
                     </div>
                 </div>
 
@@ -381,7 +277,7 @@ function openPSAAkteModal(id) {
                             <input type="text" id="hist-pruefer" placeholder="Bearbeiter / Prüfer" style="flex:1; padding:6px;">
                         </div>
                         <textarea id="hist-bemerkung" placeholder="Bemerkung / Details zum Vorgang..." style="width:100%; padding:6px;" rows="2" required></textarea>
-                        <button type="submit" class="btn btn-primary" style="align-self:flex-end;">Eintrag speichern</button>
+                        <button type="submit" class="btn btn-primary" style="align-self:flex-end; background:#0d6efd; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Eintrag speichern</button>
                     </form>
                 </details>
 
@@ -392,7 +288,7 @@ function openPSAAkteModal(id) {
                 </div>
 
                 <div style="text-align:right; margin-top:15px;">
-                    <button class="btn" onclick="closePSAAkteModal()" style="background:#ccc;">Schließen</button>
+                    <button class="btn" onclick="closePSAAkteModal()" style="background:#ccc; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Schließen</button>
                 </div>
             </div>
         </div>
@@ -465,78 +361,76 @@ function openPSAModal(id = null) {
         <div id="psa-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
             <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
                 <h3>${item.id ? '✏️ PSA bearbeiten' : '➕ PSA zuweisen / anlegen'}</h3>
-               <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-    <div style="display:flex; gap:10px;">
-        <div style="flex:2;">
-            <label><strong>Name des Trägers *</strong></label>
-            <input type="text" id="psa-traeger" value="${escapeHtml(item.traeger || item.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
-        </div>
-        <div style="flex:1;">
-            <label><strong>Spind-Nr.</strong></label>
-            <input type="text" id="psa-spind" value="${escapeHtml(item.spind)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
-        </div>
-    </div>
+                <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:2;">
+                            <label><strong>Name des Trägers *</strong></label>
+                            <input type="text" id="psa-traeger" value="${escapeHtml(item.traeger || item.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
+                        </div>
+                        <div style="flex:1;">
+                            <label><strong>Spind-Nr.</strong></label>
+                            <input type="text" id="psa-spind" value="${escapeHtml(item.spind)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
+                        </div>
+                    </div>
 
-    <!-- NEU: Hersteller & Typ -->
-    <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
-            <label><strong>Hersteller</strong></label>
-            <input type="text" id="psa-hersteller" value="${escapeHtml(item.hersteller)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Rosenbauer">
-        </div>
-        <div style="flex:1;">
-            <label><strong>Typ / Modell</strong></label>
-            <input type="text" id="psa-typ" value="${escapeHtml(item.typ)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. FIRE FIT II">
-        </div>
-    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label><strong>Hersteller</strong></label>
+                            <input type="text" id="psa-hersteller" value="${escapeHtml(item.hersteller)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Rosenbauer">
+                        </div>
+                        <div style="flex:1;">
+                            <label><strong>Typ / Modell</strong></label>
+                            <input type="text" id="psa-typ" value="${escapeHtml(item.typ)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. FIRE FIT II">
+                        </div>
+                    </div>
 
-    <div>
-        <label><strong>Ausrüstungsteil *</strong></label>
-        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
-        <datalist id="psa-ausruestung-liste">
-            <option value="Feuerwehrüberjacke">
-            <option value="Feuerwehrüberhose">
-            <option value="Feuerwehrhelm">
-            <option value="Feuerwehrstiefel">
-            <option value="Feuerwehrschutzhandschuhe">
-            <option value="Atemschutzmaske">
-            <option value="Feuerwehrhaltegurt">
-            <option value="Warnweste">
-            <option value="Dienstkleidung / Latzhose">
-        </datalist>
-    </div>
+                    <div>
+                        <label><strong>Ausrüstungsteil *</strong></label>
+                        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
+                        <datalist id="psa-ausruestung-liste">
+                            <option value="Feuerwehrüberjacke">
+                            <option value="Feuerwehrüberhose">
+                            <option value="Feuerwehrhelm">
+                            <option value="Feuerwehrstiefel">
+                            <option value="Feuerwehrschutzhandschuhe">
+                            <option value="Atemschutzmaske">
+                            <option value="Feuerwehrhaltegurt">
+                            <option value="Warnweste">
+                            <option value="Dienstkleidung / Latzhose">
+                        </datalist>
+                    </div>
 
-    <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
-            <label><strong>Größe / Konfektion</strong></label>
-            <input type="text" id="psa-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
-        </div>
-        <div style="flex:1;">
-            <label><strong>Serien- / Inventarnr.</strong></label>
-            <input type="text" id="psa-seriennummer" value="${escapeHtml(item.seriennummer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102 (optional)">
-        </div>
-    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label><strong>Größe / Konfektion</strong></label>
+                            <input type="text" id="psa-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
+                        </div>
+                        <div style="flex:1;">
+                            <label><strong>Serien- / Inventarnr.</strong></label>
+                            <input type="text" id="psa-seriennummer" value="${escapeHtml(item.seriennummer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102 (optional)">
+                        </div>
+                    </div>
 
-    <!-- NEU: Zubehör -->
-    <div>
-        <label><strong>Zubehör / Anbauteile</strong></label>
-        <input type="text" id="psa-zubehoer" value="${escapeHtml(item.zubehoer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Nackenschutz, Helmleuchte">
-    </div>
+                    <div>
+                        <label><strong>Zubehör / Anbauteile</strong></label>
+                        <input type="text" id="psa-zubehoer" value="${escapeHtml(item.zubehoer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Nackenschutz, Helmleuchte">
+                    </div>
 
-    <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
-            <label><strong>Ausgabedatum</strong></label>
-            <input type="date" id="psa-ausgabeDatum" value="${escapeHtml(item.ausgabeDatum)}" style="width:100%; padding:8px; margin-top:4px;">
-        </div>
-        <div style="flex:1;">
-            <label><strong>Nächste Prüfung</strong></label>
-            <input type="date" id="psa-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
-        </div>
-    </div>
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-        <button type="button" class="btn" onclick="closePSAModal()" style="background:#ccc;">Abbrechen</button>
-        <button type="submit" class="btn btn-primary">💾 Speichern</button>
-    </div>
-</form>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label><strong>Ausgabedatum</strong></label>
+                            <input type="date" id="psa-ausgabeDatum" value="${escapeHtml(item.ausgabeDatum)}" style="width:100%; padding:8px; margin-top:4px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label><strong>Nächste Prüfung</strong></label>
+                            <input type="date" id="psa-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+                        <button type="button" class="btn" onclick="closePSAModal()" style="background:#ccc; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Abbrechen</button>
+                        <button type="submit" class="btn btn-primary" style="background:#28a745; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">💾 Speichern</button>
+                    </div>
+                </form>
             </div>
         </div>
     `;
@@ -610,7 +504,15 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-// Aliase & Event-Listener
+// Automatische Erkennung & Laden im DOM
+const observer = new MutationObserver(() => {
+    const tbody = document.getElementById('psa-tabelle-body');
+    if (tbody && tbody.children.length === 0) {
+        filterPSA();
+    }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
 function oeffnePSAModal(id = null) { openPSAModal(id); }
 function ladePSA() { renderPSAView(); }
 
