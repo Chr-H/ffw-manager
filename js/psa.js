@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung mit Filter, PSA-Akte & Export/Import (v2.2.0)
+// FFW Manager - PSA-Verwaltung mit Filter, PSA-Akte & Export/Import (v2.2.1)
 // ==========================================
 
 function getPSA() {
@@ -107,6 +107,7 @@ function renderPSAView() {
             <table class="tabelle" id="psa-tabelle-print" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
                     <tr style="background:#b71c1c; color:white; text-align:left;">
+                        <th style="padding:10px; text-align:center; min-width:110px;" class="no-print">Aktionen</th>
                         <th style="padding:10px;">Spind</th>
                         <th style="padding:10px;">Träger</th>
                         <th style="padding:10px;">Hersteller</th>
@@ -116,7 +117,6 @@ function renderPSAView() {
                         <th style="padding:10px;">Zubehör</th>
                         <th style="padding:10px;">Inv.- / Serien-Nr.</th>
                         <th style="padding:10px;">Nächste Prüfung</th>
-                        <th style="padding:10px;" class="no-print">Aktionen</th>
                     </tr>
                 </thead>
                 <tbody id="psa-tabelle-body"></tbody>
@@ -186,6 +186,11 @@ function filterPSA() {
         
         rowsHtml += `
             <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${itemId}')">
+                <td style="padding:8px 10px; text-align:center; white-space:nowrap;" class="no-print" onclick="event.stopPropagation();">
+                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:6px 8px; font-size:1rem;">📂</button>
+                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:6px 8px; font-size:1rem;">✏️</button>
+                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:6px 8px; font-size:1rem;">🗑️</button>
+                </td>
                 <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + safeStr(item.spind) : '-'}</strong></td>
                 <td style="padding:10px; font-weight:bold;">${safeStr(item.traeger || item.name || 'Unbekannt')}</td>
                 <td style="padding:10px;">${safeStr(item.hersteller)}</td>
@@ -195,11 +200,6 @@ function filterPSA() {
                 <td style="padding:10px;">${safeStr(item.zubehoer)}</td>
                 <td style="padding:10px;">${safeStr(item.seriennummer)}</td>
                 <td style="padding:10px;">${safeStr(datum)}</td>
-                <td style="padding:8px 10px;" class="no-print" onclick="event.stopPropagation();">
-                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">📂</button>
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">🗑️</button>
-                </td>
             </tr>
         `;
     });
@@ -265,7 +265,6 @@ function importPSACSV(event) {
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
             
-            // Einfacher Trenner-Split (Semikolon oder Komma)
             const cols = lines[i].split(';').map(col => col.replace(/^"|"$/g, '').trim());
             
             if (cols.length >= 5) {
