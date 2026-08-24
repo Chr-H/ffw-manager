@@ -5,16 +5,20 @@
 /**
  * Navigationsfunktion zum Umschalten der Seiten
  */
-function zeigeSeite(seiteId) {
-    if (!seiteId) return;
+function zeigeSeite(modul) {
+    // Falls Dashboard, direkt anzeigen
+    if (modul === 'dashboard') {
+        // Logik für Dashboard
+        return;
+    }
 
-    // 1. Parameter bereinigen
-    const modul = seiteId.replace(/^seite-/, '');
+    // Prüfen, ob die aktuelle Rolle die Seite überhaupt sehen darf
+    if (!hatRecht(modul)) {
+        alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
+        return;
+    }
 
-   // 2. Rechte-Prüfung vorschalten
-    if (typeof hatRecht === "function" && !hatRecht(modul)) {
-    alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
-    return;
+    // ... Hier folgt dein bisheriger Code zum Einblenden der Seite ...
 }
 
     // 3. Alle Seiten ausblenden
@@ -738,11 +742,14 @@ function hatRecht(recht) {
 
     if (!rechteDef) return false;
 
+    // Admin hat immer alle Schreibrechte
     if (rechteDef.schreibrechte && rechteDef.schreibrechte.includes('*')) {
         return true;
     }
 
+    // Für Modul-Zugriff (Seitenaufruf)
     const hatSeitenRecht = rechteDef.seiten && rechteDef.seiten.includes(recht);
+    // Für konkrete Aktion (z.B. psa_schreiben)
     const hatSchreibRecht = rechteDef.schreibrechte && rechteDef.schreibrechte.includes(recht);
 
     return hatSeitenRecht || hatSchreibRecht;
