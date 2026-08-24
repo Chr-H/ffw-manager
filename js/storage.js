@@ -49,23 +49,29 @@ function loeschePsaEintrag(id) {
     speicherePsaData(alle);
 }
 
-// 2. Daten lokal & in Firebase Cloud speichern
+// 2. Daten lokal & in Firebase Cloud speichern (Mit Fehler-Catch)
 function speichereDaten(schluessel, daten) {
     const bereinigteDaten = Array.isArray(daten) ? daten : [];
     
-    // Immer ZUERST lokal sichern
+    // 1. IMMER sofort im Browser speichern
     localStorage.setItem('ffw_' + schluessel, JSON.stringify(bereinigteDaten));
+    console.log(`[Local] ${schluessel} lokal gesichert (${bereinigteDaten.length} Einträge).`);
 
-    // In Firebase Cloud speichern
+    // 2. In Firebase Cloud speichern
     if (typeof db !== 'undefined' && db !== null) {
         db.collection('ffw_data').doc(schluessel).set({
             eintraege: bereinigteDaten,
             aktualisiertAm: new Date().toISOString()
         })
-        .then(() => console.log(`[Cloud] ${schluessel} erfolgreich hochgeladen.`))
+        .then(() => {
+            console.log(`[Cloud] ${schluessel} erfolgreich hochgeladen.`);
+        })
         .catch(err => {
-            console.error(`Firebase Speicherfehler bei ${schluessel}:`, err);
+            console.error(`❌ Firebase Speicherfehler bei ${schluessel}:`, err);
+            alert(`⚠️ Daten lokal gespeichert, aber Cloud-Sync fehlgeschlagen:\n${err.message}`);
         });
+    } else {
+        console.warn("[Cloud] Keine DB-Verbindung – Speicher nur lokal!");
     }
 }
 
@@ -92,7 +98,14 @@ function starteCloudSync() {
                         const cloudDaten = doc.data().eintraege;
                         const lokaleDaten = ladeDaten(schluessel);
 
-                        // Wenn Cloud weniger Daten hat als lokal (und lokal nicht leer ist), Schutzgreifung
+                        // NEU: Verhindert, dass neue lokale Einträge vom veralteten Cloud-Stand überschrieben werden
+                        if (lokaleDaten.length > cloudDaten.length) {
+                            console.warn(`[Cloud Sync] Lokaler Stand (${lokaleDaten.length}) ist neuer als Cloud (${cloudDaten.length}) für ${schluessel}. Push zur Cloud...`);
+                            speichereDaten(schluessel, lokaleDaten);
+                            return;
+                        }
+
+                        // Schutz bei leerer Cloud
                         if (cloudDaten.length === 0 && lokaleDaten.length > 0) {
                             console.warn(`[Cloud Sync] Cloud-Dokument für ${schluessel} ist leer. Lokale Daten werden geschützt.`);
                             return;
