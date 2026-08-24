@@ -1,38 +1,24 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung (v2.2.3 - Fixed Storage, Date & Keys)
+// PSA-Verwaltung Modul (ffw-manager)
 // ==========================================
 
-// Hilfsfunktion: Konvertiert beliebige Datumsangaben strikt in YYYY-MM-DD für <input type="date">
-function formatiereDatumFuerInput(datumStr) {
-    if (!datumStr || datumStr === '-') return '';
-    if (datumStr.includes('.')) {
-        const teile = datumStr.split('.');
-        if (teile.length === 3) {
-            return `${teile[2]}-${teile[1].padStart(2, '0')}-${teile[0].padStart(2, '0')}`;
-        }
+// 1. PSA-Daten laden (Fallback auf LocalStorage & storage.js)
+function ladePSA() {
+    if (typeof ladePsaData === 'function') {
+        return ladePsaData();
     }
-    if (datumStr.includes('T')) {
-        return datumStr.split('T')[0];
-    }
-    return datumStr;
-}
-
-function getPSA() {
+    const daten = localStorage.getItem('ffw_psa') || localStorage.getItem('ffw_psa_daten');
     try {
-        if (typeof ladeDaten === 'function') {
-            const data = ladeDaten("psa");
-            if (Array.isArray(data) && data.length > 0) return data;
-        }
-        // Fallbacks auf beide historischen Keys
-        const localData = localStorage.getItem('ffw_psa') || localStorage.getItem('ffw_psa_daten');
-        return localData ? JSON.parse(localData) : [];
+        return daten ? JSON.parse(daten) : [];
     } catch (e) {
         console.error("Fehler beim Laden der PSA-Daten:", e);
         return [];
     }
 }
 
+// 2. PSA-Daten speichern (Mit aktiver Berechtigungsprüfung)
 function speicherePSA(psaListe) {
+    // BERECHTIGUNGSPRÜFUNG: Bleibt strikt erhalten
     const darfSchreiben = (typeof istEditor === 'function') ? istEditor() : true;
 
     if (!darfSchreiben) {
@@ -43,630 +29,229 @@ function speicherePSA(psaListe) {
     try {
         const bereinigteDaten = Array.isArray(psaListe) ? psaListe : [];
 
-        // In beiden Keys sichern, um Migrationen abzudecken
-        localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
-        localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
-        
+        // Nutzung der zentralen storage.js Speicherfunktion (Lokal + Firebase Cloud)
         if (typeof speichereDaten === 'function') {
             speichereDaten('psa', bereinigteDaten);
         } else if (typeof speicherePsaData === 'function') {
             speicherePsaData(bereinigteDaten);
+        } else {
+            localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
+            localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
         }
-        
+
+        // Event auslösen für UI-Updates
         document.dispatchEvent(new Event("psaGeaendert"));
         return true;
     } catch (e) {
         console.error("PSA Speicherfehler:", e);
-        alert("❌ Fehler beim Speichern im Browser-Speicher.");
+        alert("❌ Fehler beim Speichern der PSA-Daten.");
         return false;
     }
 }
 
-function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-function formatiereDatum(datumStr) {
-    if (!datumStr || datumStr === '-') return '-';
-    
-    const parts = datumStr.split('-');
-    let d;
-    if (parts.length === 3) {
-        d = new Date(parts[0], parts[1] - 1, parts[2]);
-    } else {
-        d = new Date(datumStr);
-    }
-
-    if (isNaN(d.getTime())) return '-';
-
-    const heute = new Date();
-    heute.setHours(0, 0, 0, 0);
-
-    const formatted = d.toLocaleDateString("de-DE", {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-
-    if (d < heute) {
-        return `<strong style="color:#c62828;" title="Prüfung überfällig!">⚠️ ${formatted}</strong>`;
-    }
-    return formatted;
-}
-
-// 1. Hauptansicht rendern
-function renderPSAView() {
-    const container = document.getElementById('seite-psa') ||
-                      document.getElementById('psa-container') || 
-                      document.getElementById('psaContainer') || 
-                      document.getElementById('psaListe') || 
-                      document.getElementById('psa') || 
-                      document.getElementById('main-content') || 
-                      document.getElementById('content');
-
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
-            <h2>🧑‍🚒 PSA-Verwaltung</h2>
-            
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn" onclick="exportPSACSV()" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">📄 Export CSV</button>
-                <button class="btn" onclick="document.getElementById('psa-import-input').click()" style="background:#6c757d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">📥 Import CSV</button>
-                <input type="file" id="psa-import-input" accept=".csv" style="display:none;" onchange="importPSACSV(event)">
-                <button class="btn" onclick="exportPSAPDF()" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ PDF / Druck</button>
-                <button class="btn btn-primary" onclick="openPSAModal()" style="background:#28a745; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; font-weight:bold;">+ PSA anlegen</button>
-            </div>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <div style="flex:2; min-width:200px;">
-                <input type="text" id="psa-filter-suche" oninput="filterPSA()" placeholder="🔍 Suche nach Name, Spind, Ausrüstung, Hersteller..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-            </div>
-            <div style="flex:1; min-width:150px;">
-                <select id="psa-filter-status" onchange="filterPSA()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                    <option value="">Alle Status anzeigen</option>
-                    <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                    <option value="In Reinigung">🧺 In Reinigung</option>
-                    <option value="Defekt">🔴 Defekt</option>
-                    <option value="Ausgemustert">⚪ Ausgemustert</option>
-                </select>
-            </div>
-        </div>
-
-        <div style="overflow-x:auto;">
-            <table class="tabelle" id="psa-tabelle-print" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                <thead>
-                    <tr style="background:#b71c1c; color:white; text-align:left;">
-                        <th style="padding:10px; text-align:center; min-width:110px;" class="no-print">Aktionen</th>
-                        <th style="padding:10px;">Spind</th>
-                        <th style="padding:10px;">Träger</th>
-                        <th style="padding:10px;">Hersteller</th>
-                        <th style="padding:10px;">Typ</th>
-                        <th style="padding:10px;">Ausrüstung / Bezeichn.</th>
-                        <th style="padding:10px;">Größe</th>
-                        <th style="padding:10px;">Zubehör</th>
-                        <th style="padding:10px;">Inv.- / Serien-Nr.</th>
-                        <th style="padding:10px;">Nächste Prüfung</th>
-                    </tr>
-                </thead>
-                <tbody id="psa-tabelle-body"></tbody>
-            </table>
-        </div>
-    `;
-
-    setTimeout(() => {
-        filterPSA();
-    }, 50);
-}
-
-// 2. Filter-Funktion & Tabellenbefüllung
+// 3. PSA filtern und Tabelle rendern
 function filterPSA() {
-    let tbody = document.getElementById('psa-tabelle-body');
+    const sucheInput = document.getElementById('psa-suche');
+    const statusSelect = document.getElementById('psa-status-filter');
+    const tbody = document.getElementById('psa-tabelle-body');
+
     if (!tbody) return;
 
-    const safeStr = (str) => {
-        if (!str && str !== 0) return '-';
-        return escapeHtml(str);
-    };
+    const suchbegriff = sucheInput ? sucheInput.value.toLowerCase().trim() : '';
+    const statusFilter = statusSelect ? statusSelect.value : 'alle';
 
-    let psaListe = [];
-    try {
-        psaListe = typeof getPSA === 'function' ? getPSA() : [];
-    } catch(e) {
-        console.error("Fehler beim Laden der PSA-Daten:", e);
-    }
+    const allePSA = ladePSA();
 
-    const suchText = (document.getElementById('psa-filter-suche')?.value || '').toLowerCase().trim();
-    const statusFilter = document.getElementById('psa-filter-status')?.value || '';
+    const gefiltert = allePSA.filter(item => {
+        const trefferSuche = !suchbegriff || 
+            (item.traeger && item.traeger.toLowerCase().includes(suchbegriff)) ||
+            (item.spind && String(item.spind).toLowerCase().includes(suchbegriff)) ||
+            (item.bezeichnung && item.bezeichnung.toLowerCase().includes(suchbegriff)) ||
+            (item.hersteller && item.hersteller.toLowerCase().includes(suchbegriff)) ||
+            (item.typ && item.typ.toLowerCase().includes(suchbegriff));
 
-    const gefiltert = psaListe.filter(item => {
-        if (!item) return false;
-        const traeger = String(item.traeger || item.name || '').toLowerCase();
-        const spind = String(item.spind || '').toLowerCase();
-        const hersteller = String(item.hersteller || '').toLowerCase();
-        const typ = String(item.typ || '').toLowerCase();
-        const bezeichnung = String(item.bezeichnung || '').toLowerCase();
-        const seriennummer = String(item.seriennummer || '').toLowerCase();
-        const zubehoer = String(item.zubehoer || '').toLowerCase();
-        const status = item.status || 'Einsatzbereit';
+        const trefferStatus = (statusFilter === 'alle') || (item.status === statusFilter);
 
-        const passtText = !suchText || 
-                          traeger.includes(suchText) || 
-                          spind.includes(suchText) || 
-                          hersteller.includes(suchText) || 
-                          typ.includes(suchText) || 
-                          bezeichnung.includes(suchText) || 
-                          zubehoer.includes(suchText) || 
-                          seriennummer.includes(suchText);
-
-        const passtStatus = statusFilter === '' || status === statusFilter;
-
-        return passtText && passtStatus;
+        return trefferSuche && trefferStatus;
     });
 
-    if (gefiltert.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#666;">Keine passenden PSA-Einträge gefunden.</td></tr>`;
+    renderePSATabelle(gefiltert);
+}
+
+// 4. HTML-Tabelle aufbauen
+function renderePSATabelle(liste) {
+    const tbody = document.getElementById('psa-tabelle-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (liste.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">Keine PSA-Einträge gefunden.</td></tr>`;
         return;
     }
 
-    let rowsHtml = '';
-    gefiltert.forEach(item => {
-        const itemId = item.id ? String(item.id).replace(/'/g, "\\'") : '';
-        const datum = typeof formatiereDatum === 'function' ? formatiereDatum(item.naechstePruefung) : (item.naechstePruefung || '-');
+    const kannBearbeiten = (typeof istEditor === 'function') ? istEditor() : true;
+
+    liste.forEach(item => {
+        const tr = document.createElement('tr');
         
-        rowsHtml += `
-            <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${itemId}')">
-                <td style="padding:8px 10px; text-align:center; white-space:nowrap;" class="no-print" onclick="event.stopPropagation();">
-                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:6px 8px; font-size:1rem;">📂</button>
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:6px 8px; font-size:1rem;">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:6px 8px; font-size:1rem;">🗑️</button>
-                </td>
-                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + safeStr(item.spind) : '-'}</strong></td>
-                <td style="padding:10px; font-weight:bold;">${safeStr(item.traeger || item.name || 'Unbekannt')}</td>
-                <td style="padding:10px;">${safeStr(item.hersteller)}</td>
-                <td style="padding:10px;">${safeStr(item.typ)}</td>
-                <td style="padding:10px;">${safeStr(item.bezeichnung)}</td>
-                <td style="padding:10px;">${safeStr(item.groesse)}</td>
-                <td style="padding:10px;">${safeStr(item.zubehoer)}</td>
-                <td style="padding:10px;">${safeStr(item.seriennummer)}</td>
-                <td style="padding:10px;">${safeStr(datum)}</td>
-            </tr>
-        `;
-    });
+        const aktionsButtons = kannBearbeiten ? `
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="oeffnePSAModal('${item.id}')" title="Bearbeiten">
+                ✏️
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="loeschePSAEintragModal('${item.id}')" title="Löschen">
+                🗑️
+            </button>
+        ` : `<span class="text-muted">Nur Lesezugriff</span>`;
 
-    tbody.innerHTML = rowsHtml;
+        tr.innerHTML = `
+            <td>${aktionsButtons}</td>
+            <td>${item.spind || '-'}</td>
+            <td><strong>${item.traeger || 'Unbekannt'}</strong></td>
+            <td>${item.hersteller || '-'}</td>
+            <td>${item.typ || '-'}</td>
+            <td>${item.bezeichnung || '-'}</td>
+            <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status || 'Aktiv'}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-// 3. EXPORT & IMPORT FUNKTIONEN
-function exportPSACSV() {
-    const psaListe = getPSA();
-    if (psaListe.length === 0) {
-        alert("Keine PSA-Daten zum Exportieren vorhanden.");
+function getStatusBadgeClass(status) {
+    switch (status) {
+        case 'Aktiv': return 'bg-success';
+        case 'In Prüfung': return 'bg-warning text-dark';
+        case 'Ausgemustert': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+// 5. Modal-Aktionen (Erstellen / Bearbeiten / Speichern)
+function oeffnePSAModal(id = null) {
+    if (typeof istEditor === 'function' && !istEditor()) {
+        alert("⚠️ Keine Berechtigung zum Bearbeiten.");
         return;
     }
 
-    const headers = ["ID", "Spind", "Traeger", "Hersteller", "Typ", "Bezeichnung", "Groesse", "Zubehoer", "Seriennummer", "AusgabeDatum", "NaechstePruefung", "Status"];
-    let csvContent = "\uFEFF" + headers.join(";") + "\n"; 
+    const modal = document.getElementById('psa-modal');
+    const form = document.getElementById('psa-form');
+    if (!modal || !form) return;
 
-    psaListe.forEach(item => {
-        const row = [
-            `"${String(item.id || '').replace(/"/g, '""')}"`,
-            `"${String(item.spind || '').replace(/"/g, '""')}"`,
-            `"${String(item.traeger || item.name || '').replace(/"/g, '""')}"`,
-            `"${String(item.hersteller || '').replace(/"/g, '""')}"`,
-            `"${String(item.typ || '').replace(/"/g, '""')}"`,
-            `"${String(item.bezeichnung || '').replace(/"/g, '""')}"`,
-            `"${String(item.groesse || '').replace(/"/g, '""')}"`,
-            `"${String(item.zubehoer || '').replace(/"/g, '""')}"`,
-            `"${String(item.seriennummer || '').replace(/"/g, '""')}"`,
-            `"${String(item.ausgabeDatum || '').replace(/"/g, '""')}"`,
-            `"${String(item.naechstePruefung || '').replace(/"/g, '""')}"`,
-            `"${String(item.status || 'Einsatzbereit').replace(/"/g, '""')}"`
-        ];
-        csvContent += row.join(";") + "\n";
-    });
+    form.reset();
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `PSA_Export_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function importPSACSV(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const lines = text.split(/\r\n|\n/);
-        if (lines.length < 2) {
-            alert("Die Datei enthält keine gültigen Daten.");
-            return;
+    if (id) {
+        const allePSA = ladePSA();
+        const eintrag = allePSA.find(p => String(p.id) === String(id));
+        if (eintrag) {
+            document.getElementById('psa-id').value = eintrag.id;
+            document.getElementById('psa-traeger').value = eintrag.traeger || '';
+            document.getElementById('psa-spind').value = eintrag.spind || '';
+            document.getElementById('psa-hersteller').value = eintrag.hersteller || '';
+            document.getElementById('psa-typ').value = eintrag.typ || '';
+            document.getElementById('psa-bezeichnung').value = eintrag.bezeichnung || '';
+            document.getElementById('psa-status').value = eintrag.status || 'Aktiv';
         }
-
-        const psaListe = getPSA();
-        let importCount = 0;
-
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-            
-            const cols = lines[i].split(';').map(col => col.replace(/^"|"$/g, '').trim());
-            
-            if (cols.length >= 5) {
-                const newItem = {
-                    id: cols[0] || ("PSA-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4)),
-                    spind: cols[1] || '',
-                    traeger: cols[2] || '',
-                    name: cols[2] || '',
-                    hersteller: cols[3] || '',
-                    typ: cols[4] || '',
-                    bezeichnung: cols[5] || '',
-                    groesse: cols[6] || '',
-                    zubehoer: cols[7] || '',
-                    seriennummer: cols[8] || '',
-                    ausgabeDatum: formatiereDatumFuerInput(cols[9] || ''),
-                    naechstePruefung: formatiereDatumFuerInput(cols[10] || ''),
-                    status: cols[11] || 'Einsatzbereit',
-                    historie: []
-                };
-
-                const existingIdx = psaListe.findIndex(p => String(p.id) === String(newItem.id));
-                if (existingIdx !== -1) {
-                    psaListe[existingIdx] = newItem;
-                } else {
-                    psaListe.push(newItem);
-                }
-                importCount++;
-            }
-        }
-
-        speicherePSA(psaListe);
-        filterPSA();
-        alert(`Erfolgreich ${importCount} PSA-Einträge importiert/aktualisiert.`);
-        event.target.value = '';
-    };
-    reader.readAsText(file);
-}
-
-function exportPSAPDF() {
-    window.print();
-}
-
-// 4. PSA-Akte (Detailansicht)
-function openPSAAkteModal(id) {
-    const item = getPSA().find(p => p && String(p.id) === String(id));
-    if (!item) return;
-
-    const safeId = escapeHtml(item.id);
-    item.historie = Array.isArray(item.historie) ? item.historie : [];
-    item.status = item.status || 'Einsatzbereit';
-
-    let historieHtml = '';
-    if (item.historie.length === 0) {
-        historieHtml = '<p style="color:#777; font-style:italic;">Bisher keine Einträge in der Akte vorhanden.</p>';
     } else {
-        historieHtml = '<ul style="list-style:none; padding:0; margin:0;">';
-        item.historie.slice().reverse().forEach(h => {
-            const histDatum = h.datum ? escapeHtml(new Date(h.datum).toLocaleDateString("de-DE")) : '-';
-            historieHtml += `
-                <li style="border-left:3px solid #1976D2; padding-left:10px; margin-bottom:10px; background:#f9f9f9; padding:8px; border-radius:0 4px 4px 0;">
-                    <div style="font-size:0.85rem; color:#666;">📅 ${histDatum} - <strong>${escapeHtml(h.typ)}</strong> ${h.pruefer ? '(' + escapeHtml(h.pruefer) + ')' : ''}</div>
-                    <div style="margin-top:2px;">${escapeHtml(h.bemerkung)}</div>
-                </li>
-            `;
-        });
-        historieHtml += '</ul>';
+        document.getElementById('psa-id').value = 'psa_' + Date.now();
     }
 
-    const modalHtml = `
-        <div id="psa-akte-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
-            <div style="background:#fff; padding:20px; border-radius:8px; width:92%; max-width:650px; max-height:90vh; overflow-y:auto;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:10px;">
-                    <div>
-                        <h2 style="margin:0;">📂 PSA-Akte: ${escapeHtml(item.bezeichnung)}</h2>
-                        <p style="margin:5px 0 0 0; color:#555;">Träger: <strong>${escapeHtml(item.traeger || item.name)}</strong> | Spind: <strong>${escapeHtml(item.spind || 'Keiner')}</strong></p>
-                    </div>
-                    <button onclick="closePSAAkteModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">✖</button>
-                </div>
+    // Event-Handler für das Formular-Submit setzen
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        savePSAFromModal();
+    };
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0; background:#f8f9fa; padding:12px; border-radius:6px;">
-                    <div><strong>Größe:</strong> ${escapeHtml(item.groesse || '-')}</div>
-                    <div><strong>Serien- / Inv.-Nr.:</strong> ${escapeHtml(item.seriennummer || '-')}</div>
-                    <div><strong>Ausgabedatum:</strong> ${formatiereDatum(item.ausgabeDatum)}</div>
-                    <div><strong>Nächste Prüfung:</strong> ${formatiereDatum(item.naechstePruefung)}</div>
-                </div>
-
-                <div style="margin-bottom:20px; background:#eef2f5; padding:12px; border-radius:6px;">
-                    <label><strong>Aktueller Status:</strong></label>
-                    <div style="display:flex; gap:10px; margin-top:5px;">
-                        <select id="psa-status-select" style="flex:1; padding:8px;">
-                            <option value="Einsatzbereit" ${item.status === 'Einsatzbereit' ? 'selected' : ''}>🟢 Einsatzbereit</option>
-                            <option value="In Reinigung" ${item.status === 'In Reinigung' ? 'selected' : ''}>🧺 In Reinigung</option>
-                            <option value="Defekt" ${item.status === 'Defekt' ? 'selected' : ''}>🔴 Defekt</option>
-                            <option value="Ausgemustert" ${item.status === 'Ausgemustert' ? 'selected' : ''}>⚪ Ausgemustert</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="speicherePSAStatus('${safeId}')" style="background:#0d6efd; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Status aktualisieren</button>
-                    </div>
-                </div>
-
-                <details style="margin-bottom:20px; background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px;">
-                    <summary style="font-weight:bold; cursor:pointer;">➕ Neuer Eintrag (Reinigung, Prüfung, Defekt, etc.)</summary>
-                    <form onsubmit="addPSAHistorieEintrag(event, '${safeId}')" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-                        <div style="display:flex; gap:10px;">
-                            <select id="hist-typ" style="flex:1; padding:6px;" required>
-                                <option value="Reinigung / Wäsche">🧺 Reinigung / Wäsche</option>
-                                <option value="Sichtprüfung">🔍 Sichtprüfung</option>
-                                <option value="Reparatur">🛠️ Reparatur</option>
-                                <option value="Mangel / Defekt">⚠️ Mangel / Defekt</option>
-                                <option value="Sonstiges">📝 Sonstiges</option>
-                            </select>
-                            <input type="text" id="hist-pruefer" placeholder="Bearbeiter / Prüfer" style="flex:1; padding:6px;">
-                        </div>
-                        <textarea id="hist-bemerkung" placeholder="Bemerkung / Details zum Vorgang..." style="width:100%; padding:6px;" rows="2" required></textarea>
-                        <button type="submit" class="btn btn-primary" style="align-self:flex-end; background:#0d6efd; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Eintrag speichern</button>
-                    </form>
-                </details>
-
-                <h3>📜 Verlaufs- & Pflegehistorie</h3>
-                <div style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:6px;">
-                    ${historieHtml}
-                </div>
-
-                <div style="text-align:right; margin-top:15px;">
-                    <button class="btn" onclick="closePSAAkteModal()" style="background:#ccc; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Schließen</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    closePSAAkteModal();
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    // Modal anzeigen (Bootstrap Fallback)
+    if (window.bootstrap && bootstrap.Modal) {
+        const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+        bsModal.show();
+    } else {
+        modal.style.display = 'block';
+    }
 }
 
-function closePSAAkteModal() {
-    const existing = document.getElementById('psa-akte-modal');
-    if (existing) existing.remove();
-}
+function savePSAFromModal() {
+    const id = document.getElementById('psa-id').value;
+    const traeger = document.getElementById('psa-traeger').value.trim();
+    const spind = document.getElementById('psa-spind').value.trim();
+    const hersteller = document.getElementById('psa-hersteller').value.trim();
+    const typ = document.getElementById('psa-typ').value.trim();
+    const bezeichnung = document.getElementById('psa-bezeichnung').value.trim();
+    const status = document.getElementById('psa-status').value;
 
-function speicherePSAStatus(id) {
-    const psaListe = getPSA();
-    const item = psaListe.find(p => p && String(p.id) === String(id));
-    if (!item) return;
+    if (!traeger) {
+        alert("Bitte geben Sie einen Träger an.");
+        return;
+    }
 
-    const neuerStatus = document.getElementById('psa-status-select').value;
-    const alterStatus = item.status || 'Einsatzbereit';
+    let allePSA = ladePSA();
+    const me = allePSA.findIndex(p => String(p.id) === String(id));
 
-    if (neuerStatus !== alterStatus) {
-        item.status = neuerStatus;
-        item.historie = Array.isArray(item.historie) ? item.historie : [];
-        item.historie.push({
-            datum: new Date().toISOString(),
-            typ: 'Statusänderung',
-            bemerkung: `Status geändert von "${alterStatus}" auf "${neuerStatus}".`,
-            pruefer: 'System'
-        });
+    const neuerEintrag = { id, traeger, spind, hersteller, typ, bezeichnung, status, geaendertAm: new Date().toISOString() };
 
-        speicherePSA(psaListe);
+    if (me >= 0) {
+        allePSA[me] = neuerEintrag;
+    } else {
+        allePSA.push(neuerEintrag);
+    }
+
+    if (speicherePSA(allePSA)) {
+        // Modal schliessen
+        const modal = document.getElementById('psa-modal');
+        if (window.bootstrap && bootstrap.Modal) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+        } else if (modal) {
+            modal.style.display = 'none';
+        }
         filterPSA();
-        openPSAAkteModal(id);
     }
 }
 
-function addPSAHistorieEintrag(event, id) {
-    event.preventDefault();
-    const psaListe = getPSA();
-    const item = psaListe.find(p => p && String(p.id) === String(id));
-    if (!item) return;
+function loeschePSAEintragModal(id) {
+    if (typeof istEditor === 'function' && !istEditor()) {
+        alert("⚠️ Keine Berechtigung zum Löschen.");
+        return;
+    }
 
-    item.historie = Array.isArray(item.historie) ? item.historie : [];
-    item.historie.push({
-        datum: new Date().toISOString(),
-        typ: document.getElementById('hist-typ').value,
-        pruefer: document.getElementById('hist-pruefer').value.trim(),
-        bemerkung: document.getElementById('hist-bemerkung').value.trim()
-    });
+    if (confirm("Möchten Sie diesen PSA-Eintrag wirklich löschen?")) {
+        let allePSA = ladePSA();
+        allePSA = allePSA.filter(p => String(p.id) !== String(id));
+        if (speicherePSA(allePSA)) {
+            filterPSA();
+        }
+    }
+}
 
-    speicherePSA(psaListe);
+// 6. Observer für dynamische UI-Loads & Global Event Listener
+document.addEventListener("DOMContentLoaded", () => {
     filterPSA();
-    openPSAAkteModal(id);
-}
 
-// 5. Modal zum Anlegen/Bearbeiten
-function openPSAModal(id = null) {
-    let item = { id: '', traeger: '', spind: '', hersteller: '', typ: '', bezeichnung: '', groesse: '', zubehoer: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
+    const sucheInput = document.getElementById('psa-suche');
+    const statusSelect = document.getElementById('psa-status-filter');
 
-    if (id && id !== 'null' && id !== 'undefined') {
-        const found = getPSA().find(p => p && String(p.id) === String(id));
-        if (found) item = found;
-    }
-
-    const safeId = escapeHtml(item.id);
-
-    // Konvertiert Daten sicher ins YYYY-MM-DD Format für das HTML5 Date-Input
-    const ausgabeFormatted = formatiereDatumFuerInput(item.ausgabeDatum);
-    const pruefungFormatted = formatiereDatumFuerInput(item.naechstePruefung);
-
-    const modalHtml = `
-        <div id="psa-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
-            <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
-                <h3>${item.id ? '✏️ PSA bearbeiten' : '➕ PSA zuweisen / anlegen'}</h3>
-                <form onsubmit="savePSAFromModal(event, '${safeId}')" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:2;">
-                            <label><strong>Name des Trägers *</strong></label>
-                            <input type="text" id="psa-traeger" value="${escapeHtml(item.traeger || item.name)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Max Mustermann">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Spind-Nr.</strong></label>
-                            <input type="text" id="psa-spind" value="${escapeHtml(item.spind)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 42">
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label><strong>Hersteller</strong></label>
-                            <input type="text" id="psa-hersteller" value="${escapeHtml(item.hersteller)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Rosenbauer">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Typ / Modell</strong></label>
-                            <input type="text" id="psa-typ" value="${escapeHtml(item.typ)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. FIRE FIT II">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label><strong>Ausrüstungsteil *</strong></label>
-                        <input type="text" id="psa-bezeichnung" list="psa-ausruestung-liste" value="${escapeHtml(item.bezeichnung)}" required style="width:100%; padding:8px; margin-top:4px;" placeholder="Wählen oder eingeben...">
-                        <datalist id="psa-ausruestung-liste">
-                            <option value="Feuerwehrüberjacke">
-                            <option value="Feuerwehrüberhose">
-                            <option value="Feuerwehrhelm">
-                            <option value="Feuerwehrstiefel">
-                            <option value="Feuerwehrschutzhandschuhe">
-                            <option value="Atemschutzmaske">
-                            <option value="Feuerwehrhaltegurt">
-                            <option value="Warnweste">
-                            <option value="Dienstkleidung / Latzhose">
-                        </datalist>
-                    </div>
-
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label><strong>Größe / Konfektion</strong></label>
-                            <input type="text" id="psa-groesse" value="${escapeHtml(item.groesse)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. 52/54 oder L">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Serien- / Inventarnr.</strong></label>
-                            <input type="text" id="psa-seriennummer" value="${escapeHtml(item.seriennummer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. PSA-102 (optional)">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label><strong>Zubehör / Anbauteile</strong></label>
-                        <input type="text" id="psa-zubehoer" value="${escapeHtml(item.zubehoer)}" style="width:100%; padding:8px; margin-top:4px;" placeholder="z. B. Nackenschutz, Helmleuchte">
-                    </div>
-
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label><strong>Ausgabedatum</strong></label>
-                            <input type="date" id="psa-ausgabeDatum" value="${ausgabeFormatted}" style="width:100%; padding:8px; margin-top:4px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label><strong>Nächste Prüfung</strong></label>
-                            <input type="date" id="psa-naechstePruefung" value="${pruefungFormatted}" style="width:100%; padding:8px; margin-top:4px;">
-                        </div>
-                    </div>
-                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-                        <button type="button" class="btn" onclick="closePSAModal()" style="background:#ccc; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Abbrechen</button>
-                        <button type="submit" class="btn btn-primary" style="background:#28a745; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">💾 Speichern</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-
-    closePSAModal();
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-function closePSAModal() {
-    const existing = document.getElementById('psa-modal');
-    if (existing) existing.remove();
-}
-
-function savePSAFromModal(event, existingId) {
-    event.preventDefault();
-
-    const psaListe = getPSA();
-    const isEdit = Boolean(existingId && existingId !== 'null' && existingId !== 'undefined' && existingId.trim() !== '');
-    const existingItem = isEdit ? (psaListe.find(p => p && String(p.id) === String(existingId)) || {}) : {};
-
-    const traegerWert = document.getElementById('psa-traeger').value.trim();
-
-    const newItem = {
-        id: isEdit ? existingId : "PSA-" + Date.now(),
-        traeger: traegerWert,
-        name: traegerWert,
-        spind: document.getElementById('psa-spind').value.trim(),
-        hersteller: document.getElementById('psa-hersteller')?.value.trim() || '',
-        typ: document.getElementById('psa-typ')?.value.trim() || '',
-        bezeichnung: document.getElementById('psa-bezeichnung').value.trim(),
-        kategorie: 'PSA',
-        groesse: document.getElementById('psa-groesse').value.trim(),
-        zubehoer: document.getElementById('psa-zubehoer')?.value.trim() || '',
-        seriennummer: document.getElementById('psa-seriennummer').value.trim(),
-        ausgabeDatum: document.getElementById('psa-ausgabeDatum').value,
-        naechstePruefung: document.getElementById('psa-naechstePruefung').value,
-        status: existingItem.status || 'Einsatzbereit',
-        historie: Array.isArray(existingItem.historie) ? existingItem.historie : [],
-        pruefungen: Array.isArray(existingItem.pruefungen) ? existingItem.pruefungen : []
-    };
-
-    if (isEdit) {
-        const idx = psaListe.findIndex(p => p && String(p.id) === String(existingId));
-        if (idx !== -1) {
-            psaListe[idx] = newItem;
-        } else {
-            psaListe.push(newItem);
-        }
-    } else {
-        psaListe.push(newItem);
-    }
-
-    speicherePSA(psaListe);
-    closePSAModal();
-    renderPSAView();
-}
-
-function loeschePSA(id) {
-    if (!confirm("Möchtest du diese PSA-Eintragung wirklich löschen?")) return;
-
-    const psaListe = getPSA().filter(p => p && String(p.id) !== String(id));
-    speicherePSA(psaListe);
-    renderPSAView();
-}
-
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-        closePSAModal();
-        closePSAAkteModal();
-    }
+    if (sucheInput) sucheInput.addEventListener('input', filterPSA);
+    if (statusSelect) statusSelect.addEventListener('change', filterPSA);
 });
 
+document.addEventListener("psaGeaendert", () => {
+    filterPSA();
+});
+
+// Vollständiger MutationObserver
 const observer = new MutationObserver(() => {
     const tbody = document.getElementById('psa-tabelle-body');
     if (tbody && tbody.children.length === 0) {
         filterPSA();
     }
 });
+
 observer.observe(document.body, { childList: true, subtree: true });
 
-function oeffnePSAModal(id = null) { openPSAModal(id); }
-function ladePSA() { renderPSAView(); }
-
-document.addEventListener("psaGeaendert", () => { filterPSA(); });
-document.addEventListener("DOMContentLoaded", () => { renderPSAView(); });
-
-// Globale Bereitstellung
-window.renderPSAView = renderPSAView;
-window.getPSA = getPSA;
+// Globale Freigaben
+window.ladePSA = ladePSA;
 window.speicherePSA = speicherePSA;
-window.openPSAModal = openPSAModal;
-window.closePSAModal = closePSAModal;
-window.openPSAAkteModal = openPSAAkteModal;
-window.closePSAAkteModal = closePSAAkteModal;
 window.filterPSA = filterPSA;
-window.exportPSACSV = exportPSACSV;
-window.importPSACSV = importPSACSV;
-window.exportPSAPDF = exportPSAPDF;
+window.oeffnePSAModal = oeffnePSAModal;
+window.savePSAFromModal = savePSAFromModal;
+window.loeschePSAEintragModal = loeschePSAEintragModal;
