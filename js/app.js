@@ -6,27 +6,20 @@
  * Navigationsfunktion zum Umschalten der Seiten
  */
 function zeigeSeite(modul) {
-    // Falls Dashboard, direkt anzeigen
-    if (modul === 'dashboard') {
-        // Logik für Dashboard
-        return;
-    }
+    if (!modul) modul = 'dashboard';
 
-    // Prüfen, ob die aktuelle Rolle die Seite überhaupt sehen darf
-    if (!hatRecht(modul)) {
+    // 1. Prüfen, ob die aktuelle Rolle die Seite überhaupt sehen darf (außer Dashboard)
+    if (modul !== 'dashboard' && typeof hatRecht === 'function' && !hatRecht(modul)) {
         alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
         return;
     }
 
-    // ... Hier folgt dein bisheriger Code zum Einblenden der Seite ...
-}
-
-    // 3. Alle Seiten ausblenden
+    // 2. Alle Seiten ausblenden
     document.querySelectorAll('.seite-ansicht').forEach(s => {
         s.style.display = 'none';
     });
 
-    // 4. Zielseite einblenden
+    // 3. Zielseite einblenden
     const ziel = document.getElementById('seite-' + modul);
     if (ziel) {
         ziel.style.display = 'block';
@@ -35,7 +28,7 @@ function zeigeSeite(modul) {
         return;
     }
 
-    // 5. Modul-spezifisches Rendern / Aktualisieren ausführen
+    // 4. Modul-spezifisches Rendern / Aktualisieren ausführen
     switch (modul) {
         case 'dashboard':
             if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
@@ -91,6 +84,7 @@ function zeigeSeite(modul) {
             console.log(`Navigation zu '${modul}' ausgeführt.`);
             break;
     }
+}
 
 window.zeigeSeite = zeigeSeite;
 
@@ -181,7 +175,6 @@ function exportPSACSV() {
         return;
     }
 
-    // Erweiterter Header
     const headers = ["Spind", "Träger", "Hersteller", "Typ", "Ausrüstung", "Größe", "Zubehör", "Seriennummer / Inv-Nr", "Ausgabedatum", "Nächste Prüfung", "Status"];
     
     const rows = daten.map(p => [
@@ -192,7 +185,7 @@ function exportPSACSV() {
         p.bezeichnung || p.ausruestung || p.teil || "",
         p.groesse || "",
         p.zubehoer || "-",
-        p.seriennummer || p.inventarnummer || "-", // Bricht ohne Nr. nicht mehr ab
+        p.seriennummer || p.inventarnummer || "-",
         p.ausgabeDatum || p.ausgabedatum || "",
         p.naechstePruefung || "",
         p.status || "Einsatzbereit"
@@ -219,6 +212,9 @@ function exportPruefungenCSV() {
     const rows = allePruefungen.map(p => [p.typ, p.bez, p.id, p.datum, p.status]);
     downloadCSV(`Pruefungen_Export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
 }
+
+window.exportPSACSV = exportPSACSV;
+window.exportPruefungenCSV = exportPruefungenCSV;
 
 
 // ==========================================
@@ -289,6 +285,8 @@ function druckeListe(titel, elementId) {
     }, 300);
 }
 
+window.druckeListe = druckeListe;
+
 
 // ==========================================
 // PWA Installations-Prompt
@@ -349,7 +347,7 @@ function aktualisiereDashboard() {
             return d >= heute && d <= in30Tagen && p.status !== 'erledigt';
         }).length;
 
-        const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit').length;
+        const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit' || !g.status).length;
         const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
 
         setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
@@ -468,8 +466,8 @@ function initEinstellungenLayout() {
     const ziel = document.getElementById('seite-einstellungen');
     if (!ziel) return;
 
-    const darfBearbeiten = typeof window.pruefeSeitenZugriff === "function" 
-        ? window.pruefeSeitenZugriff('einstellungen_schreiben') 
+    const darfBearbeiten = typeof window.hatRecht === "function" 
+        ? window.hatRecht('einstellungen_schreiben') 
         : true;
 
     const e = JSON.parse(localStorage.getItem('ffw_einstellungen')) || {
@@ -534,7 +532,7 @@ function initEinstellungenLayout() {
 }
 
 function speichereEinstellungen() {
-    if (typeof window.pruefeSeitenZugriff === "function" && !window.pruefeSeitenZugriff('einstellungen_schreiben')) {
+    if (typeof window.hatRecht === "function" && !window.hatRecht('einstellungen_schreiben')) {
         alert("⚠️ Keine Berechtigung zum Speichern vorhanden.");
         return;
     }
@@ -554,8 +552,8 @@ function speichereEinstellungen() {
 
 function exportiereSystemBackupGesichert() {
     const darfLesen = (modul) => {
-        if (typeof window.pruefeSeitenZugriff === "function") {
-            return window.pruefeSeitenZugriff(modul);
+        if (typeof window.hatRecht === "function") {
+            return window.hatRecht(modul);
         }
         return true;
     };
@@ -629,8 +627,8 @@ function initAuswertungenLayout() {
     if (!ziel) return;
 
     const darfLesen = (modul) => {
-        if (typeof window.pruefeSeitenZugriff === "function") {
-            return window.pruefeSeitenZugriff(modul);
+        if (typeof window.hatRecht === "function") {
+            return window.hatRecht(modul);
         }
         return true;
     };
@@ -643,7 +641,7 @@ function initAuswertungenLayout() {
 
     const heute = new Date();
     const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
-    const einsatzbereit = geraete.filter(g => g.status === 'einsatzbereit').length;
+    const einsatzbereit = geraete.filter(g => g.status === 'einsatzbereit' || !g.status).length;
     const defekt = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
 
     ziel.innerHTML = `
@@ -714,7 +712,6 @@ function holeAktuelleRolle() {
         console.error("Fehler beim Lesen des Benutzers aus dem localStorage:", e);
     }
 
-    // Wenn kein Benutzer angemeldet ist, nutzen wir als Entwicklungs-Fallback 'editor' statt 'gast'
     if (!rawUser) return 'editor';
 
     let rolleStr = 'editor';
@@ -740,7 +737,6 @@ function hatRecht(recht) {
 
     if (!rechteDef) return false;
 
-    // Admin hat immer uneingeschränkte Rechte
     if (rechteDef.schreibrechte && rechteDef.schreibrechte.includes('*')) {
         return true;
     }

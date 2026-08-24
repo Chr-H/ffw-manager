@@ -4,9 +4,16 @@
 
 // 1. PSA-Daten laden (Fallback auf LocalStorage & storage.js)
 function ladePSA() {
-    if (typeof ladePsaData === 'function') {
-        return ladePsaData();
+    if (typeof window.ladePsaData === 'function') {
+        return window.ladePsaData();
     }
+    
+    // Nutzen der zentralen Hilfsfunktion aus app.js / storage.js
+    if (typeof window.ladeDaten === 'function') {
+        const d = window.ladeDaten('psa');
+        if (d && d.length > 0) return d;
+    }
+
     const daten = localStorage.getItem('ffw_psa') || localStorage.getItem('ffw_psa_daten');
     try {
         return daten ? JSON.parse(daten) : [];
@@ -18,8 +25,10 @@ function ladePSA() {
 
 // 2. PSA-Daten speichern (Mit aktiver Berechtigungsprüfung)
 function speicherePSA(psaListe) {
-    // BERECHTIGUNGSPRÜFUNG: Bleibt strikt erhalten
-    const darfSchreiben = (typeof istEditor === 'function') ? istEditor() : true;
+    // BERECHTIGUNGSPRÜFUNG: Nutzt zentrales hatRecht() oder Fallback auf istEditor()
+    const darfSchreiben = (typeof window.hatRecht === 'function') 
+        ? window.hatRecht('psa_schreiben') 
+        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
 
     if (!darfSchreiben) {
         alert("⚠️ Keine Berechtigung zum Speichern.");
@@ -29,11 +38,11 @@ function speicherePSA(psaListe) {
     try {
         const bereinigteDaten = Array.isArray(psaListe) ? psaListe : [];
 
-        // Nutzung der zentralen storage.js Speicherfunktion (Lokal + Firebase Cloud)
-        if (typeof speichereDaten === 'function') {
-            speichereDaten('psa', bereinigteDaten);
-        } else if (typeof speicherePsaData === 'function') {
-            speicherePsaData(bereinigteDaten);
+        // Nutzung der zentralen Speicherfunktion (Lokal + Firebase Cloud)
+        if (typeof window.speichereDaten === 'function') {
+            window.speichereDaten('psa', bereinigteDaten);
+        } else if (typeof window.speicherePsaData === 'function') {
+            window.speicherePsaData(bereinigteDaten);
         } else {
             localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
             localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
@@ -49,7 +58,11 @@ function speicherePSA(psaListe) {
     }
 }
 
-// 3. PSA filtern und Tabelle rendern
+// 3. Hauptansicht Rendern & Filtern
+function renderPSAView() {
+    filterPSA();
+}
+
 function filterPSA() {
     const sucheInput = document.getElementById('psa-suche');
     const statusSelect = document.getElementById('psa-status-filter');
@@ -63,11 +76,15 @@ function filterPSA() {
     const allePSA = ladePSA();
 
     const gefiltert = allePSA.filter(item => {
+        const traegerText = item.traeger || item.name || '';
+        const bezeichnungText = item.bezeichnung || item.ausruestung || '';
+        
         const trefferSuche = !suchbegriff || 
-            (item.traeger && item.traeger.toLowerCase().includes(suchbegriff)) ||
+            (traegerText.toLowerCase().includes(suchbegriff)) ||
             (item.spind && String(item.spind).toLowerCase().includes(suchbegriff)) ||
-            (item.bezeichnung && item.bezeichnung.toLowerCase().includes(suchbegriff)) ||
+            (bezeichnungText.toLowerCase().includes(suchbegriff)) ||
             (item.hersteller && item.hersteller.toLowerCase().includes(suchbegriff)) ||
+            (item.seriennummer && item.seriennummer.toLowerCase().includes(suchbegriff)) ||
             (item.typ && item.typ.toLowerCase().includes(suchbegriff));
 
         const trefferStatus = (statusFilter === 'alle') || (item.status === statusFilter);
@@ -90,17 +107,14 @@ function renderePSATabelle(liste) {
         return;
     }
 
-    // Rechteprüfung: Prüft Funktionen ODER direkt den localStorage als Fallback
-    const rolleLS = String(localStorage.getItem('ffw_rolle') || '').toLowerCase();
-    const kannBearbeiten = 
-        (typeof hatRecht === 'function' && hatRecht('psa_schreiben')) || 
-        (typeof istEditor === 'function' && istEditor()) ||
-        (rolleLS === 'editor' || rolleLS === 'admin');
+    // Rechteprüfung
+    const kannBearbeiten = (typeof window.hatRecht === 'function')
+        ? window.hatRecht('psa_schreiben')
+        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
 
     liste.forEach(item => {
         const tr = document.createElement('tr');
         
-        // Aktionen ganz links: Akte (📄) immer, Bearbeiten (✏️) & Löschen (🗑️) bei Schreibrechten
         const akteBtn = `<button class="btn btn-sm btn-outline-info me-1" onclick="oeffnePSAAkteModal('${item.id}')" title="Akte / Details">📄</button>`;
         const editBtns = kannBearbeiten ? `
             <button class="btn btn-sm btn-outline-primary me-1" onclick="oeffnePSAModal('${item.id}')" title="Bearbeiten">✏️</button>
@@ -109,7 +123,6 @@ function renderePSATabelle(liste) {
 
         const aktionsButtons = `${akteBtn}${editBtns}`;
 
-        // AKTIONEN IST DIE ERSTE SPALTE (GANZ LINKS)
         tr.innerHTML = `
             <td>${aktionsButtons}</td>
             <td>${item.spind || '-'}</td>
@@ -128,9 +141,12 @@ function renderePSATabelle(liste) {
 
 function getStatusBadgeClass(status) {
     switch (status) {
-        case 'Aktiv': return 'bg-success';
-        case 'In Prüfung': return 'bg-warning text-dark';
-        case 'Ausgemustert': return 'bg-danger';
+        case 'Aktiv': 
+        case 'Einsatzbereit': return 'bg-success';
+        case 'In Prüfung': 
+        case 'Wartung': return 'bg-warning text-dark';
+        case 'Ausgemustert': 
+        case 'Defekt': return 'bg-danger';
         default: return 'bg-secondary';
     }
 }
@@ -146,9 +162,24 @@ window.oeffnePSAAkteModal = function(id) {
     }
 };
 
+// Hilfsfunktion zum sicheren Auslesen/Setzen von Formularwerten
+function getInputValue(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+}
+
+function setInputValue(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+}
+
 // 5. Modal-Aktionen (Erstellen / Bearbeiten / Speichern)
 function oeffnePSAModal(id = null) {
-    if (typeof istEditor === 'function' && !istEditor()) {
+    const darfBearbeiten = (typeof window.hatRecht === 'function')
+        ? window.hatRecht('psa_schreiben')
+        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
+
+    if (!darfBearbeiten) {
         alert("⚠️ Keine Berechtigung zum Bearbeiten.");
         return;
     }
@@ -163,25 +194,27 @@ function oeffnePSAModal(id = null) {
         const allePSA = ladePSA();
         const eintrag = allePSA.find(p => String(p.id) === String(id));
         if (eintrag) {
-            document.getElementById('psa-id').value = eintrag.id;
-            document.getElementById('psa-traeger').value = eintrag.traeger || '';
-            document.getElementById('psa-spind').value = eintrag.spind || '';
-            document.getElementById('psa-hersteller').value = eintrag.hersteller || '';
-            document.getElementById('psa-typ').value = eintrag.typ || '';
-            document.getElementById('psa-bezeichnung').value = eintrag.bezeichnung || '';
-            document.getElementById('psa-status').value = eintrag.status || 'Aktiv';
+            setInputValue('psa-id', eintrag.id);
+            setInputValue('psa-traeger', eintrag.traeger || eintrag.name);
+            setInputValue('psa-spind', eintrag.spind);
+            setInputValue('psa-hersteller', eintrag.hersteller);
+            setInputValue('psa-typ', eintrag.typ);
+            setInputValue('psa-bezeichnung', eintrag.bezeichnung || eintrag.ausruestung);
+            setInputValue('psa-groesse', eintrag.groesse);
+            setInputValue('psa-zubehoer', eintrag.zubehoer);
+            setInputValue('psa-seriennummer', eintrag.seriennummer || eintrag.inventarnummer);
+            setInputValue('psa-naechstePruefung', eintrag.naechstePruefung);
+            setInputValue('psa-status', eintrag.status || 'Aktiv');
         }
     } else {
-        document.getElementById('psa-id').value = 'psa_' + Date.now();
+        setInputValue('psa-id', 'psa_' + Date.now());
     }
 
-    // Event-Handler für das Formular-Submit setzen
     form.onsubmit = function(e) {
         e.preventDefault();
         savePSAFromModal();
     };
 
-    // Modal anzeigen (Bootstrap Fallback)
     if (window.bootstrap && bootstrap.Modal) {
         const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
         bsModal.show();
@@ -191,13 +224,17 @@ function oeffnePSAModal(id = null) {
 }
 
 function savePSAFromModal() {
-    const id = document.getElementById('psa-id').value;
-    const traeger = document.getElementById('psa-traeger').value.trim();
-    const spind = document.getElementById('psa-spind').value.trim();
-    const hersteller = document.getElementById('psa-hersteller').value.trim();
-    const typ = document.getElementById('psa-typ').value.trim();
-    const bezeichnung = document.getElementById('psa-bezeichnung').value.trim();
-    const status = document.getElementById('psa-status').value;
+    const id = getInputValue('psa-id');
+    const traeger = getInputValue('psa-traeger');
+    const spind = getInputValue('psa-spind');
+    const hersteller = getInputValue('psa-hersteller');
+    const typ = getInputValue('psa-typ');
+    const bezeichnung = getInputValue('psa-bezeichnung');
+    const groesse = getInputValue('psa-groesse');
+    const zubehoer = getInputValue('psa-zubehoer');
+    const seriennummer = getInputValue('psa-seriennummer');
+    const naechstePruefung = getInputValue('psa-naechstePruefung');
+    const status = getInputValue('psa-status') || 'Aktiv';
 
     if (!traeger) {
         alert("Bitte geben Sie einen Träger an.");
@@ -205,18 +242,30 @@ function savePSAFromModal() {
     }
 
     let allePSA = ladePSA();
-    const me = allePSA.findIndex(p => String(p.id) === String(id));
+    const index = allePSA.findIndex(p => String(p.id) === String(id));
 
-    const neuerEintrag = { id, traeger, spind, hersteller, typ, bezeichnung, status, geaendertAm: new Date().toISOString() };
+    const neuerEintrag = {
+        id,
+        traeger,
+        spind,
+        hersteller,
+        typ,
+        bezeichnung,
+        groesse,
+        zubehoer,
+        seriennummer,
+        naechstePruefung,
+        status,
+        geaendertAm: new Date().toISOString()
+    };
 
-    if (me >= 0) {
-        allePSA[me] = neuerEintrag;
+    if (index >= 0) {
+        allePSA[index] = { ...allePSA[index], ...neuerEintrag };
     } else {
         allePSA.push(neuerEintrag);
     }
 
     if (speicherePSA(allePSA)) {
-        // Modal schliessen
         const modal = document.getElementById('psa-modal');
         if (window.bootstrap && bootstrap.Modal) {
             const bsModal = bootstrap.Modal.getInstance(modal);
@@ -229,7 +278,11 @@ function savePSAFromModal() {
 }
 
 function loeschePSAEintragModal(id) {
-    if (typeof istEditor === 'function' && !istEditor()) {
+    const darfLöschen = (typeof window.hatRecht === 'function')
+        ? window.hatRecht('psa_schreiben')
+        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
+
+    if (!darfLöschen) {
         alert("⚠️ Keine Berechtigung zum Löschen.");
         return;
     }
@@ -243,7 +296,7 @@ function loeschePSAEintragModal(id) {
     }
 }
 
-// 6. Observer für dynamische UI-Loads & Global Event Listener
+// 6. Event Listener & Initialisierung
 document.addEventListener("DOMContentLoaded", () => {
     filterPSA();
 
@@ -258,20 +311,12 @@ document.addEventListener("psaGeaendert", () => {
     filterPSA();
 });
 
-// Vollständiger MutationObserver
-const observer = new MutationObserver(() => {
-    const tbody = document.getElementById('psa-tabelle-body');
-    if (tbody && tbody.children.length === 0) {
-        filterPSA();
-    }
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
-
 // Globale Freigaben
 window.ladePSA = ladePSA;
 window.speicherePSA = speicherePSA;
+window.renderPSAView = renderPSAView;
 window.filterPSA = filterPSA;
+window.renderePSATabelle = renderePSATabelle;
 window.oeffnePSAModal = oeffnePSAModal;
 window.savePSAFromModal = savePSAFromModal;
 window.loeschePSAEintragModal = loeschePSAEintragModal;

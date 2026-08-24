@@ -1,13 +1,17 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (v0.8.0 - Bereinigt & Repariert)
+// RECHTE- & BENUTZERSTEUERUNG (v0.9.0 - Optimiert & Harmonisiert)
 // ==========================================
 
 const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
 
-// Active session state directly from Local or Session Storage
+// Aktive Sitzung aus LocalStorage oder SessionStorage abrufen
 function holeAktuellenBenutzer() {
     const userString = localStorage.getItem('ffw_user') || localStorage.getItem('ffw_aktiver_benutzer') || sessionStorage.getItem('ffw_user');
-    return userString ? JSON.parse(userString) : { name: "", email: "", rolle: "gast" };
+    try {
+        return userString ? JSON.parse(userString) : { name: "", email: "", rolle: "gast" };
+    } catch (e) {
+        return { name: "", email: "", rolle: "gast" };
+    }
 }
 
 let aktuellerBenutzer = holeAktuellenBenutzer();
@@ -59,7 +63,7 @@ function aktualisiereModulSichtbarkeit() {
         elem.style.display = darfSchreiben ? '' : 'none';
     });
 
-    // 3. Eingabefelder in Daten-Containern sperren (Login/Registrierungsformulare ausnehmen)
+    // 3. Eingabefelder in Daten-Containern sperren
     document.querySelectorAll('#psa-container input, #psa-container select, #psa-container textarea, #pruefungen-container input, #pruefungen-container select, #pruefungen-container textarea').forEach(elem => {
         if (!darfSchreiben && !elem.classList.contains('allow-viewer')) {
             elem.disabled = true;
@@ -108,13 +112,13 @@ function zeigePinModal(zielSeite) {
         alert(`Willkommen, ${aktuellerBenutzer.name}!\nErfolgreich angemeldet als ${aktuellerBenutzer.rolle.toUpperCase()}.`);
         
         aktualisiereModulSichtbarkeit();
-        if (typeof zeigeSeite === 'function') {
-            zeigeSeite(zielSeite && zielSeite !== 'dashboard' ? zielSeite : 'dashboard');
+        if (typeof window.zeigeSeite === 'function') {
+            window.zeigeSeite(zielSeite && zielSeite !== 'dashboard' ? zielSeite : 'dashboard');
         }
     };
 
     if (window.db) {
-        db.collection('benutzer').get().then(snapshot => {
+        window.db.collection('benutzer').get().then(snapshot => {
             let treffer = null;
 
             snapshot.forEach(doc => {
@@ -138,7 +142,7 @@ function zeigePinModal(zielSeite) {
                 alert("❌ Ungültige Kombination aus Benutzername/E-Mail und PIN!");
             }
         }).catch(err => {
-            console.warn("Firebase-Rechtefehler beim Login, nutze lokalen Notfall-Login:", err);
+            console.warn("Firebase-Rechtefehler beim Login, nutze lokalen Fallback:", err);
             
             if ((eingabeKennung === 'admin' || eingabeKennung === 'admin@ffw.de') && (eingabePin === '1234' || eingabePin === 'admin')) {
                 loginErfolgreich({
@@ -192,7 +196,7 @@ function beantrageZugang(e) {
     }
 
     if (window.db) {
-        db.collection('zugangsanfragen').add({
+        window.db.collection('zugangsanfragen').add({
             name: name,
             email: email,
             pin: pin,
@@ -287,7 +291,7 @@ function ladeZugangsanfragen() {
     const ziel = document.getElementById("zugangsanfragen-bereich");
     if (!ziel || !window.db) return;
 
-    db.collection('zugangsanfragen').where('status', '==', 'ausstehend').get()
+    window.db.collection('zugangsanfragen').where('status', '==', 'ausstehend').get()
         .then(snapshot => {
             let html = `<h3>Offene Zugangsanträge (${snapshot.size})</h3>`;
             
@@ -335,7 +339,7 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
     if (window.db) {
         const cleanEmail = email.trim().toLowerCase();
 
-        db.collection('benutzer').get().then(snapshot => {
+        window.db.collection('benutzer').get().then(snapshot => {
             let bestehenderUserDoc = null;
 
             snapshot.forEach(doc => {
@@ -345,14 +349,14 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
             });
 
             if (bestehenderUserDoc) {
-                return db.collection('benutzer').doc(bestehenderUserDoc.id).update({
+                return window.db.collection('benutzer').doc(bestehenderUserDoc.id).update({
                     name: name,
                     pin: pin,
                     rolle: (rolle || 'viewer').toLowerCase(),
                     aktualisiertAm: new Date().toISOString()
                 });
             } else {
-                return db.collection('benutzer').add({
+                return window.db.collection('benutzer').add({
                     name: name,
                     email: email,
                     pin: pin,
@@ -362,7 +366,7 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
             }
         })
         .then(() => {
-            return db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
+            return window.db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
         })
         .then(() => {
             alert(`Zugang für ${name} wurde erfolgreich aktiviert!`);
@@ -376,7 +380,7 @@ function lehneAntragAb(requestId) {
     if (!confirm("Soll dieser Antrag wirklich abgelehnt werden?")) return;
 
     if (window.db) {
-        db.collection('zugangsanfragen').doc(requestId).update({ status: 'abgelehnt' })
+        window.db.collection('zugangsanfragen').doc(requestId).update({ status: 'abgelehnt' })
             .then(() => {
                 alert("Antrag wurde abgelehnt.");
                 ladeAdminAnsicht();
@@ -389,7 +393,7 @@ function ladeAktiveBenutzer() {
     const ziel = document.getElementById("aktive-benutzer-bereich");
     if (!ziel || !window.db) return;
 
-    db.collection('benutzer').get()
+    window.db.collection('benutzer').get()
         .then(snapshot => {
             let html = `<h3>Freigeschaltete Kameraden (${snapshot.size})</h3>`;
             
@@ -456,7 +460,7 @@ function pinZuruecksetzen(userId, benutzerName) {
     }
 
     if (window.db) {
-        db.collection('benutzer').doc(userId).update({ pin: sauberePin })
+        window.db.collection('benutzer').doc(userId).update({ pin: sauberePin })
             .then(() => alert(`✅ PIN für ${benutzerName} erfolgreich geändert!`))
             .catch(err => alert("Fehler beim Ändern der PIN: " + err.message));
     }
@@ -465,7 +469,7 @@ function pinZuruecksetzen(userId, benutzerName) {
 function aendereBenutzerRolle(userId, neueRolle) {
     if (!window.db) return;
 
-    db.collection('benutzer').doc(userId).update({ rolle: neueRolle.toLowerCase() })
+    window.db.collection('benutzer').doc(userId).update({ rolle: neueRolle.toLowerCase() })
         .then(() => {
             alert("✅ Rolle erfolgreich aktualisiert!");
             ladeAktiveBenutzer();
@@ -477,7 +481,7 @@ function loescheBenutzer(userId, name) {
     if (!confirm(`Möchtest du dem Kameraden ${name} wirklich alle Rechte entziehen?`)) return;
     if (!window.db) return;
 
-    db.collection('benutzer').doc(userId).delete()
+    window.db.collection('benutzer').doc(userId).delete()
         .then(() => {
             alert(`Zugang für ${name} wurde gelöscht.`);
             ladeAdminAnsicht();
@@ -531,8 +535,8 @@ function abmelden() {
     aktuellerBenutzer = { name: "", email: "", rolle: "gast" };
     
     aktualisiereModulSichtbarkeit();
-    if (typeof zeigeSeite === 'function') {
-        zeigeSeite('dashboard');
+    if (typeof window.zeigeSeite === 'function') {
+        window.zeigeSeite('dashboard');
     }
 }
 
@@ -554,8 +558,9 @@ function starteInaktivitaetsTimer() {
     document.addEventListener(event, starteInaktivitaetsTimer);
 });
 
-// --- GLOBALE FREIGABEN & EVENT LISTENER ---
+// --- GLOBALE FREIGABEN ---
 
+window.holeAktuellenBenutzer = holeAktuellenBenutzer;
 window.istAdmin = istAdmin;
 window.istEditor = istEditor;
 window.hatZugriffAufSensibleDaten = hatZugriffAufSensibleDaten;
