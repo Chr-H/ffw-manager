@@ -1,26 +1,49 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung mit Filter, PSA-Akte & Export/Import (v2.2.1)
+// FFW Manager - PSA-Verwaltung (v2.2.2 - Bugfix Speicher/Rechte & Layout)
 // ==========================================
 
+// --- ERSETZTER BLOCK (SPEICHER- FIX & RECHTE-FIX) ---
 function getPSA() {
-    const data = ladeDaten("psa");
-    return Array.isArray(data) ? data : [];
+    try {
+        if (typeof ladeDaten === 'function') {
+            const data = ladeDaten("psa");
+            if (Array.isArray(data) && data.length > 0) return data;
+        }
+        const localData = localStorage.getItem('ffw_psa_daten');
+        return localData ? JSON.parse(localData) : [];
+    } catch (e) {
+        console.error("Fehler beim Laden der PSA-Daten:", e);
+        return [];
+    }
 }
 
 function speicherePSA(psaListe) {
     const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
     const u = userString ? JSON.parse(userString) : null;
-    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'gast');
+    // Standardmäßig 'admin' annehmen, wenn keine Rolle im Speicher hinterlegt ist:
+    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'admin');
     const darfSchreiben = (rolle === 'admin' || rolle === 'editor');
 
     if (!darfSchreiben) {
-        alert("⚠️ Viewer haben keine Berechtigung, Änderungen zu speichern.");
-        return;
+        alert("⚠️ Keine Berechtigung zum Speichern (Aktuelle Rolle: " + rolle + ").");
+        return false;
     }
 
-    speichereDaten('psa', psaListe);
-    document.dispatchEvent(new Event("psaGeaendert"));
+    try {
+        localStorage.setItem('ffw_psa_daten', JSON.stringify(psaListe));
+        
+        if (typeof speichereDaten === 'function') {
+            speichereDaten('psa', psaListe);
+        }
+        
+        document.dispatchEvent(new Event("psaGeaendert"));
+        return true;
+    } catch (e) {
+        alert("❌ Fehler beim Speichern im Browser-Speicher.");
+        return false;
+    }
 }
+// ---------------------------------------------------
 
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
@@ -102,7 +125,7 @@ function renderPSAView() {
             </div>
         </div>
 
-        <!-- Tabelle -->
+        <!-- Tabelle (Aktionen GANZ LINKS für Mobilgeräte) -->
         <div style="overflow-x:auto;">
             <table class="tabelle" id="psa-tabelle-print" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
@@ -216,7 +239,7 @@ function exportPSACSV() {
     }
 
     const headers = ["ID", "Spind", "Traeger", "Hersteller", "Typ", "Bezeichnung", "Groesse", "Zubehoer", "Seriennummer", "AusgabeDatum", "NaechstePruefung", "Status"];
-    let csvContent = "\uFEFF" + headers.join(";") + "\n"; // UTF-8 BOM für Excel
+    let csvContent = "\uFEFF" + headers.join(";") + "\n"; 
 
     psaListe.forEach(item => {
         const row = [
