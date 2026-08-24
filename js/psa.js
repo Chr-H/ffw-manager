@@ -181,7 +181,7 @@ function renderPSAView() {
         <!-- Filter- & Suchleiste -->
         <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <div style="flex:2; min-width:200px;">
-                <input type="text" id="psa-filter-suche" oninput="filterPSA()" placeholder="🔍 Suche nach Name, Spind, Ausrüstung..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                <input type="text" id="psa-filter-suche" oninput="filterPSA()" placeholder="🔍 Suche nach Name, Spind, Ausrüstung, Hersteller..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
             </div>
             <div style="flex:1; min-width:150px;">
                 <select id="psa-filter-status" onchange="filterPSA()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
@@ -198,25 +198,30 @@ function renderPSAView() {
         <div style="overflow-x:auto;">
             <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
-                    <tr style="background:#f4f6f8; text-align:left; border-bottom:2px solid #e0e0e0;">
-    <th style="padding:10px;">Aktionen</th>
-    <th style="padding:10px;">Spind</th>
-    <th style="padding:10px;">Träger</th>
-    <th style="padding:10px;">Hersteller</th>
-    <th style="padding:10px;">Typ</th>
-    <th style="padding:10px;">Ausrüstung</th>
-    <th style="padding:10px;">Größe</th>
-    <th style="padding:10px;">Zubehör</th>
-    <th style="padding:10px;">Status</th>
-    <th style="padding:10px;">Nächste Prüfung</th>
-</tr>
+                    <tr style="background:#b71c1c; color:white; text-align:left;">
+                        <th style="padding:10px;">Spind</th>
+                        <th style="padding:10px;">Träger</th>
+                        <th style="padding:10px;">Hersteller</th>
+                        <th style="padding:10px;">Typ</th>
+                        <th style="padding:10px;">Ausrüstung / Bezeichn.</th>
+                        <th style="padding:10px;">Größe</th>
+                        <th style="padding:10px;">Zubehör</th>
+                        <th style="padding:10px;">Inv.- / Serien-Nr.</th>
+                        <th style="padding:10px;">Nächste Prüfung</th>
+                        <th style="padding:10px;">Aktionen</th>
+                    </tr>
                 </thead>
                 <tbody id="psa-tabelle-body"></tbody>
             </table>
         </div>
     `;
 
-    filterPSA();
+    // Verzögerter Aufruf, damit der Browser den tbody im DOM sicher erkennt
+    setTimeout(() => {
+        if (typeof filterPSA === 'function') {
+            filterPSA();
+        }
+    }, 50);
 }
 
 // 2. Filter-Funktion (Aktualisiert für 10 Spalten)
