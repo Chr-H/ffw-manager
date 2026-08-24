@@ -11,12 +11,19 @@ function zeigeSeite(seiteId) {
     // 1. Parameter bereinigen
     const modul = seiteId.replace(/^seite-/, '');
 
-    // 2. Rechte-Prüfung vorschalten
+   // 2. Rechte-Prüfung vorschalten
     if (typeof window.pruefeSeitenZugriff === "function") {
         if (!window.pruefeSeitenZugriff(modul)) {
-            alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
-            return;
+            // Verhindert das Aufpoppen während des Login-Vorgangs
+            const rolle = typeof holeAktuelleRolle === "function" ? holeAktuelleRolle() : 'gast';
+            if (!hatRecht(modul)) {
+                alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
+                return;
+            }
         }
+    } else if (!hatRecht(modul)) {
+        alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
+        return;
     }
 
     // 3. Alle Seiten ausblenden
@@ -746,8 +753,11 @@ function anmeldenBenutzer(benutzerdaten) {
         return;
     }
     
+    // Beide Keys setzen, damit alte und neue Module die Rolle sofort erkennen
     localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify(benutzerdaten));
-    localStorage.removeItem('ffw_user');
+    localStorage.setItem('ffw_user', JSON.stringify(benutzerdaten));
+    
+    // Seite neu laden, damit die Rechte sauber ab Start greifen
     location.reload();
 }
 

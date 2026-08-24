@@ -1,18 +1,21 @@
 // ==========================================
-// RECHTE- & BENUTZERSTEUERUNG (v0.7.4 - Bereinigt)
+// RECHTE- & BENUTZERSTEUERUNG (v0.8.0 - Bereinigt & Repariert)
 // ==========================================
 
 const MASTER_ADMIN_EMAIL = "christian.holmer@arcor.de"; 
 
-// Aktueller Status in der Sitzung
-let aktuellerBenutzer = JSON.parse(sessionStorage.getItem('ffw_user')) || {
-    name: "",
-    email: "",
-    rolle: "gast"
-};
+// Active session state directly from Local or Session Storage
+function holeAktuellenBenutzer() {
+    const userString = localStorage.getItem('ffw_user') || localStorage.getItem('ffw_aktiver_benutzer') || sessionStorage.getItem('ffw_user');
+    return userString ? JSON.parse(userString) : { name: "", email: "", rolle: "gast" };
+}
 
-// Prüffunktionen für Berechtigungen
+let aktuellerBenutzer = holeAktuellenBenutzer();
+
+// --- PRÜFFUNKTIONEN FÜR BERECHTIGUNGEN ---
+
 function istAdmin() {
+    aktuellerBenutzer = holeAktuellenBenutzer();
     if (!aktuellerBenutzer) return false;
     const r = (aktuellerBenutzer.rolle || "").toLowerCase();
     const e = (aktuellerBenutzer.email || "").toLowerCase();
@@ -20,6 +23,7 @@ function istAdmin() {
 }
 
 function istEditor() {
+    aktuellerBenutzer = holeAktuellenBenutzer();
     if (!aktuellerBenutzer) return false;
     const r = (aktuellerBenutzer.rolle || "").toLowerCase();
     return istAdmin() || r === 'editor';
@@ -29,10 +33,14 @@ function hatZugriffAufSensibleDaten() {
     return istEditor();
 }
 
-// UI ANPASSEN
+// --- UI & MODUL-SICHTBARKEIT ---
+
 function aktualisiereModulSichtbarkeit() {
+    aktuellerBenutzer = holeAktuellenBenutzer();
+    const darfSchreiben = istEditor();
+
+    // 1. Dashboard-Cards / Navigations-Buttons visuell anpassen
     const sensibleModule = ['psa', 'personal']; 
-    
     sensibleModule.forEach(modulId => {
         const navBtn = document.querySelector(`button[onclick*="'${modulId}'"]`);
         const dashboardCard = document.querySelector(`.card[onclick*="'${modulId}'"]`);
@@ -46,10 +54,26 @@ function aktualisiereModulSichtbarkeit() {
         }
     });
 
+    // 2. Buttons für Speichern/Löschen/Bearbeiten je nach Recht anzeigen/verstecken
+    document.querySelectorAll('.btn-speichern, .btn-loeschen, .btn-bearbeiten, .admin-only').forEach(elem => {
+        elem.style.display = darfSchreiben ? '' : 'none';
+    });
+
+    // 3. Eingabefelder in Daten-Containern sperren (Login/Registrierungsformulare ausnehmen)
+    document.querySelectorAll('#psa-container input, #psa-container select, #psa-container textarea, #pruefungen-container input, #pruefungen-container select, #pruefungen-container textarea').forEach(elem => {
+        if (!darfSchreiben && !elem.classList.contains('allow-viewer')) {
+            elem.disabled = true;
+        } else {
+            elem.disabled = false;
+        }
+    });
+
     renderLoginStatusHeader();
+    aktualisiereUserHeaderUI();
 }
 
-// SEITEN-ZUGRIFFS-SCHUTZ
+// --- SEITEN-ZUGRIFFS-SCHUTZ ---
+
 function pruefeSeitenZugriff(seiteId) {
     const geschuetzteSeiten = ['psa', 'personal']; 
     
@@ -60,7 +84,8 @@ function pruefeSeitenZugriff(seiteId) {
     return true;
 }
 
-// ANMELDUNG MIT PIN / BENUTZERNAME
+// --- ANMELDUNG MIT PIN / BENUTZERNAME ---
+
 function zeigePinModal(zielSeite) {
     const emailOderName = prompt("👤 Bitte Benutzername oder E-Mail-Adresse eingeben:");
     if (!emailOderName) return;
@@ -71,7 +96,6 @@ function zeigePinModal(zielSeite) {
     const eingabeKennung = emailOderName.trim().toLowerCase();
     const eingabePin = pin.trim();
 
-    // Erfolgreichen Login ausführen
     const loginErfolgreich = (userObj) => {
         aktuellerBenutzer = userObj;
         const userString = JSON.stringify(aktuellerBenutzer);
@@ -83,8 +107,7 @@ function zeigePinModal(zielSeite) {
 
         alert(`Willkommen, ${aktuellerBenutzer.name}!\nErfolgreich angemeldet als ${aktuellerBenutzer.rolle.toUpperCase()}.`);
         
-        if (typeof aktualisiereUserHeaderUI === 'function') aktualisiereUserHeaderUI();
-        if (typeof aktualisiereModulSichtbarkeit === 'function') aktualisiereModulSichtbarkeit();
+        aktualisiereModulSichtbarkeit();
         if (typeof zeigeSeite === 'function') {
             zeigeSeite(zielSeite && zielSeite !== 'dashboard' ? zielSeite : 'dashboard');
         }
@@ -117,7 +140,6 @@ function zeigePinModal(zielSeite) {
         }).catch(err => {
             console.warn("Firebase-Rechtefehler beim Login, nutze lokalen Notfall-Login:", err);
             
-            // Lokaler Notfall-Login (Fallback) bei Firestore-Fehler:
             if ((eingabeKennung === 'admin' || eingabeKennung === 'admin@ffw.de') && (eingabePin === '1234' || eingabePin === 'admin')) {
                 loginErfolgreich({
                     name: 'Admin (Offline/Fallback)',
@@ -129,7 +151,6 @@ function zeigePinModal(zielSeite) {
             }
         });
     } else {
-        // Lokaler Fallback ohne Datenbankverbindung
         if ((eingabeKennung === 'admin' || eingabeKennung === 'admin@ffw.de') && (eingabePin === '1234' || eingabePin === 'admin')) {
             loginErfolgreich({
                 name: 'Admin (Offline)',
@@ -142,8 +163,21 @@ function zeigePinModal(zielSeite) {
     }
 }
 
+function zeigLoginModalOderAbmelden() {
+    if (!istEditor()) {
+        const modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.style.display = 'block';
+        } else {
+            zeigePinModal('dashboard');
+        }
+    } else {
+        abmelden();
+    }
+}
 
-// ZUGANGS-ANTRAG SENDEN
+// --- ZUGANGS-ANTRÄGE & RECHTE ---
+
 function beantrageZugang(e) {
     if (e) e.preventDefault();
     
@@ -181,7 +215,35 @@ function beantrageZugang(e) {
     }
 }
 
-// RENDER-FUNKTION FÜR DEN BENUTZERBEREICH
+function rechteBeantragen() {
+    aktuellerBenutzer = holeAktuellenBenutzer();
+    const name = aktuellerBenutzer.name || prompt("Wie ist dein Name?");
+    if (!name) return;
+
+    const wunschRolle = prompt("Welche Rolle benötigst du? (editor / admin)", "editor");
+    if (!wunschRolle) return;
+
+    const begründung = prompt("Kurze Begründung für den Administrator:");
+
+    if (window.db) {
+        window.db.collection('rechte_anfragen').add({
+            name: name,
+            wunschRolle: wunschRolle,
+            begruendung: begründung || '',
+            datum: new Date().toISOString(),
+            status: 'offen'
+        }).then(() => {
+            alert("✅ Deine Anfrage wurde an den Administrator übermittelt!");
+        }).catch(err => {
+            alert("Fehler beim Senden der Anfrage: " + err.message);
+        });
+    } else {
+        alert("Keine Datenbankverbindung möglich.");
+    }
+}
+
+// --- BENUTZERVERWALTUNG (ADMIN) ---
+
 function renderBenutzerVerwaltung() {
     aktualisiereModulSichtbarkeit();
     
@@ -190,14 +252,12 @@ function renderBenutzerVerwaltung() {
 
     if (istAdmin()) {
         if (regForm) regForm.style.display = "none"; 
-        
         if (adminContainer) {
             adminContainer.style.display = "block";
             ladeAdminAnsicht();
         }
     } else {
         if (regForm) regForm.style.display = "block";
-        
         if (adminContainer) {
             adminContainer.style.display = "none";
             adminContainer.innerHTML = "";
@@ -205,7 +265,6 @@ function renderBenutzerVerwaltung() {
     }
 }
 
-// LÄDT ANTRÄGE & KAMERADEN
 function ladeAdminAnsicht() {
     const container = document.getElementById("benutzer-verwaltung-container");
     if (!container || !window.db) return;
@@ -224,7 +283,6 @@ function ladeAdminAnsicht() {
     ladeAktiveBenutzer();
 }
 
-// 1. OFFENE ZUGANGSANTRÄGE LADEN
 function ladeZugangsanfragen() {
     const ziel = document.getElementById("zugangsanfragen-bereich");
     if (!ziel || !window.db) return;
@@ -271,7 +329,6 @@ function ladeZugangsanfragen() {
         });
 }
 
-// FREISCHALTEN
 function genehmigeAntrag(requestId, name, email, pin, rolle) {
     if (!confirm(`Soll der Zugang für ${name} als ${(rolle || 'viewer').toUpperCase()} freigeschaltet werden?`)) return;
 
@@ -315,7 +372,6 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
     }
 }
 
-// ABLEHNEN
 function lehneAntragAb(requestId) {
     if (!confirm("Soll dieser Antrag wirklich abgelehnt werden?")) return;
 
@@ -329,7 +385,6 @@ function lehneAntragAb(requestId) {
     }
 }
 
-// 2. FREIGESCHALTETE KAMERADEN VERWALTEN
 function ladeAktiveBenutzer() {
     const ziel = document.getElementById("aktive-benutzer-bereich");
     if (!ziel || !window.db) return;
@@ -390,7 +445,6 @@ function ladeAktiveBenutzer() {
         });
 }
 
-// PIN DURCH ADMIN ZURÜCKSETZEN
 function pinZuruecksetzen(userId, benutzerName) {
     const neuePin = prompt(`🔑 Neue 4- bis 6-stellige PIN für ${benutzerName} eingeben:`);
     if (neuePin === null) return;
@@ -408,7 +462,6 @@ function pinZuruecksetzen(userId, benutzerName) {
     }
 }
 
-// ROLLE BEARBEITEN
 function aendereBenutzerRolle(userId, neueRolle) {
     if (!window.db) return;
 
@@ -420,7 +473,6 @@ function aendereBenutzerRolle(userId, neueRolle) {
         .catch(err => alert("Fehler beim Aktualisieren: " + err.message));
 }
 
-// BENUTZER LÖSCHEN
 function loescheBenutzer(userId, name) {
     if (!confirm(`Möchtest du dem Kameraden ${name} wirklich alle Rechte entziehen?`)) return;
     if (!window.db) return;
@@ -433,33 +485,23 @@ function loescheBenutzer(userId, name) {
         .catch(err => alert("Fehler beim Löschen: " + err.message));
 }
 
-// HEADER STATUSZEILE
+// --- HEADER UI & ABMELDEN ---
+
 function renderLoginStatusHeader() {
     let headerRight = document.querySelector('.feuerwehr');
     if (!headerRight) return;
     
+    aktuellerBenutzer = holeAktuellenBenutzer();
     const statusText = istEditor() 
         ? `👤 ${aktuellerBenutzer.name || 'Angemeldet'} (${(aktuellerBenutzer.rolle || 'admin').toUpperCase()}) <a href="javascript:void(0)" onclick="abmelden()" style="color:#fff; margin-left:10px; font-size:12px;">[Abmelden]</a>`
-        : `🔒 Tablet-Modus (Gast) <a href="javascript:void(0)" onclick="zeigePinModal('dashboard')" style="color:#fff; margin-left:10px; font-size:12px;">[Anmelden]</a>`;
+        : `🔒 Tablet-Modus (Gast) <a href="javascript:void(0)" onclick="zeigLoginModalOderAbmelden()" style="color:#fff; margin-left:10px; font-size:12px;">[Anmelden]</a>`;
         
     headerRight.innerHTML = `Freiwillige Feuerwehr Albertsried <br><small style="font-size:12px; opacity:0.9;">${statusText}</small>`;
 }
 
-// ABMELDEN
-function abmelden() {
-    sessionStorage.removeItem('ffw_user');
-    localStorage.removeItem('ffw_user');
-    localStorage.removeItem('ffw_aktiver_benutzer');
-    aktuellerBenutzer = { name: "", email: "", rolle: "gast" };
-    
-    aktualisiereModulSichtbarkeit();
-    if (typeof zeigeSeite === 'function') {
-        zeigeSeite('dashboard');
-    }
-}
-// Dynamic Header UI für Rolle & Anmelden/Abmelden
 function aktualisiereUserHeaderUI() {
-    const rolle = typeof holeAktuelleRolle === 'function' ? holeAktuelleRolle() : 'gast';
+    aktuellerBenutzer = holeAktuellenBenutzer();
+    const rolle = aktuellerBenutzer.rolle || 'gast';
     const roleBadge = document.getElementById('aktueller-benutzer-rolle');
     const btn = document.getElementById('btn-login-logout');
 
@@ -480,26 +522,22 @@ function aktualisiereUserHeaderUI() {
     }
 }
 
-function zeigLoginModalOderAbmelden() {
-    const rolle = typeof holeAktuelleRolle === 'function' ? holeAktuelleRolle() : 'gast';
-    if (rolle === 'gast') {
-        const modal = document.getElementById('login-modal');
-        if (modal) modal.style.display = 'block';
-        else alert('Login-Modal wurde im HTML nicht gefunden.');
-    } else {
-        if (typeof abmelden === 'function') {
-            abmelden();
-        }
+function abmelden() {
+    sessionStorage.removeItem('ffw_user');
+    localStorage.removeItem('ffw_user');
+    localStorage.removeItem('ffw_aktiver_benutzer');
+    localStorage.setItem('ffw_aktive_rolle', 'gast');
+    
+    aktuellerBenutzer = { name: "", email: "", rolle: "gast" };
+    
+    aktualisiereModulSichtbarkeit();
+    if (typeof zeigeSeite === 'function') {
+        zeigeSeite('dashboard');
     }
 }
 
-// Globale Verfügbarkeit herstellen
-window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
-window.aktualisiereUserHeaderUI = aktualisiereUserHeaderUI;
+// --- AUTOMATISCHE SPERRE BEI INAKTIVITÄT (5 MIN) ---
 
-// Nach dem Laden der Seite automatisch aufrufen
-document.addEventListener('DOMContentLoaded', aktualisiereUserHeaderUI);
-// AUTOMATISCHE SPERRE BEI INAKTIVITÄT (5 MIN)
 let inaktivitaetsTimer;
 
 function starteInaktivitaetsTimer() {
@@ -516,14 +554,17 @@ function starteInaktivitaetsTimer() {
     document.addEventListener(event, starteInaktivitaetsTimer);
 });
 
-// GLOBALE FREIGABEN
+// --- GLOBALE FREIGABEN & EVENT LISTENER ---
+
 window.istAdmin = istAdmin;
 window.istEditor = istEditor;
 window.hatZugriffAufSensibleDaten = hatZugriffAufSensibleDaten;
 window.aktualisiereModulSichtbarkeit = aktualisiereModulSichtbarkeit;
 window.pruefeSeitenZugriff = pruefeSeitenZugriff;
 window.zeigePinModal = zeigePinModal;
+window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
 window.beantrageZugang = beantrageZugang;
+window.rechteBeantragen = rechteBeantragen;
 window.renderBenutzerVerwaltung = renderBenutzerVerwaltung;
 window.ladeAdminAnsicht = ladeAdminAnsicht;
 window.genehmigeAntrag = genehmigeAntrag;
@@ -533,116 +574,8 @@ window.pinZuruecksetzen = pinZuruecksetzen;
 window.aendereBenutzerRolle = aendereBenutzerRolle;
 window.loescheBenutzer = loescheBenutzer;
 window.abmelden = abmelden;
+window.aktualisiereUserHeaderUI = aktualisiereUserHeaderUI;
 
-// Dieser kurze Code kommtZUSÄTZLICH unter deine zeigePinModal-Funktion:
-
-function zeigLoginModalOderAbmelden() {
-    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
-    const u = userString ? JSON.parse(userString) : null;
-    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : 'gast';
-
-    if (rolle === 'gast') {
-        if (typeof zeigePinModal === 'function') {
-            zeigePinModal();
-        } else {
-            alert("Fehler: zeigePinModal() ist nicht definiert.");
-        }
-    } else {
-        if (typeof abmelden === 'function') {
-            abmelden();
-        } else {
-            sessionStorage.removeItem('ffw_user');
-            localStorage.removeItem('ffw_user');
-            localStorage.setItem('ffw_aktive_rolle', 'gast');
-            location.reload();
-        }
-    }
-}
-
-// Global für das HTML-onclick Attribut verfügbar machen
-window.zeigLoginModalOderAbmelden = zeigLoginModalOderAbmelden;
-
-function aktualisiereModulSichtbarkeit() {
-    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
-    const u = userString ? JSON.parse(userString) : null;
-    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : 'gast';
-
-    const istAdminOderEditor = (rolle === 'admin' || rolle === 'editor');
-
-    // Alle Speichern/Löschen/Bearbeiten-Buttons für Viewer sperren
-    document.querySelectorAll('.btn-speichern, .btn-loeschen, .btn-bearbeiten, .admin-only').forEach(elem => {
-        elem.style.display = istAdminOderEditor ? '' : 'none';
-    });
-
-    // Alle Eingabefelder im Viewer-Modus auf readOnly setzen
-    document.querySelectorAll('input, select, textarea').forEach(elem => {
-        if (!istAdminOderEditor && !elem.classList.contains('allow-viewer')) {
-            elem.disabled = true;
-        } else {
-            elem.disabled = false;
-        }
-    });
-}
-
-// Nach Seitenaufruf und Login ausführen
-document.addEventListener('DOMContentLoaded', aktualisiereModulSichtbarkeit);
-
-function rechteBeantragen() {
-    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
-    const u = userString ? JSON.parse(userString) : null;
-    
-    const name = u ? u.name : prompt("Wie ist dein Name?");
-    if (!name) return;
-
-    const wunschRolle = prompt("Welche Rolle benötigst du? (editor / admin)", "editor");
-    if (!wunschRolle) return;
-
-    const begründung = prompt("Kurze Begründung für den Administrator:");
-
-    if (window.db) {
-        window.db.collection('rechte_anfragen').add({
-            name: name,
-            wunschRolle: wunschRolle,
-            begruendung: begründung || '',
-            datum: new Date().toISOString(),
-            status: 'offen'
-        }).then(() => {
-            alert("✅ Deine Anfrage wurde an den Administrator übermittelt!");
-        }).catch(err => {
-            alert("Fehler beim Senden der Anfrage: " + err.message);
-        });
-    } else {
-        alert("Keine Datenbankverbindung möglich.");
-    }
-}
-
-window.rechteBeantragen = rechteBeantragen;
-
-/**
- * Sperrt alle Eingaben und Speichern-Buttons für Rollen ohne Schreibrechte (z.B. Viewer/Gast)
- */
-function pruefeModulSchreibrechte() {
-    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
-    const u = userString ? JSON.parse(userString) : null;
-    const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'gast');
-
-    const darfSchreiben = (rolle === 'admin' || rolle === 'editor');
-
-    if (!darfSchreiben) {
-        // PSA & Prüfungs-Buttons ausblenden
-        document.querySelectorAll('#psa-container button, #pruefungen-container button, .btn-psa, .btn-pruefung, form button[type="submit"]').forEach(btn => {
-            // Ausgenommen sind reine Schließen-/Abbrechen-Buttons im Modal
-            if (!btn.classList.contains('btn-close') && !btn.classList.contains('btn-secondary')) {
-                btn.style.display = 'none';
-            }
-        });
-
-        // Alle Eingabefelder in PSA / Prüfungen schreibgeschützt machen
-        document.querySelectorAll('#psa-container input, #psa-container select, #psa-container textarea, #pruefungen-container input, #pruefungen-container select, #pruefungen-container textarea').forEach(input => {
-            input.disabled = true;
-        });
-    }
-}
-
-// Führe die Sperre nach jedem Seitenaufruf/Wechsel aus:
-document.addEventListener('DOMContentLoaded', pruefeModulSchreibrechte);
+document.addEventListener('DOMContentLoaded', () => {
+    aktualisiereModulSichtbarkeit();
+});
