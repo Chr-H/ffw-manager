@@ -1,15 +1,30 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung (v2.2.2 - Bugfix Speicher/Rechte & Layout)
+// FFW Manager - PSA-Verwaltung (v2.2.3 - Fixed Storage, Date & Keys)
 // ==========================================
 
-// --- ERSETZTER BLOCK (SPEICHER- FIX & RECHTE-FIX) ---
+// Hilfsfunktion: Konvertiert beliebige Datumsangaben strikt in YYYY-MM-DD für <input type="date">
+function formatiereDatumFuerInput(datumStr) {
+    if (!datumStr || datumStr === '-') return '';
+    if (datumStr.includes('.')) {
+        const teile = datumStr.split('.');
+        if (teile.length === 3) {
+            return `${teile[2]}-${teile[1].padStart(2, '0')}-${teile[0].padStart(2, '0')}`;
+        }
+    }
+    if (datumStr.includes('T')) {
+        return datumStr.split('T')[0];
+    }
+    return datumStr;
+}
+
 function getPSA() {
     try {
         if (typeof ladeDaten === 'function') {
             const data = ladeDaten("psa");
             if (Array.isArray(data) && data.length > 0) return data;
         }
-        const localData = localStorage.getItem('ffw_psa_daten');
+        // Fallbacks auf beide historischen Keys
+        const localData = localStorage.getItem('ffw_psa') || localStorage.getItem('ffw_psa_daten');
         return localData ? JSON.parse(localData) : [];
     } catch (e) {
         console.error("Fehler beim Laden der PSA-Daten:", e);
@@ -18,7 +33,6 @@ function getPSA() {
 }
 
 function speicherePSA(psaListe) {
-    // 1. Zentrale Rechteprüfung nutzen
     const darfSchreiben = (typeof istEditor === 'function') ? istEditor() : true;
 
     if (!darfSchreiben) {
@@ -29,17 +43,16 @@ function speicherePSA(psaListe) {
     try {
         const bereinigteDaten = Array.isArray(psaListe) ? psaListe : [];
 
-        // 2. Einheitlichen Schlüssel ('ffw_psa') nutzen!
+        // In beiden Keys sichern, um Migrationen abzudecken
         localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
+        localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
         
-        // 3. In Firebase/Storage sichern
         if (typeof speichereDaten === 'function') {
             speichereDaten('psa', bereinigteDaten);
         } else if (typeof speicherePsaData === 'function') {
             speicherePsaData(bereinigteDaten);
         }
         
-        // Event auslösen
         document.dispatchEvent(new Event("psaGeaendert"));
         return true;
     } catch (e) {
@@ -48,7 +61,6 @@ function speicherePSA(psaListe) {
         return false;
     }
 }
-// ---------------------------------------------------
 
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
@@ -61,7 +73,7 @@ function escapeHtml(text) {
 }
 
 function formatiereDatum(datumStr) {
-    if (!datumStr) return '-';
+    if (!datumStr || datumStr === '-') return '-';
     
     const parts = datumStr.split('-');
     let d;
@@ -104,7 +116,6 @@ function renderPSAView() {
         <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>🧑‍🚒 PSA-Verwaltung</h2>
             
-            <!-- Aktions-Buttons / Datensicherung -->
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="btn" onclick="exportPSACSV()" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">📄 Export CSV</button>
                 <button class="btn" onclick="document.getElementById('psa-import-input').click()" style="background:#6c757d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">📥 Import CSV</button>
@@ -114,7 +125,6 @@ function renderPSAView() {
             </div>
         </div>
 
-        <!-- Filter- & Suchleiste -->
         <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <div style="flex:2; min-width:200px;">
                 <input type="text" id="psa-filter-suche" oninput="filterPSA()" placeholder="🔍 Suche nach Name, Spind, Ausrüstung, Hersteller..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
@@ -130,7 +140,6 @@ function renderPSAView() {
             </div>
         </div>
 
-        <!-- Tabelle (Aktionen GANZ LINKS für Mobilgeräte) -->
         <div style="overflow-x:auto;">
             <table class="tabelle" id="psa-tabelle-print" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
@@ -179,13 +188,13 @@ function filterPSA() {
 
     const gefiltert = psaListe.filter(item => {
         if (!item) return false;
-        const traeger = (item.traeger || item.name || '').toLowerCase();
-        const spind = (item.spind || '').toLowerCase();
-        const hersteller = (item.hersteller || '').toLowerCase();
-        const typ = (item.typ || '').toLowerCase();
-        const bezeichnung = (item.bezeichnung || '').toLowerCase();
-        const seriennummer = (item.seriennummer || '').toLowerCase();
-        const zubehoer = (item.zubehoer || '').toLowerCase();
+        const traeger = String(item.traeger || item.name || '').toLowerCase();
+        const spind = String(item.spind || '').toLowerCase();
+        const hersteller = String(item.hersteller || '').toLowerCase();
+        const typ = String(item.typ || '').toLowerCase();
+        const bezeichnung = String(item.bezeichnung || '').toLowerCase();
+        const seriennummer = String(item.seriennummer || '').toLowerCase();
+        const zubehoer = String(item.zubehoer || '').toLowerCase();
         const status = item.status || 'Einsatzbereit';
 
         const passtText = !suchText || 
@@ -235,7 +244,7 @@ function filterPSA() {
     tbody.innerHTML = rowsHtml;
 }
 
-// 3. EXPORT & IMPORT FUNKTIONEN (Datensicherung)
+// 3. EXPORT & IMPORT FUNKTIONEN
 function exportPSACSV() {
     const psaListe = getPSA();
     if (psaListe.length === 0) {
@@ -248,18 +257,18 @@ function exportPSACSV() {
 
     psaListe.forEach(item => {
         const row = [
-            `"${(item.id || '').replace(/"/g, '""')}"`,
-            `"${(item.spind || '').replace(/"/g, '""')}"`,
-            `"${(item.traeger || item.name || '').replace(/"/g, '""')}"`,
-            `"${(item.hersteller || '').replace(/"/g, '""')}"`,
-            `"${(item.typ || '').replace(/"/g, '""')}"`,
-            `"${(item.bezeichnung || '').replace(/"/g, '""')}"`,
-            `"${(item.groesse || '').replace(/"/g, '""')}"`,
-            `"${(item.zubehoer || '').replace(/"/g, '""')}"`,
-            `"${(item.seriennummer || '').replace(/"/g, '""')}"`,
-            `"${(item.ausgabeDatum || '').replace(/"/g, '""')}"`,
-            `"${(item.naechstePruefung || '').replace(/"/g, '""')}"`,
-            `"${(item.status || 'Einsatzbereit').replace(/"/g, '""')}"`
+            `"${String(item.id || '').replace(/"/g, '""')}"`,
+            `"${String(item.spind || '').replace(/"/g, '""')}"`,
+            `"${String(item.traeger || item.name || '').replace(/"/g, '""')}"`,
+            `"${String(item.hersteller || '').replace(/"/g, '""')}"`,
+            `"${String(item.typ || '').replace(/"/g, '""')}"`,
+            `"${String(item.bezeichnung || '').replace(/"/g, '""')}"`,
+            `"${String(item.groesse || '').replace(/"/g, '""')}"`,
+            `"${String(item.zubehoer || '').replace(/"/g, '""')}"`,
+            `"${String(item.seriennummer || '').replace(/"/g, '""')}"`,
+            `"${String(item.ausgabeDatum || '').replace(/"/g, '""')}"`,
+            `"${String(item.naechstePruefung || '').replace(/"/g, '""')}"`,
+            `"${String(item.status || 'Einsatzbereit').replace(/"/g, '""')}"`
         ];
         csvContent += row.join(";") + "\n";
     });
@@ -307,13 +316,13 @@ function importPSACSV(event) {
                     groesse: cols[6] || '',
                     zubehoer: cols[7] || '',
                     seriennummer: cols[8] || '',
-                    ausgabeDatum: cols[9] || '',
-                    naechstePruefung: cols[10] || '',
+                    ausgabeDatum: formatiereDatumFuerInput(cols[9] || ''),
+                    naechstePruefung: formatiereDatumFuerInput(cols[10] || ''),
                     status: cols[11] || 'Einsatzbereit',
                     historie: []
                 };
 
-                const existingIdx = psaListe.findIndex(p => p.id === newItem.id);
+                const existingIdx = psaListe.findIndex(p => String(p.id) === String(newItem.id));
                 if (existingIdx !== -1) {
                     psaListe[existingIdx] = newItem;
                 } else {
@@ -337,7 +346,7 @@ function exportPSAPDF() {
 
 // 4. PSA-Akte (Detailansicht)
 function openPSAAkteModal(id) {
-    const item = getPSA().find(p => p && p.id === id);
+    const item = getPSA().find(p => p && String(p.id) === String(id));
     if (!item) return;
 
     const safeId = escapeHtml(item.id);
@@ -379,7 +388,6 @@ function openPSAAkteModal(id) {
                     <div><strong>Nächste Prüfung:</strong> ${formatiereDatum(item.naechstePruefung)}</div>
                 </div>
 
-                <!-- Status Ändern -->
                 <div style="margin-bottom:20px; background:#eef2f5; padding:12px; border-radius:6px;">
                     <label><strong>Aktueller Status:</strong></label>
                     <div style="display:flex; gap:10px; margin-top:5px;">
@@ -393,7 +401,6 @@ function openPSAAkteModal(id) {
                     </div>
                 </div>
 
-                <!-- Neue Historie / Ereignis eintragen -->
                 <details style="margin-bottom:20px; background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px;">
                     <summary style="font-weight:bold; cursor:pointer;">➕ Neuer Eintrag (Reinigung, Prüfung, Defekt, etc.)</summary>
                     <form onsubmit="addPSAHistorieEintrag(event, '${safeId}')" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
@@ -412,7 +419,6 @@ function openPSAAkteModal(id) {
                     </form>
                 </details>
 
-                <!-- Historie Liste -->
                 <h3>📜 Verlaufs- & Pflegehistorie</h3>
                 <div style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:6px;">
                     ${historieHtml}
@@ -436,7 +442,7 @@ function closePSAAkteModal() {
 
 function speicherePSAStatus(id) {
     const psaListe = getPSA();
-    const item = psaListe.find(p => p && p.id === id);
+    const item = psaListe.find(p => p && String(p.id) === String(id));
     if (!item) return;
 
     const neuerStatus = document.getElementById('psa-status-select').value;
@@ -461,7 +467,7 @@ function speicherePSAStatus(id) {
 function addPSAHistorieEintrag(event, id) {
     event.preventDefault();
     const psaListe = getPSA();
-    const item = psaListe.find(p => p && p.id === id);
+    const item = psaListe.find(p => p && String(p.id) === String(id));
     if (!item) return;
 
     item.historie = Array.isArray(item.historie) ? item.historie : [];
@@ -482,11 +488,15 @@ function openPSAModal(id = null) {
     let item = { id: '', traeger: '', spind: '', hersteller: '', typ: '', bezeichnung: '', groesse: '', zubehoer: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
 
     if (id && id !== 'null' && id !== 'undefined') {
-        const found = getPSA().find(p => p && p.id === id);
+        const found = getPSA().find(p => p && String(p.id) === String(id));
         if (found) item = found;
     }
 
     const safeId = escapeHtml(item.id);
+
+    // Konvertiert Daten sicher ins YYYY-MM-DD Format für das HTML5 Date-Input
+    const ausgabeFormatted = formatiereDatumFuerInput(item.ausgabeDatum);
+    const pruefungFormatted = formatiereDatumFuerInput(item.naechstePruefung);
 
     const modalHtml = `
         <div id="psa-modal" class="psa-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;">
@@ -550,11 +560,11 @@ function openPSAModal(id = null) {
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1;">
                             <label><strong>Ausgabedatum</strong></label>
-                            <input type="date" id="psa-ausgabeDatum" value="${escapeHtml(item.ausgabeDatum)}" style="width:100%; padding:8px; margin-top:4px;">
+                            <input type="date" id="psa-ausgabeDatum" value="${ausgabeFormatted}" style="width:100%; padding:8px; margin-top:4px;">
                         </div>
                         <div style="flex:1;">
                             <label><strong>Nächste Prüfung</strong></label>
-                            <input type="date" id="psa-naechstePruefung" value="${escapeHtml(item.naechstePruefung)}" style="width:100%; padding:8px; margin-top:4px;">
+                            <input type="date" id="psa-naechstePruefung" value="${pruefungFormatted}" style="width:100%; padding:8px; margin-top:4px;">
                         </div>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
@@ -580,7 +590,7 @@ function savePSAFromModal(event, existingId) {
 
     const psaListe = getPSA();
     const isEdit = Boolean(existingId && existingId !== 'null' && existingId !== 'undefined' && existingId.trim() !== '');
-    const existingItem = isEdit ? (psaListe.find(p => p && p.id === existingId) || {}) : {};
+    const existingItem = isEdit ? (psaListe.find(p => p && String(p.id) === String(existingId)) || {}) : {};
 
     const traegerWert = document.getElementById('psa-traeger').value.trim();
 
@@ -604,7 +614,7 @@ function savePSAFromModal(event, existingId) {
     };
 
     if (isEdit) {
-        const idx = psaListe.findIndex(p => p && p.id === existingId);
+        const idx = psaListe.findIndex(p => p && String(p.id) === String(existingId));
         if (idx !== -1) {
             psaListe[idx] = newItem;
         } else {
@@ -622,12 +632,11 @@ function savePSAFromModal(event, existingId) {
 function loeschePSA(id) {
     if (!confirm("Möchtest du diese PSA-Eintragung wirklich löschen?")) return;
 
-    const psaListe = getPSA().filter(p => p && p.id !== id);
+    const psaListe = getPSA().filter(p => p && String(p.id) !== String(id));
     speicherePSA(psaListe);
     renderPSAView();
 }
 
-// Globales Event für Keyboard Accessibility (Escape-Taste schließt Modale)
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
         closePSAModal();
@@ -635,7 +644,6 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-// Automatische Erkennung & Laden im DOM
 const observer = new MutationObserver(() => {
     const tbody = document.getElementById('psa-tabelle-body');
     if (tbody && tbody.children.length === 0) {
@@ -652,15 +660,13 @@ document.addEventListener("DOMContentLoaded", () => { renderPSAView(); });
 
 // Globale Bereitstellung
 window.renderPSAView = renderPSAView;
-window.filterPSA = filterPSA;
+window.getPSA = getPSA;
+window.speicherePSA = speicherePSA;
 window.openPSAModal = openPSAModal;
 window.closePSAModal = closePSAModal;
-window.savePSAFromModal = savePSAFromModal;
 window.openPSAAkteModal = openPSAAkteModal;
 window.closePSAAkteModal = closePSAAkteModal;
-window.speicherePSAStatus = speicherePSAStatus;
-window.addPSAHistorieEintrag = addPSAHistorieEintrag;
-window.loeschePSA = loeschePSA;
+window.filterPSA = filterPSA;
 window.exportPSACSV = exportPSACSV;
 window.importPSACSV = importPSACSV;
 window.exportPSAPDF = exportPSAPDF;
