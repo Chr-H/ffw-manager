@@ -222,13 +222,27 @@ function renderPSAView() {
 // 2. Filter-Funktion (Aktualisiert für 10 Spalten)
 function filterPSA() {
     let tbody = document.getElementById('psa-tabelle-body');
-    if (!tbody) {
-        if (typeof renderPSAView === 'function') renderPSAView();
-        tbody = document.getElementById('psa-tabelle-body');
-        if (!tbody) return;
+    if (!tbody) return;
+
+    // Sicherer Helfer für HTML-Escaping
+    const safeStr = (str) => {
+        if (!str && str !== 0) return '-';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "<")
+            .replace(/>/g, ">")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
+
+    // Daten holen
+    let psaListe = [];
+    try {
+        psaListe = typeof getPSA === 'function' ? getPSA() : [];
+    } catch(e) {
+        console.error("Fehler beim Laden der PSA-Daten:", e);
     }
 
-    const psaListe = getPSA();
     const suchText = (document.getElementById('psa-filter-suche')?.value || '').toLowerCase().trim();
     const statusFilter = document.getElementById('psa-filter-status')?.value || '';
 
@@ -243,7 +257,8 @@ function filterPSA() {
         const zubehoer = (item.zubehoer || '').toLowerCase();
         const status = item.status || 'Einsatzbereit';
 
-        const passtText = traeger.includes(suchText) || 
+        const passtText = !suchText || 
+                          traeger.includes(suchText) || 
                           spind.includes(suchText) || 
                           hersteller.includes(suchText) || 
                           typ.includes(suchText) || 
@@ -263,23 +278,24 @@ function filterPSA() {
 
     let rowsHtml = '';
     gefiltert.forEach(item => {
-        const safeId = escapeHtml(item.id || '');
+        const itemId = item.id ? String(item.id).replace(/'/g, "\\'") : '';
+        const datum = typeof formatiereDatum === 'function' ? formatiereDatum(item.naechstePruefung) : (item.naechstePruefung || '-');
         
         rowsHtml += `
-            <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${safeId}')">
-                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + escapeHtml(item.spind) : '-'}</strong></td>
-                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || item.name || 'Unbekannt')}</td>
-                <td style="padding:10px;">${escapeHtml(item.hersteller || '-')}</td>
-                <td style="padding:10px;">${escapeHtml(item.typ || '-')}</td>
-                <td style="padding:10px;">${escapeHtml(item.bezeichnung || '-')}</td>
-                <td style="padding:10px;">${escapeHtml(item.groesse || '-')}</td>
-                <td style="padding:10px;">${escapeHtml(item.zubehoer || '-')}</td>
-                <td style="padding:10px;">${escapeHtml(item.seriennummer || '-')}</td>
-                <td style="padding:10px;">${typeof formatiereDatum === 'function' ? formatiereDatum(item.naechstePruefung) : (item.naechstePruefung || '-')}</td>
+            <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${itemId}')">
+                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + safeStr(item.spind) : '-'}</strong></td>
+                <td style="padding:10px; font-weight:bold;">${safeStr(item.traeger || item.name || 'Unbekannt')}</td>
+                <td style="padding:10px;">${safeStr(item.hersteller)}</td>
+                <td style="padding:10px;">${safeStr(item.typ)}</td>
+                <td style="padding:10px;">${safeStr(item.bezeichnung)}</td>
+                <td style="padding:10px;">${safeStr(item.groesse)}</td>
+                <td style="padding:10px;">${safeStr(item.zubehoer)}</td>
+                <td style="padding:10px;">${safeStr(item.seriennummer)}</td>
+                <td style="padding:10px;">${safeStr(datum)}</td>
                 <td style="padding:8px 10px;" onclick="event.stopPropagation();">
-                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${safeId}')">📂 Akte</button>
-                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${safeId}')">✏️</button>
-                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${safeId}')">🗑️</button>
+                    <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')">📂</button>
+                    <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')">✏️</button>
+                    <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')">🗑️</button>
                 </td>
             </tr>
         `;
@@ -287,7 +303,6 @@ function filterPSA() {
 
     tbody.innerHTML = rowsHtml;
 }
-
 // 3. PSA-Akte (Detailansicht)
 function openPSAAkteModal(id) {
     const item = getPSA().find(p => p && p.id === id);
