@@ -12,19 +12,10 @@ function zeigeSeite(seiteId) {
     const modul = seiteId.replace(/^seite-/, '');
 
    // 2. Rechte-Prüfung vorschalten
-    if (typeof window.pruefeSeitenZugriff === "function") {
-        if (!window.pruefeSeitenZugriff(modul)) {
-            // Verhindert das Aufpoppen während des Login-Vorgangs
-            const rolle = typeof holeAktuelleRolle === "function" ? holeAktuelleRolle() : 'gast';
-            if (!hatRecht(modul)) {
-                alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
-                return;
-            }
-        }
-    } else if (!hatRecht(modul)) {
-        alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
-        return;
-    }
+    if (typeof hatRecht === "function" && !hatRecht(modul)) {
+    alert("⚠️ Sie besitzen keine Berechtigung für dieses Modul.");
+    return;
+}
 
     // 3. Alle Seiten ausblenden
     document.querySelectorAll('.seite-ansicht').forEach(s => {
