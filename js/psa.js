@@ -219,11 +219,11 @@ function renderPSAView() {
     filterPSA();
 }
 
-// 2. Filter-Funktion
+// 2. Filter-Funktion (Aktualisiert für 10 Spalten)
 function filterPSA() {
     let tbody = document.getElementById('psa-tabelle-body');
     if (!tbody) {
-        renderPSAView();
+        if (typeof renderPSAView === 'function') renderPSAView();
         tbody = document.getElementById('psa-tabelle-body');
         if (!tbody) return;
     }
@@ -236,13 +236,19 @@ function filterPSA() {
         if (!item) return false;
         const traeger = (item.traeger || item.name || '').toLowerCase();
         const spind = (item.spind || '').toLowerCase();
+        const hersteller = (item.hersteller || '').toLowerCase();
+        const typ = (item.typ || '').toLowerCase();
         const bezeichnung = (item.bezeichnung || '').toLowerCase();
         const seriennummer = (item.seriennummer || '').toLowerCase();
+        const zubehoer = (item.zubehoer || '').toLowerCase();
         const status = item.status || 'Einsatzbereit';
 
         const passtText = traeger.includes(suchText) || 
                           spind.includes(suchText) || 
+                          hersteller.includes(suchText) || 
+                          typ.includes(suchText) || 
                           bezeichnung.includes(suchText) || 
+                          zubehoer.includes(suchText) || 
                           seriennummer.includes(suchText);
 
         const passtStatus = statusFilter === '' || status === statusFilter;
@@ -251,41 +257,31 @@ function filterPSA() {
     });
 
     if (gefiltert.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#666;">Keine passenden PSA-Einträge gefunden.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#666;">Keine passenden PSA-Einträge gefunden.</td></tr>`;
         return;
     }
 
     let rowsHtml = '';
     gefiltert.forEach(item => {
-        const safeId = escapeHtml(item.id);
-        const status = item.status || 'Einsatzbereit';
+        const safeId = escapeHtml(item.id || '');
         
-        let statusBadge = `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🟢 Einsatzbereit</span>`;
-        if (status === 'In Reinigung') {
-            statusBadge = `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🧺 In Reinigung</span>`;
-        } else if (status === 'Defekt') {
-            statusBadge = `<span style="background:#ffebee; color:#c62828; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">🔴 Defekt</span>`;
-        } else if (status === 'Ausgemustert') {
-            statusBadge = `<span style="background:#eee; color:#616161; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:0.85rem;">⚪ Ausgemustert</span>`;
-        }
-
         rowsHtml += `
             <tr style="border-bottom:1px solid #eee; cursor:pointer;" onclick="openPSAAkteModal('${safeId}')">
+                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + escapeHtml(item.spind) : '-'}</strong></td>
+                <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || item.name || 'Unbekannt')}</td>
+                <td style="padding:10px;">${escapeHtml(item.hersteller || '-')}</td>
+                <td style="padding:10px;">${escapeHtml(item.typ || '-')}</td>
+                <td style="padding:10px;">${escapeHtml(item.bezeichnung || '-')}</td>
+                <td style="padding:10px;">${escapeHtml(item.groesse || '-')}</td>
+                <td style="padding:10px;">${escapeHtml(item.zubehoer || '-')}</td>
+                <td style="padding:10px;">${escapeHtml(item.seriennummer || '-')}</td>
+                <td style="padding:10px;">${typeof formatiereDatum === 'function' ? formatiereDatum(item.naechstePruefung) : (item.naechstePruefung || '-')}</td>
                 <td style="padding:8px 10px;" onclick="event.stopPropagation();">
                     <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${safeId}')">📂 Akte</button>
                     <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${safeId}')">✏️</button>
                     <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${safeId}')">🗑️</button>
                 </td>
-                <td style="padding:10px;"><strong>${item.spind ? '🚪 ' + escapeHtml(item.spind) : '-'}</strong></td>
-        <td style="padding:10px; font-weight:bold;">${escapeHtml(item.traeger || item.name || 'Unbekannt')}</td>
-        <td style="padding:10px;">${escapeHtml(item.hersteller || '-')}</td>
-        <td style="padding:10px;">${escapeHtml(item.typ || '-')}</td>
-        <td style="padding:10px;">${escapeHtml(item.bezeichnung || '-')}</td>
-        <td style="padding:10px;">${escapeHtml(item.groesse || '-')}</td>
-        <td style="padding:10px;">${escapeHtml(item.zubehoer || '-')}</td>
-        <td style="padding:10px;">${statusBadge}</td>
-        <td style="padding:10px;">${formatiereDatum(item.naechstePruefung)}</td>
-    </tr>
+            </tr>
         `;
     });
 
