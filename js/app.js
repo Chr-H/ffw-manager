@@ -713,22 +713,32 @@ const ROLLEN_CONFIG = {
 };
 
 function holeAktuelleRolle() {
-    let user = null;
+    let rawUser = null;
     try {
-        const rawUser = localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user');
-        if (rawUser) {
-            user = JSON.parse(rawUser);
-        }
+        rawUser = localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user');
     } catch (e) {
         console.error("Fehler beim Lesen des Benutzers aus dem localStorage:", e);
-    }
-
-    if (!user) {
         return 'gast';
     }
 
-    const rolle = String(user.rolle || user.role || 'gast').toLowerCase().trim();
-    return ROLLEN_CONFIG[rolle] ? rolle : 'gast';
+    if (!rawUser) return 'gast';
+
+    let rolleStr = 'gast';
+
+    // Unterstützt JSON-Objekte ({rolle: "editor"}) UND einfache Strings ("editor")
+    try {
+        const parsed = JSON.parse(rawUser);
+        if (typeof parsed === 'object' && parsed !== null) {
+            rolleStr = parsed.rolle || parsed.role || 'gast';
+        } else if (typeof parsed === 'string') {
+            rolleStr = parsed;
+        }
+    } catch (e) {
+        rolleStr = rawUser; // Fallback, falls kein gültiges JSON vorliegt
+    }
+
+    const rolleClean = String(rolleStr).toLowerCase().trim();
+    return ROLLEN_CONFIG[rolleClean] ? rolleClean : 'gast';
 }
 
 function hatRecht(recht) {
@@ -747,17 +757,35 @@ function hatRecht(recht) {
     return hatSeitenRecht || hatSchreibRecht;
 }
 
+// Globale Helfer-Funktionen für Rollenprüfungen
+function istEditor() {
+    const rolle = holeAktuelleRolle();
+    return rolle === 'editor' || rolle === 'admin';
+}
+
+function istAdmin() {
+    return holeAktuelleRolle() === 'admin';
+}
+
 function anmeldenBenutzer(benutzerdaten) {
-    if (!benutzerdaten || !benutzerdaten.rolle) {
-        console.error("Ungültige Benutzerdaten übergeben.");
+    if (!benutzerdaten) {
+        console.error("Keine Benutzerdaten übergeben.");
         return;
     }
     
-    // Beide Keys setzen, damit alte und neue Module die Rolle sofort erkennen
-    localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify(benutzerdaten));
-    localStorage.setItem('ffw_user', JSON.stringify(benutzerdaten));
+    // Flexibel: Akzeptiert sowohl ein Objekt als auch einen reinen Rollen-String
+    const payload = typeof benutzerdaten === 'string' 
+        ? { rolle: benutzerdaten } 
+        : benutzerdaten;
+
+    if (!payload.rolle && !payload.role) {
+        console.error("Ungültige Benutzerdaten (keine Rolle definiert).");
+        return;
+    }
+
+    localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify(payload));
+    localStorage.setItem('ffw_user', JSON.stringify(payload));
     
-    // Seite neu laden, damit die Rechte sauber ab Start greifen
     location.reload();
 }
 
@@ -768,7 +796,10 @@ function abmelden() {
     location.reload();
 }
 
+// Alle zentralen Funktionen global am window-Objekt freigeben
 window.holeAktuelleRolle = holeAktuelleRolle;
 window.hatRecht = hatRecht;
+window.istEditor = istEditor;
+window.istAdmin = istAdmin;
 window.anmeldenBenutzer = anmeldenBenutzer;
 window.abmelden = abmelden;

@@ -86,7 +86,7 @@ function renderePSATabelle(liste) {
     tbody.innerHTML = '';
 
     if (liste.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">Keine PSA-Einträge gefunden.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">Keine PSA-Einträge gefunden.</td></tr>`;
         return;
     }
 
@@ -96,22 +96,22 @@ function renderePSATabelle(liste) {
         const tr = document.createElement('tr');
         
         const aktionsButtons = kannBearbeiten ? `
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="oeffnePSAModal('${item.id}')" title="Bearbeiten">
-                ✏️
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="loeschePSAEintragModal('${item.id}')" title="Löschen">
-                🗑️
-            </button>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="oeffnePSAModal('${item.id}')" title="Bearbeiten">✏️</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="loeschePSAEintragModal('${item.id}')" title="Löschen">🗑️</button>
         ` : `<span class="text-muted">Nur Lesezugriff</span>`;
 
+        // Passend zur Tabellenstruktur im Screenshot (Aktionen am Ende!):
         tr.innerHTML = `
-            <td>${aktionsButtons}</td>
             <td>${item.spind || '-'}</td>
             <td><strong>${item.traeger || 'Unbekannt'}</strong></td>
             <td>${item.hersteller || '-'}</td>
             <td>${item.typ || '-'}</td>
             <td>${item.bezeichnung || '-'}</td>
-            <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status || 'Aktiv'}</span></td>
+            <td>${item.groesse || '-'}</td>
+            <td>${item.zubehoer || '-'}</td>
+            <td>${item.seriennummer || '-'}</td>
+            <td>${item.naechstePruefung || '-'}</td>
+            <td>${aktionsButtons}</td>
         `;
         tbody.appendChild(tr);
     });
