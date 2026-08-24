@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - PSA-Verwaltung mit Filter & PSA-Akte (v2.1.4)
+// FFW Manager - PSA-Verwaltung mit Filter, PSA-Akte & Export/Import (v2.2.0)
 // ==========================================
 
 function getPSA() {
@@ -8,24 +8,20 @@ function getPSA() {
 }
 
 function speicherePSA(psaListe) {
-    // 1. Prüfen, ob der Nutzer Schreibrechte hat (Admin oder Editor)
     const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
     const u = userString ? JSON.parse(userString) : null;
     const rolle = (u && u.rolle) ? u.rolle.toLowerCase() : (localStorage.getItem('ffw_aktive_rolle') || 'gast');
     const darfSchreiben = (rolle === 'admin' || rolle === 'editor');
 
-    // 2. Abbrechen, wenn keine Schreibrechte vorliegen
     if (!darfSchreiben) {
         alert("⚠️ Viewer haben keine Berechtigung, Änderungen zu speichern.");
         return;
     }
 
-    // 3. Nur speichern, wenn Rechte vorhanden sind
     speichereDaten('psa', psaListe);
     document.dispatchEvent(new Event("psaGeaendert"));
 }
 
-// Safe HTML Escaping
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     return String(text)
@@ -36,7 +32,6 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// Robuste Datumsformatierung & Überfälligkeitsprüfung
 function formatiereDatum(datumStr) {
     if (!datumStr) return '-';
     
@@ -80,7 +75,15 @@ function renderPSAView() {
     container.innerHTML = `
         <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>🧑‍🚒 PSA-Verwaltung</h2>
-            <button class="btn btn-primary" onclick="openPSAModal()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">+ PSA ausgeben / anlegen</button>
+            
+            <!-- Aktions-Buttons / Datensicherung -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn" onclick="exportPSACSV()" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">📄 Export CSV</button>
+                <button class="btn" onclick="document.getElementById('psa-import-input').click()" style="background:#6c757d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">📥 Import CSV</button>
+                <input type="file" id="psa-import-input" accept=".csv" style="display:none;" onchange="importPSACSV(event)">
+                <button class="btn" onclick="exportPSAPDF()" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ PDF / Druck</button>
+                <button class="btn btn-primary" onclick="openPSAModal()" style="background:#28a745; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; font-weight:bold;">+ PSA anlegen</button>
+            </div>
         </div>
 
         <!-- Filter- & Suchleiste -->
@@ -101,7 +104,7 @@ function renderPSAView() {
 
         <!-- Tabelle -->
         <div style="overflow-x:auto;">
-            <table class="tabelle" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <table class="tabelle" id="psa-tabelle-print" style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <thead>
                     <tr style="background:#b71c1c; color:white; text-align:left;">
                         <th style="padding:10px;">Spind</th>
@@ -113,7 +116,7 @@ function renderPSAView() {
                         <th style="padding:10px;">Zubehör</th>
                         <th style="padding:10px;">Inv.- / Serien-Nr.</th>
                         <th style="padding:10px;">Nächste Prüfung</th>
-                        <th style="padding:10px;">Aktionen</th>
+                        <th style="padding:10px;" class="no-print">Aktionen</th>
                     </tr>
                 </thead>
                 <tbody id="psa-tabelle-body"></tbody>
@@ -192,7 +195,7 @@ function filterPSA() {
                 <td style="padding:10px;">${safeStr(item.zubehoer)}</td>
                 <td style="padding:10px;">${safeStr(item.seriennummer)}</td>
                 <td style="padding:10px;">${safeStr(datum)}</td>
-                <td style="padding:8px 10px;" onclick="event.stopPropagation();">
+                <td style="padding:8px 10px;" class="no-print" onclick="event.stopPropagation();">
                     <button class="btn btn-bearbeiten" title="Akte öffnen" onclick="openPSAAkteModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">📂</button>
                     <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="openPSAModal('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">✏️</button>
                     <button class="btn btn-loeschen" title="Löschen" onclick="loeschePSA('${itemId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; border-radius:4px; padding:4px 8px;">🗑️</button>
@@ -204,7 +207,108 @@ function filterPSA() {
     tbody.innerHTML = rowsHtml;
 }
 
-// 3. PSA-Akte (Detailansicht)
+// 3. EXPORT & IMPORT FUNKTIONEN (Datensicherung)
+function exportPSACSV() {
+    const psaListe = getPSA();
+    if (psaListe.length === 0) {
+        alert("Keine PSA-Daten zum Exportieren vorhanden.");
+        return;
+    }
+
+    const headers = ["ID", "Spind", "Traeger", "Hersteller", "Typ", "Bezeichnung", "Groesse", "Zubehoer", "Seriennummer", "AusgabeDatum", "NaechstePruefung", "Status"];
+    let csvContent = "\uFEFF" + headers.join(";") + "\n"; // UTF-8 BOM für Excel
+
+    psaListe.forEach(item => {
+        const row = [
+            `"${(item.id || '').replace(/"/g, '""')}"`,
+            `"${(item.spind || '').replace(/"/g, '""')}"`,
+            `"${(item.traeger || item.name || '').replace(/"/g, '""')}"`,
+            `"${(item.hersteller || '').replace(/"/g, '""')}"`,
+            `"${(item.typ || '').replace(/"/g, '""')}"`,
+            `"${(item.bezeichnung || '').replace(/"/g, '""')}"`,
+            `"${(item.groesse || '').replace(/"/g, '""')}"`,
+            `"${(item.zubehoer || '').replace(/"/g, '""')}"`,
+            `"${(item.seriennummer || '').replace(/"/g, '""')}"`,
+            `"${(item.ausgabeDatum || '').replace(/"/g, '""')}"`,
+            `"${(item.naechstePruefung || '').replace(/"/g, '""')}"`,
+            `"${(item.status || 'Einsatzbereit').replace(/"/g, '""')}"`
+        ];
+        csvContent += row.join(";") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `PSA_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function importPSACSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r\n|\n/);
+        if (lines.length < 2) {
+            alert("Die Datei enthält keine gültigen Daten.");
+            return;
+        }
+
+        const psaListe = getPSA();
+        let importCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            // Einfacher Trenner-Split (Semikolon oder Komma)
+            const cols = lines[i].split(';').map(col => col.replace(/^"|"$/g, '').trim());
+            
+            if (cols.length >= 5) {
+                const newItem = {
+                    id: cols[0] || ("PSA-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4)),
+                    spind: cols[1] || '',
+                    traeger: cols[2] || '',
+                    name: cols[2] || '',
+                    hersteller: cols[3] || '',
+                    typ: cols[4] || '',
+                    bezeichnung: cols[5] || '',
+                    groesse: cols[6] || '',
+                    zubehoer: cols[7] || '',
+                    seriennummer: cols[8] || '',
+                    ausgabeDatum: cols[9] || '',
+                    naechstePruefung: cols[10] || '',
+                    status: cols[11] || 'Einsatzbereit',
+                    historie: []
+                };
+
+                const existingIdx = psaListe.findIndex(p => p.id === newItem.id);
+                if (existingIdx !== -1) {
+                    psaListe[existingIdx] = newItem;
+                } else {
+                    psaListe.push(newItem);
+                }
+                importCount++;
+            }
+        }
+
+        speicherePSA(psaListe);
+        filterPSA();
+        alert(`Erfolgreich ${importCount} PSA-Einträge importiert/aktualisiert.`);
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function exportPSAPDF() {
+    window.print();
+}
+
+// 4. PSA-Akte (Detailansicht)
 function openPSAAkteModal(id) {
     const item = getPSA().find(p => p && p.id === id);
     if (!item) return;
@@ -346,7 +450,7 @@ function addPSAHistorieEintrag(event, id) {
     openPSAAkteModal(id);
 }
 
-// 4. Modal zum Anlegen/Bearbeiten
+// 5. Modal zum Anlegen/Bearbeiten
 function openPSAModal(id = null) {
     let item = { id: '', traeger: '', spind: '', hersteller: '', typ: '', bezeichnung: '', groesse: '', zubehoer: '', seriennummer: '', ausgabeDatum: '', naechstePruefung: '', status: 'Einsatzbereit' };
 
@@ -530,3 +634,6 @@ window.closePSAAkteModal = closePSAAkteModal;
 window.speicherePSAStatus = speicherePSAStatus;
 window.addPSAHistorieEintrag = addPSAHistorieEintrag;
 window.loeschePSA = loeschePSA;
+window.exportPSACSV = exportPSACSV;
+window.importPSACSV = importPSACSV;
+window.exportPSAPDF = exportPSAPDF;
