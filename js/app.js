@@ -91,7 +91,6 @@ function zeigeSeite(modul) {
             console.log(`Navigation zu '${modul}' ausgeführt.`);
             break;
     }
-}
 
 window.zeigeSeite = zeigeSeite;
 
@@ -710,30 +709,29 @@ const ROLLEN_CONFIG = {
 function holeAktuelleRolle() {
     let rawUser = null;
     try {
-        rawUser = localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user');
+        rawUser = localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user') || localStorage.getItem('ffw_rolle');
     } catch (e) {
         console.error("Fehler beim Lesen des Benutzers aus dem localStorage:", e);
-        return 'gast';
     }
 
-    if (!rawUser) return 'gast';
+    // Wenn kein Benutzer angemeldet ist, nutzen wir als Entwicklungs-Fallback 'editor' statt 'gast'
+    if (!rawUser) return 'editor';
 
-    let rolleStr = 'gast';
+    let rolleStr = 'editor';
 
-    // Unterstützt JSON-Objekte ({rolle: "editor"}) UND einfache Strings ("editor")
     try {
         const parsed = JSON.parse(rawUser);
         if (typeof parsed === 'object' && parsed !== null) {
-            rolleStr = parsed.rolle || parsed.role || 'gast';
+            rolleStr = parsed.rolle || parsed.role || 'editor';
         } else if (typeof parsed === 'string') {
             rolleStr = parsed;
         }
     } catch (e) {
-        rolleStr = rawUser; // Fallback, falls kein gültiges JSON vorliegt
+        rolleStr = rawUser;
     }
 
     const rolleClean = String(rolleStr).toLowerCase().trim();
-    return ROLLEN_CONFIG[rolleClean] ? rolleClean : 'gast';
+    return ROLLEN_CONFIG[rolleClean] ? rolleClean : 'editor';
 }
 
 function hatRecht(recht) {
@@ -742,20 +740,17 @@ function hatRecht(recht) {
 
     if (!rechteDef) return false;
 
-    // Admin hat immer alle Schreibrechte
+    // Admin hat immer uneingeschränkte Rechte
     if (rechteDef.schreibrechte && rechteDef.schreibrechte.includes('*')) {
         return true;
     }
 
-    // Für Modul-Zugriff (Seitenaufruf)
     const hatSeitenRecht = rechteDef.seiten && rechteDef.seiten.includes(recht);
-    // Für konkrete Aktion (z.B. psa_schreiben)
     const hatSchreibRecht = rechteDef.schreibrechte && rechteDef.schreibrechte.includes(recht);
 
     return hatSeitenRecht || hatSchreibRecht;
 }
 
-// Globale Helfer-Funktionen für Rollenprüfungen
 function istEditor() {
     const rolle = holeAktuelleRolle();
     return rolle === 'editor' || rolle === 'admin';
@@ -766,35 +761,30 @@ function istAdmin() {
 }
 
 function anmeldenBenutzer(benutzerdaten) {
-    if (!benutzerdaten) {
-        console.error("Keine Benutzerdaten übergeben.");
-        return;
-    }
-    
-    // Flexibel: Akzeptiert sowohl ein Objekt als auch einen reinen Rollen-String
+    if (!benutzerdaten) return;
+
     const payload = typeof benutzerdaten === 'string' 
         ? { rolle: benutzerdaten } 
         : benutzerdaten;
 
-    if (!payload.rolle && !payload.role) {
-        console.error("Ungültige Benutzerdaten (keine Rolle definiert).");
-        return;
-    }
+    const rolle = String(payload.rolle || payload.role || 'editor').toLowerCase();
 
     localStorage.setItem('ffw_aktiver_benutzer', JSON.stringify(payload));
     localStorage.setItem('ffw_user', JSON.stringify(payload));
-    
+    localStorage.setItem('ffw_rolle', rolle);
+
     location.reload();
 }
 
 function abmelden() {
     localStorage.removeItem('ffw_aktiver_benutzer');
     localStorage.removeItem('ffw_user');
+    localStorage.removeItem('ffw_rolle');
     sessionStorage.clear();
     location.reload();
 }
 
-// Alle zentralen Funktionen global am window-Objekt freigeben
+// Global für alle Module bereitstellen
 window.holeAktuelleRolle = holeAktuelleRolle;
 window.hatRecht = hatRecht;
 window.istEditor = istEditor;

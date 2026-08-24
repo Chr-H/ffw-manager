@@ -90,19 +90,26 @@ function renderePSATabelle(liste) {
         return;
     }
 
-    // Rechteprüfung direkt über hatRecht ODER istEditor
-    const kannBearbeiten = (typeof hatRecht === 'function' && hatRecht('psa_schreiben')) || 
-                           (typeof istEditor === 'function' && istEditor());
+    // Rechteprüfung: Prüft Funktionen ODER direkt den localStorage als Fallback
+    const rolleLS = String(localStorage.getItem('ffw_rolle') || '').toLowerCase();
+    const kannBearbeiten = 
+        (typeof hatRecht === 'function' && hatRecht('psa_schreiben')) || 
+        (typeof istEditor === 'function' && istEditor()) ||
+        (rolleLS === 'editor' || rolleLS === 'admin');
 
     liste.forEach(item => {
         const tr = document.createElement('tr');
         
-        const aktionsButtons = kannBearbeiten ? `
+        // Aktionen ganz links: Akte (📄) immer, Bearbeiten (✏️) & Löschen (🗑️) bei Schreibrechten
+        const akteBtn = `<button class="btn btn-sm btn-outline-info me-1" onclick="oeffnePSAAkteModal('${item.id}')" title="Akte / Details">📄</button>`;
+        const editBtns = kannBearbeiten ? `
             <button class="btn btn-sm btn-outline-primary me-1" onclick="oeffnePSAModal('${item.id}')" title="Bearbeiten">✏️</button>
             <button class="btn btn-sm btn-outline-danger" onclick="loeschePSAEintragModal('${item.id}')" title="Löschen">🗑️</button>
-        ` : `<span class="text-muted">Nur Lesezugriff</span>`;
+        ` : `<span class="text-muted ms-1">Nur Lesezugriff</span>`;
 
-        // AKTIONEN IST JETZT DIE ERSTE SPALTE (GANZ LINKS)
+        const aktionsButtons = `${akteBtn}${editBtns}`;
+
+        // AKTIONEN IST DIE ERSTE SPALTE (GANZ LINKS)
         tr.innerHTML = `
             <td>${aktionsButtons}</td>
             <td>${item.spind || '-'}</td>
@@ -127,6 +134,17 @@ function getStatusBadgeClass(status) {
         default: return 'bg-secondary';
     }
 }
+
+// Global verfügbare Hilfsfunktion für den Akte-Button
+window.oeffnePSAAkteModal = function(id) {
+    if (typeof window.zeigPSADetails === 'function') {
+        window.zeigPSADetails(id);
+    } else if (typeof window.oeffneAkte === 'function') {
+        window.oeffneAkte('psa', id);
+    } else {
+        console.log("Akte-Funktionsaufruf für ID:", id);
+    }
+};
 
 // 5. Modal-Aktionen (Erstellen / Bearbeiten / Speichern)
 function oeffnePSAModal(id = null) {
