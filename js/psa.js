@@ -85,12 +85,14 @@ function renderePSATabelle(liste) {
 
     tbody.innerHTML = '';
 
-    if (liste.length === 0) {
+    if (!liste || liste.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">Keine PSA-Einträge gefunden.</td></tr>`;
         return;
     }
 
-    const kannBearbeiten = (typeof istEditor === 'function') ? istEditor() : true;
+    // Rechteprüfung direkt über hatRecht ODER istEditor
+    const kannBearbeiten = (typeof hatRecht === 'function' && hatRecht('psa_schreiben')) || 
+                           (typeof istEditor === 'function' && istEditor());
 
     liste.forEach(item => {
         const tr = document.createElement('tr');
@@ -100,18 +102,18 @@ function renderePSATabelle(liste) {
             <button class="btn btn-sm btn-outline-danger" onclick="loeschePSAEintragModal('${item.id}')" title="Löschen">🗑️</button>
         ` : `<span class="text-muted">Nur Lesezugriff</span>`;
 
-        // Passend zur Tabellenstruktur im Screenshot (Aktionen am Ende!):
+        // AKTIONEN IST JETZT DIE ERSTE SPALTE (GANZ LINKS)
         tr.innerHTML = `
+            <td>${aktionsButtons}</td>
             <td>${item.spind || '-'}</td>
-            <td><strong>${item.traeger || 'Unbekannt'}</strong></td>
+            <td><strong>${item.traeger || item.name || 'Unbekannt'}</strong></td>
             <td>${item.hersteller || '-'}</td>
             <td>${item.typ || '-'}</td>
-            <td>${item.bezeichnung || '-'}</td>
+            <td>${item.bezeichnung || item.ausruestung || '-'}</td>
             <td>${item.groesse || '-'}</td>
             <td>${item.zubehoer || '-'}</td>
-            <td>${item.seriennummer || '-'}</td>
+            <td>${item.seriennummer || item.inventarnummer || '-'}</td>
             <td>${item.naechstePruefung || '-'}</td>
-            <td>${aktionsButtons}</td>
         `;
         tbody.appendChild(tr);
     });
