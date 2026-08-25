@@ -491,17 +491,18 @@
 
         </main>
     </div>
-
-    <!-- Firebase SDKs (MÜSSEN zuerst geladen werden) -->
+<!-- 1. Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
 
-    <!-- Hauptanwendung & globale Helfer -->
-    <script src="js/app.js"></script>
+    <!-- 2. Speicher-Basisdaten (MUSS vor app.js stehen!) -->
     <script src="js/storage.js"></script>
     <script src="js/kategorien.js"></script>
 
-    <!-- Einzelne Module -->
+    <!-- 3. Haupt-App -->
+    <script src="js/app.js"></script>
+
+    <!-- 4. Module -->
     <script src="js/geraete.js"></script>
     <script src="js/fahrzeuge.js"></script>
     <script src="js/psa.js"></script>
