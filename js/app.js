@@ -584,7 +584,7 @@ window.exportiereSystemBackupGesichert = exportiereSystemBackupGesichert;
 
 
 // ==========================================
-// Firebase-Anbindung
+// Firebase-Anbindung (ohne blockierenden Cache)
 // ==========================================
 
 if (typeof firebase !== 'undefined') {
@@ -603,20 +603,13 @@ if (typeof firebase !== 'undefined') {
 
     const db = firebase.firestore();
 
-    db.enablePersistence({ synchronizeTabs: true })
-        .catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Offline-Speicher: Mehrere Tabs geöffnet.');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Browser unterstützt keinen Offline-Speicher.');
-            }
-        });
+    // ACHTUNG: enablePersistence wurde entfernt, 
+    // damit Firebase IMMER direkt live mit der Cloud spricht!
 
     window.db = db;
 } else {
     console.warn("Firebase JS-SDK wurde nicht geladen. Lokale Speicherung wird verwendet.");
 }
-
 
 // ==========================================
 // Modul: Auswertungen Render-Logik
