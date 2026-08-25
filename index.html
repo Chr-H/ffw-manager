@@ -492,10 +492,16 @@
         </main>
     </div>
 
-    <!-- Firebase SDK & Anwendungs-Skripte -->
-     <!-- Anwendungs-Skripte (Exakt in dieser Reihenfolge laden!) -->
+    <!-- Firebase SDKs (MÜSSEN zuerst geladen werden) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <!-- Hauptanwendung & globale Helfer -->
+    <script src="js/app.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/kategorien.js"></script>
+
+    <!-- Einzelne Module -->
     <script src="js/geraete.js"></script>
     <script src="js/fahrzeuge.js"></script>
     <script src="js/psa.js"></script>
@@ -504,6 +510,5 @@
     <script src="js/personal.js"></script>
     <script src="js/benutzer.js"></script>
     <script src="js/einstellungen.js"></script>
-    <script src="js/app.js"></script>
 </body>
 </html>
