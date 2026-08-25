@@ -590,9 +590,9 @@ window.exportiereSystemBackupGesichert = exportiereSystemBackupGesichert;
 if (typeof firebase !== 'undefined') {
     const firebaseConfig = {
         apiKey: "AIzaSyA8toPLitz2AUXz9f0m-h_WCqsK-g_PNyk",
-        authDomain: "ffw-albertsried.firebaseapp.com",
-        projectId: "ffw-albertsried",
-        storageBucket: "ffw-albertsried.appspot.com",
+        authDomain: "ffw-manager-19fbd.firebaseapp.com",
+        projectId: "ffw-manager-19fbd",
+        storageBucket: "ffw-manager-19fbd.firebasestorage.app",
         messagingSenderId: "45591494617",
         appId: "1:45591494617:web:46ddf894c840871212e3c8"
     };
@@ -602,10 +602,6 @@ if (typeof firebase !== 'undefined') {
     }
 
     const db = firebase.firestore();
-
-    // ACHTUNG: enablePersistence wurde entfernt, 
-    // damit Firebase IMMER direkt live mit der Cloud spricht!
-
     window.db = db;
 } else {
     console.warn("Firebase JS-SDK wurde nicht geladen. Lokale Speicherung wird verwendet.");
