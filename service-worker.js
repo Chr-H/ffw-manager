@@ -1,14 +1,16 @@
 // ==========================================
-// FFW Manager - Service Worker (v5.3.6.)
+// FFW Manager - Service Worker (v5.3.7.)
 // ==========================================
 
-const CACHE_NAME = 'ffw-manager-v5.3.6'; // Version erhöht für Icon-Caching
+const CACHE_NAME = 'ffw-manager-v5.3.7'; // Version erhöht für Icon-Caching
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
+  './css/geraete.css',
+  './css/layout.css',
   './js/storage.js',
   './js/kategorien.js',
   './js/geraete.js',
@@ -16,10 +18,12 @@ const ASSETS_TO_CACHE = [
   './js/psa.js',
   './js/lager.js',
   './js/pruefungen.js',
+  './js/personal.js',
+  './js/benutzer.js',
+  './js/einstellungen.js',
   './js/app.js',
-  // 🖼️ App-Icons für Homescreen & PWA-Installation
-  './icons/icon-192x192.png',
-  './icons/icon-512x512.png'
+  './emblem-192.png',
+  './emblem-512.png'
 ];
 
 // 1. Installation: Erzwingt frischen Download vom Server
