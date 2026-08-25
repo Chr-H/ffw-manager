@@ -331,41 +331,53 @@
                 </div>
             </section>
 
-            <!-- 4. PSA BEREICH -->
-            <section id="seite-psa" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importPSAInput').click()">📥 CSV Import</button>
-                        <input type="file" id="importPSAInput" style="display:none;" accept=".csv" onchange="importPSACSV(this)">
-                        <button type="button" class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
-                    </div>
-                </div>
-                
-                <!-- Umschließender Container für Rechtesteuerung -->
-                <div id="psa-container">
-                    <div id="psa-tabelle-bereich" class="table-responsive">
-                        <table class="geraete-tabelle" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th>Aktionen</th>
-                                    <th>Spind</th>
-                                    <th>Träger</th>
-                                    <th>Hersteller</th>
-                                    <th>Typ</th>
-                                    <th>Ausrüstung / Bezeichn.</th>
-                                    <th>Größe</th>
-                                    <th>Zubehör</th>
-                                    <th>Inv.- / Serien-Nr.</th>
-                                    <th>Nächste Prüfung</th>
-                                </tr>
-                            </thead>
-                            <tbody id="psa-tabelle-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+           <!-- 4. PSA BEREICH -->
+<section id="seite-psa" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button type="button" class="btn btn-primary" onclick="oeffnePSAModal()">➕ Neue PSA anlegen</button>
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('importPSAInput').click()">📥 CSV Import</button>
+            <input type="file" id="importPSAInput" style="display:none;" accept=".csv" onchange="importPSACSV(this)">
+            <button type="button" class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
+        </div>
+    </div>
+    
+    <!-- Filter- & Suchleiste -->
+    <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="psa-suche" placeholder="🔍 Suche nach Träger, Spind, Gerät..." style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; flex-grow: 1;">
+        <select id="psa-status-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="alle">Alle Status</option>
+            <option value="Aktiv">🟢 Aktiv / Einsatzbereit</option>
+            <option value="Wartung">🟡 In Prüfung / Wartung</option>
+            <option value="Defekt">🔴 Ausgemustert / Defekt</option>
+        </select>
+    </div>
+
+    <!-- Umschließender Container für Rechtesteuerung & Tabelle -->
+    <div id="psa-container">
+        <div id="psa-tabelle-bereich" class="table-responsive">
+            <table class="geraete-tabelle" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th class="no-print">Aktionen</th>
+                        <th>Spind</th>
+                        <th>Träger</th>
+                        <th>Hersteller</th>
+                        <th>Typ</th>
+                        <th>Ausrüstung / Bezeichn.</th>
+                        <th>Größe</th>
+                        <th>Zubehör</th>
+                        <th>Inv.- / Serien-Nr.</th>
+                        <th>Nächste Prüfung</th>
+                    </tr>
+                </thead>
+                <tbody id="psa-tabelle-body"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
 
             <!-- 5. PRÜFUNGEN BEREICH -->
             <section id="seite-pruefungen" class="seite-ansicht" style="display: none;">

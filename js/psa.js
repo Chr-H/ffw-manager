@@ -320,3 +320,89 @@ window.renderePSATabelle = renderePSATabelle;
 window.oeffnePSAModal = oeffnePSAModal;
 window.savePSAFromModal = savePSAFromModal;
 window.loeschePSAEintragModal = loeschePSAEintragModal;
+
+// 7. PSA CSV Import & Export Logik
+function importPSACSV(inputElement) {
+    const file = inputElement.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const zeilen = text.split('\n');
+        let importiertePSA = [];
+
+        for (let i = 1; i < zeilen.length; i++) {
+            const zeile = zeilen[i].trim();
+            if (!zeile) continue;
+            
+            const spalten = zeile.split(';');
+            if (spalten.length >= 2) {
+                importiertePSA.push({
+                    id: 'psa_' + Date.now() + '_' + i,
+                    spind: spalten[0] || '',
+                    traeger: spalten[1] || '',
+                    hersteller: spalten[2] || '',
+                    typ: spalten[3] || '',
+                    bezeichnung: spalten[4] || '',
+                    groesse: spalten[5] || '',
+                    zubehoer: spalten[6] || '',
+                    seriennummer: spalten[7] || '',
+                    naechstePruefung: spalten[8] || '',
+                    status: 'Aktiv',
+                    geaendertAm: new Date().toISOString()
+                });
+            }
+        }
+
+        if (importiertePSA.length > 0) {
+            let allePSA = ladePSA();
+            let neueGesamtPSA = allePSA.concat(importiertePSA);
+            if (speicherePSA(neueGesamtPSA)) {
+                alert(`✅ ${importiertePSA.length} PSA-Einträge erfolgreich importiert!`);
+                filterPSA();
+            }
+        } else {
+            alert("⚠️ Keine gültigen Daten in der CSV-Datei gefunden.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function exportPSACSV() {
+    const daten = ladePSA();
+    if (!daten || daten.length === 0) {
+        alert("Keine PSA-Daten zum Exportieren vorhanden.");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Spind;Träger;Hersteller;Typ;Bezeichnung;Größe;Zubehör;Seriennummer;Nächste Prüfung\n";
+
+    daten.forEach(item => {
+        const row = [
+            item.spind || '',
+            item.traeger || item.name || '',
+            item.hersteller || '',
+            item.typ || '',
+            item.bezeichnung || item.ausruestung || '',
+            item.groesse || '',
+            item.zubehoer || '',
+            item.seriennummer || item.inventarnummer || '',
+            item.naechstePruefung || ''
+        ].join(";");
+        csvContent += row + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `PSA_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Globale Freigaben für HTML-Events (onclick/onchange)
+window.importPSACSV = importPSACSV;
+window.exportPSACSV = exportPSACSV;
