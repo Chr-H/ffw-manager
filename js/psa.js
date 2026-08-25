@@ -1,14 +1,23 @@
 // ==========================================
-// PSA-Verwaltung Modul (ffw-manager)
+// PSA-Verwaltung Modul (ffw-manager) - KORRIGIERT
 // ==========================================
 
-// 1. PSA-Daten laden (Fallback auf LocalStorage & storage.js)
-function ladePSA() {
-    if (typeof window.ladePsaData === 'function') {
-        return window.ladePsaData();
+// Sichere Hilfsfunktion für Rechte
+function hatPSASchreibrechte() {
+    if (typeof window.hatRecht === 'function') {
+        return window.hatRecht('psa_schreiben');
     }
-    
-    // Nutzen der zentralen Hilfsfunktion aus app.js / storage.js
+    if (typeof window.istEditor === 'function') {
+        return window.istEditor();
+    }
+    // Standardmäßig absichern: Wenn ungewiss, KEIN Schreibrecht!
+    const me = JSON.parse(localStorage.getItem('ffw_user') || '{}');
+    return me.rolle === 'admin' || me.rolle === 'editor';
+}
+
+// 1. PSA-Daten laden
+function ladePSA() {
+    if (typeof window.ladePsaData === 'function') return window.ladePsaData();
     if (typeof window.ladeDaten === 'function') {
         const d = window.ladeDaten('psa');
         if (d && d.length > 0) return d;
@@ -23,14 +32,9 @@ function ladePSA() {
     }
 }
 
-// 2. PSA-Daten speichern (Mit aktiver Berechtigungsprüfung)
+// 2. PSA-Daten speichern
 function speicherePSA(psaListe) {
-    // BERECHTIGUNGSPRÜFUNG: Nutzt zentrales hatRecht() oder Fallback auf istEditor()
-    const darfSchreiben = (typeof window.hatRecht === 'function') 
-        ? window.hatRecht('psa_schreiben') 
-        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
-
-    if (!darfSchreiben) {
+    if (!hatPSASchreibrechte()) {
         alert("⚠️ Keine Berechtigung zum Speichern.");
         return false;
     }
@@ -38,7 +42,6 @@ function speicherePSA(psaListe) {
     try {
         const bereinigteDaten = Array.isArray(psaListe) ? psaListe : [];
 
-        // Nutzung der zentralen Speicherfunktion (Lokal + Firebase Cloud)
         if (typeof window.speichereDaten === 'function') {
             window.speichereDaten('psa', bereinigteDaten);
         } else if (typeof window.speicherePsaData === 'function') {
@@ -48,7 +51,6 @@ function speicherePSA(psaListe) {
             localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
         }
 
-        // Event auslösen für UI-Updates
         document.dispatchEvent(new Event("psaGeaendert"));
         return true;
     } catch (e) {
@@ -107,24 +109,19 @@ function renderePSATabelle(liste) {
         return;
     }
 
-    // Rechteprüfung
-    const kannBearbeiten = (typeof window.hatRecht === 'function')
-        ? window.hatRecht('psa_schreiben')
-        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
+    const kannBearbeiten = hatPSASchreibrechte();
 
     liste.forEach(item => {
         const tr = document.createElement('tr');
         
-        const akteBtn = `<button class="btn btn-sm btn-outline-info me-1" onclick="oeffnePSAAkteModal('${item.id}')" title="Akte / Details">📄</button>`;
+        const akteBtn = `<button class="btn btn-sm btn-outline-info me-1" onclick="window.oeffnePSAAkteModal('${item.id}')" title="Akte / Details">📄</button>`;
         const editBtns = kannBearbeiten ? `
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="oeffnePSAModal('${item.id}')" title="Bearbeiten">✏️</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="loeschePSAEintragModal('${item.id}')" title="Löschen">🗑️</button>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="window.oeffnePSAModal('${item.id}')" title="Bearbeiten">✏️</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="window.loeschePSAEintragModal('${item.id}')" title="Löschen">🗑️</button>
         ` : `<span class="text-muted ms-1">Nur Lesezugriff</span>`;
 
-        const aktionsButtons = `${akteBtn}${editBtns}`;
-
         tr.innerHTML = `
-            <td>${aktionsButtons}</td>
+            <td>${akteBtn}${editBtns}</td>
             <td>${item.spind || '-'}</td>
             <td><strong>${item.traeger || item.name || 'Unbekannt'}</strong></td>
             <td>${item.hersteller || '-'}</td>
@@ -139,18 +136,6 @@ function renderePSATabelle(liste) {
     });
 }
 
-function getStatusBadgeClass(status) {
-    switch (status) {
-        case 'Aktiv': 
-        case 'Einsatzbereit': return 'bg-success';
-        case 'In Prüfung': 
-        case 'Wartung': return 'bg-warning text-dark';
-        case 'Ausgemustert': 
-        case 'Defekt': return 'bg-danger';
-        default: return 'bg-secondary';
-    }
-}
-
 // Global verfügbare Hilfsfunktion für den Akte-Button
 window.oeffnePSAAkteModal = function(id) {
     if (typeof window.zeigPSADetails === 'function') {
@@ -158,11 +143,10 @@ window.oeffnePSAAkteModal = function(id) {
     } else if (typeof window.oeffneAkte === 'function') {
         window.oeffneAkte('psa', id);
     } else {
-        console.log("Akte-Funktionsaufruf für ID:", id);
+        alert("Details-Ansicht für Akte (ID: " + id + ") wird vorbereitet.");
     }
 };
 
-// Hilfsfunktion zum sicheren Auslesen/Setzen von Formularwerten
 function getInputValue(id) {
     const el = document.getElementById(id);
     return el ? el.value.trim() : '';
@@ -173,22 +157,21 @@ function setInputValue(id, val) {
     if (el) el.value = val || '';
 }
 
-// 5. Modal-Aktionen (Erstellen / Bearbeiten / Speichern)
+// 5. Modal-Aktionen
 function oeffnePSAModal(id = null) {
-    const darfBearbeiten = (typeof window.hatRecht === 'function')
-        ? window.hatRecht('psa_schreiben')
-        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
-
-    if (!darfBearbeiten) {
+    if (!hatPSASchreibrechte()) {
         alert("⚠️ Keine Berechtigung zum Bearbeiten.");
         return;
     }
 
     const modal = document.getElementById('psa-modal');
     const form = document.getElementById('psa-form');
-    if (!modal || !form) return;
+    if (!modal) {
+        alert("Fehler: PSA-Modal (HTML) wurde nicht gefunden.");
+        return;
+    }
 
-    form.reset();
+    if (form) form.reset();
 
     if (id) {
         const allePSA = ladePSA();
@@ -210,10 +193,12 @@ function oeffnePSAModal(id = null) {
         setInputValue('psa-id', 'psa_' + Date.now());
     }
 
-    form.onsubmit = function(e) {
-        e.preventDefault();
-        savePSAFromModal();
-    };
+    if (form) {
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            savePSAFromModal();
+        };
+    }
 
     if (window.bootstrap && bootstrap.Modal) {
         const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
@@ -226,15 +211,6 @@ function oeffnePSAModal(id = null) {
 function savePSAFromModal() {
     const id = getInputValue('psa-id');
     const traeger = getInputValue('psa-traeger');
-    const spind = getInputValue('psa-spind');
-    const hersteller = getInputValue('psa-hersteller');
-    const typ = getInputValue('psa-typ');
-    const bezeichnung = getInputValue('psa-bezeichnung');
-    const groesse = getInputValue('psa-groesse');
-    const zubehoer = getInputValue('psa-zubehoer');
-    const seriennummer = getInputValue('psa-seriennummer');
-    const naechstePruefung = getInputValue('psa-naechstePruefung');
-    const status = getInputValue('psa-status') || 'Aktiv';
 
     if (!traeger) {
         alert("Bitte geben Sie einen Träger an.");
@@ -247,15 +223,15 @@ function savePSAFromModal() {
     const neuerEintrag = {
         id,
         traeger,
-        spind,
-        hersteller,
-        typ,
-        bezeichnung,
-        groesse,
-        zubehoer,
-        seriennummer,
-        naechstePruefung,
-        status,
+        spind: getInputValue('psa-spind'),
+        hersteller: getInputValue('psa-hersteller'),
+        typ: getInputValue('psa-typ'),
+        bezeichnung: getInputValue('psa-bezeichnung'),
+        groesse: getInputValue('psa-groesse'),
+        zubehoer: getInputValue('psa-zubehoer'),
+        seriennummer: getInputValue('psa-seriennummer'),
+        naechstePruefung: getInputValue('psa-naechstePruefung'),
+        status: getInputValue('psa-status') || 'Aktiv',
         geaendertAm: new Date().toISOString()
     };
 
@@ -278,11 +254,7 @@ function savePSAFromModal() {
 }
 
 function loeschePSAEintragModal(id) {
-    const darfLöschen = (typeof window.hatRecht === 'function')
-        ? window.hatRecht('psa_schreiben')
-        : ((typeof window.istEditor === 'function') ? window.istEditor() : true);
-
-    if (!darfLöschen) {
+    if (!hatPSASchreibrechte()) {
         alert("⚠️ Keine Berechtigung zum Löschen.");
         return;
     }
@@ -302,9 +274,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sucheInput = document.getElementById('psa-suche');
     const statusSelect = document.getElementById('psa-status-filter');
+    const neuBtn = document.getElementById('btn-neues-psa') || document.getElementById('btn-psa-neu');
 
     if (sucheInput) sucheInput.addEventListener('input', filterPSA);
     if (statusSelect) statusSelect.addEventListener('change', filterPSA);
+    
+    // Automatisches Verknüpfen des "Neues PSA anlegen"-Buttons
+    if (neuBtn) {
+        neuBtn.addEventListener('click', () => oeffnePSAModal());
+    }
 });
 
 document.addEventListener("psaGeaendert", () => {
@@ -320,89 +298,3 @@ window.renderePSATabelle = renderePSATabelle;
 window.oeffnePSAModal = oeffnePSAModal;
 window.savePSAFromModal = savePSAFromModal;
 window.loeschePSAEintragModal = loeschePSAEintragModal;
-
-// 7. PSA CSV Import & Export Logik
-function importPSACSV(inputElement) {
-    const file = inputElement.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const zeilen = text.split('\n');
-        let importiertePSA = [];
-
-        for (let i = 1; i < zeilen.length; i++) {
-            const zeile = zeilen[i].trim();
-            if (!zeile) continue;
-            
-            const spalten = zeile.split(';');
-            if (spalten.length >= 2) {
-                importiertePSA.push({
-                    id: 'psa_' + Date.now() + '_' + i,
-                    spind: spalten[0] || '',
-                    traeger: spalten[1] || '',
-                    hersteller: spalten[2] || '',
-                    typ: spalten[3] || '',
-                    bezeichnung: spalten[4] || '',
-                    groesse: spalten[5] || '',
-                    zubehoer: spalten[6] || '',
-                    seriennummer: spalten[7] || '',
-                    naechstePruefung: spalten[8] || '',
-                    status: 'Aktiv',
-                    geaendertAm: new Date().toISOString()
-                });
-            }
-        }
-
-        if (importiertePSA.length > 0) {
-            let allePSA = ladePSA();
-            let neueGesamtPSA = allePSA.concat(importiertePSA);
-            if (speicherePSA(neueGesamtPSA)) {
-                alert(`✅ ${importiertePSA.length} PSA-Einträge erfolgreich importiert!`);
-                filterPSA();
-            }
-        } else {
-            alert("⚠️ Keine gültigen Daten in der CSV-Datei gefunden.");
-        }
-    };
-    reader.readAsText(file);
-}
-
-function exportPSACSV() {
-    const daten = ladePSA();
-    if (!daten || daten.length === 0) {
-        alert("Keine PSA-Daten zum Exportieren vorhanden.");
-        return;
-    }
-
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Spind;Träger;Hersteller;Typ;Bezeichnung;Größe;Zubehör;Seriennummer;Nächste Prüfung\n";
-
-    daten.forEach(item => {
-        const row = [
-            item.spind || '',
-            item.traeger || item.name || '',
-            item.hersteller || '',
-            item.typ || '',
-            item.bezeichnung || item.ausruestung || '',
-            item.groesse || '',
-            item.zubehoer || '',
-            item.seriennummer || item.inventarnummer || '',
-            item.naechstePruefung || ''
-        ].join(";");
-        csvContent += row + "\n";
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `PSA_Export_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// Globale Freigaben für HTML-Events (onclick/onchange)
-window.importPSACSV = importPSACSV;
-window.exportPSACSV = exportPSACSV;
