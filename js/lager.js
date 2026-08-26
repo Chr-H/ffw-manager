@@ -1,9 +1,45 @@
 // ==========================================
-// FFW Manager - Lagerverwaltung (v0.6.3)
+// FFW Manager - Lagerverwaltung (v1.3.0 RECHTEGEPRÜFT)
 // ==========================================
 
 let lagerDaten = ladeDaten("lager") || [];
 let bearbeitungsLagerId = null;
+
+/**
+ * Aktuelle Benutzerrolle aus allen verfügbaren Quellen ermitteln
+ */
+function holeLagerUserRolle() {
+    try {
+        const user = JSON.parse(
+            localStorage.getItem('ffw_aktiver_benutzer') || 
+            localStorage.getItem('ffw_user') || 
+            sessionStorage.getItem('ffw_user') || '{}'
+        );
+        const rolle = localStorage.getItem('ffw_aktive_rolle') || user.rolle || 'gast';
+        return String(rolle).toLowerCase().trim();
+    } catch (e) {
+        return 'gast';
+    }
+}
+
+/**
+ * Leserechte prüfen (Gast = kein Zugriff; Viewer, Editor, Admin = Zugriff)
+ */
+function hatLagerLeseRecht() {
+    const rolle = holeLagerUserRolle();
+    return ['viewer', 'editor', 'admin'].includes(rolle);
+}
+
+/**
+ * Schreibrechte prüfen (nur Editor & Admin)
+ */
+function hatLagerSchreibRecht() {
+    if (typeof window.hatRecht === "function") {
+        if (window.hatRecht('lager_schreiben')) return true;
+    }
+    const rolle = holeLagerUserRolle();
+    return ['editor', 'admin'].includes(rolle);
+}
 
 // Hilfsfunktion: Safe HTML Escaping gegen XSS-Lücken
 function escapeHtmlLager(text) {
@@ -22,6 +58,10 @@ function holeLagerDaten() {
 }
 
 function speichereLagerDaten(daten) {
+    if (!hatLagerSchreibRecht()) {
+        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Speichern.");
+        return;
+    }
     lagerDaten = daten;
     speichereDaten("lager", daten);
     document.dispatchEvent(new Event("lagerGeaendert"));
@@ -52,8 +92,8 @@ function parseCSVLine(line, delimiter) {
 }
 
 function importLagerCSV(inputOrEvent) {
-    if (typeof istEditor === "function" && !istEditor()) {
-        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Daten zu importieren.");
+    if (!hatLagerSchreibRecht()) {
+        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Importieren von Daten.");
         return;
     }
 
@@ -65,7 +105,6 @@ function importLagerCSV(inputOrEvent) {
     const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
     if (!file) return;
 
-    // FRAGE: Soll der alte Bestand überschrieben werden?
     const meeresErsetzen = confirm(
         "Möchtest du den vorhandenen Lagerbestand KOMPLETT ÜBERSCHREIBEN?\n\n" +
         "• OK = Bisherigen Bestand löschen und nur die Datei-Artikel laden\n" +
@@ -89,14 +128,12 @@ function importLagerCSV(inputOrEvent) {
 
         const delim = zeilen[0].includes(';') ? ';' : ',';
 
-        // 1. Spalten-Indizes anhand der Kopfzeile exakt ermitteln
         const headerCols = parseCSVLine(zeilen[0].toLowerCase(), delim);
         
         const idxId = headerCols.findIndex(h => h === "id");
         const idxArtNr = headerCols.findIndex(h => h.includes("art") || h.includes("nummer") || h.includes("numme"));
         const idxHersteller = headerCols.findIndex(h => h.includes("herstell"));
         
-        // Exakte Erkennung der Bezeichnung (schließt Spalten wie "Artikelnummer" aus)
         const idxBez = headerCols.findIndex(h => 
             h.includes("bezeichn") || 
             h.includes("name") || 
@@ -111,7 +148,6 @@ function importLagerCSV(inputOrEvent) {
         const idxMindest = headerCols.findIndex(h => h.includes("mindest"));
         const idxSoll = headerCols.findIndex(h => h.includes("soll"));
 
-        // Wenn 'Ersetzen' gewählt wurde, starten wir mit einem leeren Array
         let aktuelleListe = meeresErsetzen ? [] : (typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []));
         let hinzugefuegt = 0;
         let geaendert = 0;
@@ -122,10 +158,8 @@ function importLagerCSV(inputOrEvent) {
             const rawId = idxId !== -1 ? (spalten[idxId] || '').trim() : '';
             const artNr = idxArtNr !== -1 ? (spalten[idxArtNr] || '').trim() : '';
             
-            // Fallback: Falls keine Bezeichnung-Spalte gefunden wurde, nimm Spalte 3 (Index 2)
             let bezeichnung = idxBez !== -1 ? (spalten[idxBez] || '').trim() : (spalten[2] || '').trim();
 
-            // Zeile überspringen, wenn weder Art.-Nr. noch Bezeichnung da sind
             if (!artNr && !bezeichnung) continue;
 
             const hersteller = idxHersteller !== -1 ? (spalten[idxHersteller] || '').trim() : '';
@@ -168,16 +202,13 @@ function importLagerCSV(inputOrEvent) {
             }
         }
 
-        // Speichern
         if (typeof speichereLagerDaten === "function") {
             speichereLagerDaten(aktuelleListe);
         } else if (typeof speichereDaten === "function") {
             speichereDaten("lager", aktuelleListe);
         }
         
-        // Ansicht neu rendern
         if (typeof renderLagerView === "function") renderLagerView();
-        else if (typeof filterLager === "function") filterLager();
 
         if (inputElement) inputElement.value = '';
 
@@ -192,8 +223,12 @@ function importLagerCSV(inputOrEvent) {
     reader.readAsText(file, 'UTF-8');
 }
 
-// NEU & KORRIGIERT:
 function exportLagerCSV() {
+    if (!hatLagerLeseRecht()) {
+        alert("🔒 Keine Berechtigung zum Exportieren.");
+        return;
+    }
+
     const daten = typeof holeLagerDaten === "function" ? holeLagerDaten() : (ladeDaten("lager") || []);
 
     if (!Array.isArray(daten) || daten.length === 0) {
@@ -246,7 +281,7 @@ function exportLagerCSV() {
             
             link.href = url;
             link.style.display = "none";
-            link.download = dateiname; // Zwingt den Browser zur .csv Vorgabe + Dateinamen
+            link.download = dateiname;
             
             document.body.appendChild(link);
             link.click();
@@ -342,8 +377,8 @@ function erstelleModalFallsNichtVorhanden() {
 }
 
 function openLagerAkteModal(id = null) {
-    if (typeof istEditor === "function" && !istEditor()) {
-        alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Artikel zu verwalten.");
+    if (!hatLagerSchreibRecht()) {
+        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Erstellen oder Bearbeiten von Artikeldaten.");
         return;
     }
 
@@ -391,6 +426,11 @@ function schliesseLagerModal() {
 }
 
 function speichereLagerItem() {
+    if (!hatLagerSchreibRecht()) {
+        alert("🔒 Keine Berechtigung zum Speichern.");
+        return;
+    }
+
     const bezeichnung = document.getElementById('lager-bezeichnung').value.trim();
     if (!bezeichnung) {
         alert("Bitte eine Bezeichnung eingeben.");
@@ -427,8 +467,8 @@ function speichereLagerItem() {
 }
 
 function loescheLagerItem(id) {
-    if (typeof istEditor === "function" && !istEditor()) {
-        alert("🔒 Schreibschutz aktiv!");
+    if (!hatLagerSchreibRecht()) {
+        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Löschen.");
         return;
     }
 
@@ -447,6 +487,19 @@ function renderLagerView() {
     const container = document.getElementById('lager-container');
     if (!container) return;
 
+    // 1. GAST-CHECK: Gäste komplett aussperren
+    if (!hatLagerLeseRecht()) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px;">
+                <h2 style="color: #721c24;">🔒 Zugriff verweigert</h2>
+                <p style="color: #721c24; margin-top: 10px;">
+                    Als <strong>Gast</strong> hast du keine Berechtigung, die Lagerverwaltung einzusehen.
+                </p>
+            </div>`;
+        return;
+    }
+
+    const kannSchreiben = hatLagerSchreibRecht();
     const daten = holeLagerDaten();
     const sucheInput = document.getElementById('sucheLager');
     const suche = sucheInput ? sucheInput.value.toLowerCase() : '';
@@ -461,7 +514,11 @@ function renderLagerView() {
     let html = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
         <input type="text" id="sucheLager" placeholder="🔍 Artikel suchen..." oninput="renderLagerView()" value="${escapeHtmlLager(suche)}" style="padding:8px; border-radius:4px; border:1px solid #ccc; max-width:300px;">
-        <button class="btn btn-primary" onclick="openLagerAkteModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Artikel anlegen</button>
+        ${kannSchreiben ? `
+            <button class="btn btn-primary" onclick="openLagerAkteModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Artikel anlegen</button>
+        ` : `
+            <span style="color:#666; font-style:italic; font-size:0.9em;">🔒 Schreibgeschützt (Viewer)</span>
+        `}
     </div>
     <table class="table table-striped table-hover" style="width:100%; border-collapse: collapse; background:#fff;">
         <thead style="background:#343a40; color:#fff;">
@@ -494,12 +551,14 @@ function renderLagerView() {
 
             const safeId = escapeHtmlLager(item.id);
 
+            const aktionenHTML = kannSchreiben ? `
+                <button class="btn btn-sm" title="Bearbeiten" onclick="openLagerAkteModal('${safeId}')" style="cursor:pointer; background:none; border:none;">✏️</button>
+                <button class="btn btn-sm" title="Löschen" onclick="loescheLagerItem('${safeId}')" style="cursor:pointer; background:none; border:none;">🗑️</button>
+            ` : `<span style="color:#777; font-size:0.85em;">👁️ Nur Lesezugriff</span>`;
+
             html += `
             <tr style="border-bottom:1px solid #dee2e6;">
-                <td style="padding:8px; border:1px solid #dee2e6; text-align:center;">
-                    <button class="btn btn-sm" title="Bearbeiten" onclick="openLagerAkteModal('${safeId}')" style="cursor:pointer; background:none; border:none;">✏️</button>
-                    <button class="btn btn-sm" title="Löschen" onclick="loescheLagerItem('${safeId}')" style="cursor:pointer; background:none; border:none;">🗑️</button>
-                </td>
+                <td style="padding:8px; border:1px solid #dee2e6; text-align:center;">${aktionenHTML}</td>
                 <td style="padding:8px; border:1px solid #dee2e6;"><strong>${escapeHtmlLager(item.artikelnummer || '-')}</strong></td>
                 <td style="padding:8px; border:1px solid #dee2e6;">${escapeHtmlLager(item.bezeichnung || item.name || '-')}</td>
                 <td style="padding:8px; border:1px solid #dee2e6;">${escapeHtmlLager(item.kategorie || '-')}</td>

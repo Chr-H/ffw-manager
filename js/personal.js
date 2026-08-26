@@ -1,8 +1,68 @@
-// js/personal.js
+// ==========================================
+// FFW Manager - Personalverwaltung (v1.3.0 RECHTEGEPRÜFT)
+// ==========================================
+
+/**
+ * Aktuelle Benutzerrolle aus allen verfügbaren Quellen ermitteln
+ */
+function holePersonalUserRolle() {
+    try {
+        const user = JSON.parse(
+            localStorage.getItem('ffw_aktiver_benutzer') || 
+            localStorage.getItem('ffw_user') || 
+            sessionStorage.getItem('ffw_user') || '{}'
+        );
+        const rolle = localStorage.getItem('ffw_aktive_rolle') || user.rolle || 'gast';
+        return String(rolle).toLowerCase().trim();
+    } catch (e) {
+        return 'gast';
+    }
+}
+
+/**
+ * Leserechte prüfen (Gast = kein Zugriff; Viewer, Editor, Admin = Zugriff)
+ */
+function hatPersonalLeseRecht() {
+    const rolle = holePersonalUserRolle();
+    return ['viewer', 'editor', 'admin'].includes(rolle);
+}
+
+/**
+ * Schreibrechte prüfen (nur Editor & Admin)
+ */
+function hatPersonalSchreibRecht() {
+    if (typeof window.hatRecht === "function") {
+        if (window.hatRecht('personal_schreiben')) return true;
+    }
+    const rolle = holePersonalUserRolle();
+    return ['editor', 'admin'].includes(rolle);
+}
 
 // 1. Hauptfunktion: Personal-Tabelle & Dashboard-Statistik rendern
 function renderePersonalTabelle() {
     const tbody = document.getElementById('personal-tabelle-body');
+    const neuBtn = document.getElementById('btn-neues-mitglied') || document.getElementById('btn-personal-neu');
+
+    // 1. GAST-CHECK: Gäste komplett aussperren
+    if (!hatPersonalLeseRecht()) {
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align:center; color:#721c24; background-color:#f8d7da; padding:20px; font-weight:bold;">
+                        🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, die Personaldaten einzusehen.
+                    </td>
+                </tr>`;
+        }
+        if (neuBtn) neuBtn.style.display = 'none';
+        return;
+    }
+
+    const kannSchreiben = hatPersonalSchreibRecht();
+
+    // 2. VIEWER-CHECK: Hinzufügen-Button steuern
+    if (neuBtn) {
+        neuBtn.style.display = kannSchreiben ? 'inline-block' : 'none';
+    }
 
     // Daten laden (per Hilfsfunktion aus storage.js oder globalem Array)
     let mitglieder = [];
@@ -50,7 +110,7 @@ function renderePersonalTabelle() {
         return;
     }
 
-    // Zeilen generieren (8 Spalten gemäß <thead> in index.html)
+    // Zeilen generieren
     gefiltert.forEach(m => {
         const tr = document.createElement('tr');
 
@@ -70,6 +130,12 @@ function renderePersonalTabelle() {
                 : `<span style="color:#c62828; font-weight:bold;">🔴 ${datumStr}</span>`;
         }
 
+        // Aktions-Buttons nur anzeigen, wenn Schreibrechte vorliegen
+        const aktionenHTML = kannSchreiben ? `
+            <button onclick="bearbeiteMitglied('${m.id}')" style="padding:4px 8px; cursor:pointer;" title="Bearbeiten">✏️</button>
+            <button onclick="loescheMitglied('${m.id}')" style="padding:4px 8px; cursor:pointer; background:#dc3545; color:white; border:none; border-radius:3px;" title="Löschen">🗑️</button>
+        ` : `<span style="color:#777; font-size:0.85em;">👁️ Nur Lesezugriff</span>`;
+
         tr.innerHTML = `
             <td><strong>${m.spind || '-'}</strong></td>
             <td><strong>${m.vorname || ''} ${m.nachname || ''}</strong></td>
@@ -78,10 +144,7 @@ function renderePersonalTabelle() {
             <td>${g26HTML}</td>
             <td>${m.lehrgaenge || '-'}</td>
             <td>${m.bemerkung || '-'}</td>
-            <td>
-                <button onclick="bearbeiteMitglied('${m.id}')" style="padding:4px 8px; cursor:pointer;">✏️</button>
-                <button onclick="loescheMitglied('${m.id}')" style="padding:4px 8px; cursor:pointer; background:#dc3545; color:white; border:none; border-radius:3px;">🗑️</button>
-            </td>
+            <td>${aktionenHTML}</td>
         `;
 
         tbody.appendChild(tr);
@@ -90,6 +153,11 @@ function renderePersonalTabelle() {
 
 // 2. Modal-Steuerung & Aktionen
 function oeffneMitgliedModal(mitgliedId = null) {
+    if (!hatPersonalSchreibRecht()) {
+        alert("⚠️ Keine Berechtigung zum Hinzufügen oder Bearbeiten von Mitgliedern.");
+        return;
+    }
+
     const modal = document.getElementById('mitglied-modal');
     const form = document.getElementById('mitglied-form');
     if (!modal || !form) return;
@@ -127,7 +195,12 @@ function schliesseMitgliedModal() {
 }
 
 function speichereMitglied(e) {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+    if (!hatPersonalSchreibRecht()) {
+        alert("⚠️ Keine Berechtigung zum Speichern.");
+        return;
+    }
 
     const id = document.getElementById('mitglied-id').value || 'pers_' + Date.now();
     const ausgewaehlteFunktionen = Array.from(document.querySelectorAll('.cb-funktion:checked')).map(cb => cb.value);
@@ -153,6 +226,11 @@ function speichereMitglied(e) {
 }
 
 function loescheMitglied(id) {
+    if (!hatPersonalSchreibRecht()) {
+        alert("⚠️ Keine Berechtigung zum Löschen von Mitgliedern.");
+        return;
+    }
+
     if (confirm('Möchtest du dieses Mitglied wirklich löschen?')) {
         if (typeof loescheMitgliedData === 'function') {
             loescheMitgliedData(id);
