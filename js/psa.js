@@ -1,8 +1,25 @@
 // ==========================================
-// PSA-Verwaltung Modul (ffw-manager) - KORRIGIERT
+// PSA-Verwaltung Modul (ffw-manager) - KORRIGIERT & RECHTEGEPRÜFT
 // ==========================================
 
-// Sichere Hilfsfunktion für Rechte
+// Hilfsfunktion: Aktuelle Benutzerrolle aus allen Quellen sicher ermitteln
+function holePSAUserRolle() {
+    try {
+        const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user') || '{}');
+        const rolle = localStorage.getItem('ffw_aktive_rolle') || user.rolle || 'gast';
+        return String(rolle).toLowerCase().trim();
+    } catch (e) {
+        return 'gast';
+    }
+}
+
+// Prüfe Leserechte (gast = kein Zugriff, viewer/editor/admin = Zugriff)
+function hatPSALeserechte() {
+    const rolle = holePSAUserRolle();
+    return ['viewer', 'editor', 'admin'].includes(rolle);
+}
+
+// Sichere Hilfsfunktion für Schreibrechte (nur editor & admin)
 function hatPSASchreibrechte() {
     if (typeof window.hatRecht === 'function') {
         return window.hatRecht('psa_schreiben');
@@ -10,9 +27,8 @@ function hatPSASchreibrechte() {
     if (typeof window.istEditor === 'function') {
         return window.istEditor();
     }
-    // Standardmäßig absichern: Wenn ungewiss, KEIN Schreibrecht!
-    const me = JSON.parse(localStorage.getItem('ffw_user') || '{}');
-    return me.rolle === 'admin' || me.rolle === 'editor';
+    const rolle = holePSAUserRolle();
+    return ['editor', 'admin'].includes(rolle);
 }
 
 // 1. PSA-Daten laden
@@ -101,19 +117,37 @@ function filterPSA() {
     renderePSATabelle(gefiltert);
 }
 
-// 4. HTML-Tabelle aufbauen
+// 4. HTML-Tabelle aufbauen mit Rechteschutz
 function renderePSATabelle(liste) {
     const tbody = document.getElementById('psa-tabelle-body');
+    const neuBtn = document.getElementById('btn-neues-psa') || document.getElementById('btn-psa-neu');
     if (!tbody) return;
 
     tbody.innerHTML = '';
+
+    // 1. GAST-CHECK: Gäste sehen absolut keine Inhalte
+    if (!hatPSALeserechte()) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center text-danger py-4" style="background-color: #f8d7da;">
+                    🔒 <strong>Zugriff verweigert:</strong> Als Gast hast du keine Berechtigung, die PSA-Daten einzusehen.
+                </td>
+            </tr>`;
+        if (neuBtn) neuBtn.style.display = 'none';
+        return;
+    }
+
+    const kannBearbeiten = hatPSASchreibrechte();
+
+    // 2. VIEWER-CHECK: "Neues PSA"-Button ein-/ausblenden
+    if (neuBtn) {
+        neuBtn.style.display = kannBearbeiten ? 'inline-block' : 'none';
+    }
 
     if (!liste || liste.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">Keine PSA-Einträge gefunden.</td></tr>`;
         return;
     }
-
-    const kannBearbeiten = hatPSASchreibrechte();
 
     liste.forEach(item => {
         const tr = document.createElement('tr');
@@ -122,7 +156,7 @@ function renderePSATabelle(liste) {
         const editBtns = kannBearbeiten ? `
             <button class="btn btn-sm btn-outline-primary me-1" onclick="window.oeffnePSAModal('${item.id}')" title="Bearbeiten">✏️</button>
             <button class="btn btn-sm btn-outline-danger" onclick="window.loeschePSAEintragModal('${item.id}')" title="Löschen">🗑️</button>
-        ` : `<span class="text-muted ms-1">Nur Lesezugriff</span>`;
+        ` : `<span class="text-muted ms-1" style="font-size: 0.85em;">👁️ Nur Lesezugriff</span>`;
 
         tr.innerHTML = `
             <td>${akteBtn}${editBtns}</td>
