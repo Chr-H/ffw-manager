@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Personalverwaltung (v1.3.2 FIX)
+// FFW Manager - Personalverwaltung (v1.3.3 COMPLETE FIX)
 // ==========================================
 
 let personalDaten = ladeDaten("personal") || [];
@@ -48,7 +48,7 @@ function speicherePersonalDaten(daten) {
 }
 
 // ------------------------------------------
-// MODAL & FORMULAR (Mitglied anlegen / bearbeiten)
+// MODAL LOGIK
 // ------------------------------------------
 
 function erstellePersonalModalFallsNichtVorhanden() {
@@ -81,7 +81,7 @@ function erstellePersonalModalFallsNichtVorhanden() {
                             </div>
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <div style="flex:1;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Funktion / Dienstgrad</label>
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Dienstgrad / Funktion</label>
                                     <input type="text" id="pers-funktion" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:1;">
@@ -188,7 +188,7 @@ function speicherePersonalItem() {
 
 function loeschePersonalItem(id) {
     if (!hatPersonalSchreibRecht()) {
-        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Löschen.");
+        alert("🔒 Schreibschutz aktiv!");
         return;
     }
     if (!confirm("Mitglied wirklich löschen?")) return;
@@ -199,52 +199,34 @@ function loeschePersonalItem(id) {
 }
 
 // ------------------------------------------
-// CSV & PDF EXPORT / IMPORT
+// EXPORT & IMPORT (CSV / PDF)
 // ------------------------------------------
 
 function exportPersonalCSV() {
-    if (!hatPersonalLeseRecht()) {
-        alert("🔒 Keine Berechtigung zum Exportieren.");
-        return;
-    }
+    if (!hatPersonalLeseRecht()) return alert("🔒 Keine Berechtigung.");
     const daten = holePersonalDaten();
-    if (!daten || daten.length === 0) {
-        alert("⚠️ Keine Personaldaten vorhanden.");
-        return;
-    }
+    if (!daten.length) return alert("⚠️ Keine Daten vorhanden.");
 
     const headers = ["ID", "Spind", "Vorname", "Nachname", "Funktion", "G26.3 Ablauf", "Qualifikationen"];
     const rows = daten.map(p => [
-        p.id || '',
-        p.spind || '',
-        p.vorname || '',
-        p.nachname || p.name || '',
-        p.funktion || '',
-        p.g26Ablauf || '',
+        p.id || '', p.spind || '', p.vorname || '', p.nachname || p.name || '', p.funktion || '', p.g26Ablauf || '',
         Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '')
     ]);
 
     const dateiname = `Personalliste_FFW_${new Date().toISOString().split('T')[0]}.csv`;
-    if (typeof window.downloadCSV === "function") {
-        window.downloadCSV(dateiname, headers, rows);
-    } else {
-        const csvLines = [headers.join(";")];
-        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
-        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = dateiname;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+    const csvLines = [headers.join(";")];
+    rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+    const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = dateiname;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function importPersonalCSV(inputOrEvent) {
-    if (!hatPersonalSchreibRecht()) {
-        alert("🔒 Keine Berechtigung zum Importieren.");
-        return;
-    }
+    if (!hatPersonalSchreibRecht()) return alert("🔒 Keine Berechtigung.");
     let inputElement = inputOrEvent && inputOrEvent.target ? inputOrEvent.target : inputOrEvent;
     const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
     if (!file) return;
@@ -286,11 +268,46 @@ function exportPersonalPDF() {
 }
 
 // ------------------------------------------
-// RENDER-LOGIK (Fügt Daten direkt in deine bestehende HTML-Tabelle ein)
+// RENDER ENGINE FOR PRE-EXISTING DOM LAYOUT
 // ------------------------------------------
 
 function renderPersonalView() {
-    const tbody = document.querySelector("#personal-table tbody, table tbody");
+    // 1. Suche den Container oder erstelle dynamisch eine Tabelle falls keine da ist
+    let table = document.querySelector("table");
+    let tbody = document.querySelector("tbody");
+
+    // Falls die HTML-Struktur noch keine Tabelle hat:
+    if (!tbody && table) {
+        tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+    }
+
+    // Buttons in der Menüleiste ergänzen/verdrahten
+    const allBtns = Array.from(document.querySelectorAll("button"));
+    const neuBtn = allBtns.find(b => b.textContent.includes("Neues Mitglied"));
+
+    if (neuBtn) {
+        neuBtn.onclick = () => openPersonalModal();
+
+        // Export/Import-Buttons daneben einfügen, falls nicht vorhanden
+        if (!document.getElementById('pers-export-csv-btn')) {
+            const wrapper = neuBtn.parentElement;
+            if (wrapper) {
+                const extraDiv = document.createElement('span');
+                extraDiv.style.marginLeft = "10px";
+                extraDiv.innerHTML = `
+                    <button id="pers-export-csv-btn" onclick="exportPersonalCSV()" class="btn btn-secondary" style="padding:6px 10px; margin-right:5px; background:#6c757d; color:#fff; border:none; border-radius:4px; cursor:pointer;">📥 CSV Export</button>
+                    ${hatPersonalSchreibRecht() ? `
+                    <label class="btn btn-success" style="padding:6px 10px; margin-right:5px; background:#28a745; color:#fff; border-radius:4px; cursor:pointer; display:inline-block;">
+                        📤 CSV Import <input type="file" accept=".csv" onchange="importPersonalCSV(event)" style="display:none;">
+                    </label>` : ''}
+                    <button id="pers-export-pdf-btn" onclick="exportPersonalPDF()" class="btn btn-info" style="padding:6px 10px; background:#17a2b8; color:#fff; border:none; border-radius:4px; cursor:pointer;">📄 PDF Export</button>
+                `;
+                neuBtn.after(extraDiv);
+            }
+        }
+    }
+
     if (!tbody) return;
 
     if (!hatPersonalLeseRecht()) {
@@ -301,16 +318,8 @@ function renderPersonalView() {
     const meins = holePersonalDaten();
     const kannSchreiben = hatPersonalSchreibRecht();
 
-    // Event-Handler für den "+ Neues Mitglied" Button verdrahten
-    const neuBtn = document.querySelector("button:contains('Neues Mitglied')") || document.querySelector("button.btn-primary");
-    const allBtns = Array.from(document.querySelectorAll("button"));
-    const buttonAdd = allBtns.find(b => b.textContent.includes("Neues Mitglied"));
-    if (buttonAdd) {
-        buttonAdd.onclick = () => openPersonalModal();
-    }
-
     if (!meins || meins.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">Keine Personaldaten gefunden. Klicke auf "+ Neues Mitglied".</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">Keine Personaldaten vorhanden. Klicke auf "+ Neues Mitglied".</td></tr>`;
         return;
     }
 
@@ -320,25 +329,24 @@ function renderPersonalView() {
         const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
         const safeId = escapeHtmlPersonal(p.id);
 
-        let g26Badge = '<span style="color:green;">🟢 ' + (p.g26Ablauf || 'Gültig') + '</span>';
+        let g26Badge = '<span style="color:#28a745; font-weight:bold;">🟢 ' + (p.g26Ablauf || 'Gültig') + '</span>';
         if (p.g26Ablauf) {
             const ablaufDatum = new Date(p.g26Ablauf);
             if (ablaufDatum < new Date()) {
-                g26Badge = '<span style="color:red; font-weight:bold;">🔴 Abgelaufen (' + p.g26Ablauf + ')</span>';
+                g26Badge = '<span style="color:#dc3545; font-weight:bold;">🔴 Abgelaufen (' + p.g26Ablauf + ')</span>';
             }
         }
 
         const aktionen = kannSchreiben ? `
-            <button class="btn btn-sm btn-outline-secondary" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; padding:2px 6px; border-radius:4px;">✏️</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; border:1px solid #dc3545; background:#fff; color:#dc3545; padding:2px 6px; border-radius:4px;">🗑️</button>
+            <button title="Bearbeiten" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:3px 8px; border-radius:4px;">✏️</button>
+            <button title="Löschen" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:3px 8px; border-radius:4px;">🗑️</button>
         ` : '👁️';
 
         html += `
-        <tr>
+        <tr style="border-bottom: 1px solid #eee;">
             <td style="padding:10px; font-weight:bold;">${escapeHtmlPersonal(p.spind || '-')}</td>
             <td style="padding:10px; font-weight:bold;">${fullName}</td>
             <td style="padding:10px;">${escapeHtmlPersonal(p.funktion || '-')}</td>
-            <td style="padding:10px;"><span style="background:#e8f4fd; padding:3px 8px; border-radius:4px; color:#0056b3;">${escapeHtmlPersonal(p.funktion || 'Mitglied')}</span></td>
             <td style="padding:10px;">${g26Badge}</td>
             <td style="padding:10px;">${escapeHtmlPersonal(qualis)}</td>
             <td style="padding:10px; text-align:center;">${aktionen}</td>
@@ -349,7 +357,7 @@ function renderPersonalView() {
 }
 
 // ------------------------------------------
-// INITIALISIERUNG & WINDOW EXPORT
+// LIFECYCLE HOOKS
 // ------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -360,6 +368,11 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("personalGeaendert", () => {
     renderPersonalView();
 });
+
+// Fallback Rendering
+setTimeout(() => {
+    renderPersonalView();
+}, 200);
 
 window.holePersonalDaten = holePersonalDaten;
 window.speicherePersonalDaten = speicherePersonalDaten;
