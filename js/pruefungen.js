@@ -1,29 +1,48 @@
 // ==========================================
-// FFW Manager - Prüfungsverwaltung (v1.2.1)
+// FFW Manager - Prüfungsverwaltung (v1.3.0 KORRIGIERT)
 // ==========================================
 
 /**
- * Zentrale Rechteprüfung für das Prüfungsmodul
+ * Aktuelle Benutzerrolle aus allen verfügbaren Quellen ermitteln
+ */
+function holePruefungUserRolle() {
+    try {
+        const user = JSON.parse(
+            localStorage.getItem('ffw_aktiver_benutzer') || 
+            localStorage.getItem('ffw_user') || 
+            sessionStorage.getItem('ffw_user') || '{}'
+        );
+        const rolle = localStorage.getItem('ffw_aktive_rolle') || user.rolle || 'gast';
+        return String(rolle).toLowerCase().trim();
+    } catch (e) {
+        return 'gast';
+    }
+}
+
+/**
+ * Leserechte prüfen (Gast = kein Zugriff; Viewer, Editor, Admin = Zugriff)
+ */
+function hatPruefungLeseRecht() {
+    const rolle = holePruefungUserRolle();
+    return ['viewer', 'editor', 'admin'].includes(rolle);
+}
+
+/**
+ * Zentrale Rechteprüfung für Schreibrechte im Prüfungsmodul (nur Editor & Admin)
  */
 function hatPruefungSchreibRecht() {
     if (typeof window.hatRecht === "function") {
         if (window.hatRecht('pruefungen_schreiben')) return true;
     }
-    const userString = localStorage.getItem('ffw_user') || sessionStorage.getItem('ffw_user');
-    if (userString) {
-        try {
-            const u = JSON.parse(userString);
-            const rolle = (u.rolle || '').toLowerCase();
-            return rolle === 'admin' || rolle === 'editor';
-        } catch (e) {
-            console.error("Fehler beim Lesen der Rolle:", e);
-        }
-    }
-    const aktiveRolle = localStorage.getItem('ffw_aktive_rolle') || 'gast';
-    return aktiveRolle === 'admin' || aktiveRolle === 'editor';
+    const rolle = holePruefungUserRolle();
+    return ['editor', 'admin'].includes(rolle);
 }
 
 function getPruefungen() {
+    // Falls Gast: Gar keine Prüfungsdaten zurückliefern
+    if (!hatPruefungLeseRecht()) {
+        return [];
+    }
     const data = ladeDaten("pruefungen");
     return Array.isArray(data) ? data : [];
 }
@@ -31,12 +50,12 @@ function getPruefungen() {
 function speicherePruefungen(liste) {
     if (!hatPruefungSchreibRecht()) {
         alert("⚠️ Keine Berechtigung zum Speichern vorhanden!");
-        return;
+        return false;
     }
     speichereDaten('pruefungen', liste);
     document.dispatchEvent(new Event("pruefungenGeaendert"));
+    return true;
 }
-
 // Safe HTML Escaping gegen XSS-Lücken
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
@@ -77,7 +96,7 @@ function formatiereDatum(datumStr) {
     return formatted;
 }
 
-// 1. Hauptansicht für Prüfungen rendern
+// 1. Hauptansicht für Prüfungen rendern (MIT RECHTE-SCHUTZ)
 function renderPruefungenView() {
     const container = document.getElementById('pruefungen-container') || 
                       document.getElementById('pruefungenContainer') || 
@@ -87,10 +106,22 @@ function renderPruefungenView() {
 
     if (!container) return;
 
+    // 1. GAST-CHECK: Gäste komplett aussperren
+    if (!hatPruefungLeseRecht()) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px;">
+                <h2 style="color: #721c24;">🔒 Zugriff verweigert</h2>
+                <p style="color: #721c24; margin-top: 10px;">
+                    Als <strong>Gast</strong> hast du keine Berechtigung, die Prüfungsübersicht einzusehen.
+                </p>
+            </div>`;
+        return;
+    }
+
     const darfSchreiben = hatPruefungSchreibRecht();
 
     container.innerHTML = `
-        <div class="view-header" style="display:flex; justify-space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <h2>📋 Prüfungsübersicht & Termine</h2>
             <div style="display:flex; gap:10px; align-items:center;">
                 <button class="btn btn-secondary" onclick="exportPruefungenCSV()">📊 CSV Export</button>
