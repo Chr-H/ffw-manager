@@ -406,43 +406,58 @@
             </section>
 
             <!-- 7. PERSONAL BEREICH -->
-            <section id="seite-personal" class="seite-ansicht" style="display: none;">
-                <h2>👥 Personalverwaltung</h2>
-                <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <input type="text" id="personal-suche" placeholder="Suche nach Name, Spind..." oninput="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
-                    <select id="personal-filter-funktion" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
-                        <option value="">Alle Funktionen</option>
-                        <option value="Kommandant">Kommandant</option>
-                        <option value="stellv. Kommandant">stellv. Kommandant</option>
-                        <option value="Gruppenführer">Gruppenführer</option>
-                        <option value="Gerätewart">Gerätewart</option>
-                        <option value="Maschinist">Maschinist</option>
-                        <option value="Atemschutzträger">Atemschutzträger</option>
-                    </select>
-                    <select id="personal-filter-g26" onchange="renderePersonalTabelle()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
-                        <option value="">G26.3 Status (Alle)</option>
-                        <option value="gueltig">Gültig</option>
-                        <option value="abgelaufen">Abgelaufen</option>
-                    </select>
-                    <button class="btn btn-primary btn-speichern" onclick="oeffneMitgliedModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Neues Mitglied</button>
-                </div>
+<section id="seite-personal" class="seite-ansicht" style="display: none; padding: 20px;">
+    <h2>👥 Personalverwaltung</h2>
 
-                <div class="table-responsive" style="width:100%; overflow-x:auto;">
-                    <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse;">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Spind</th>
-                                <th>Name</th>
-                                <th>Funktion</th>
-                                <th>G26.3 Status</th>
-                                <th>Atemschutz</th>
-                                <th class="no-print">Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody id="personal-tabelle-body"></tbody>
-                    </table>
-                </div>
-            </section>
+    <!-- Aktionsleiste mit Filtern & Buttons -->
+    <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <input type="text" id="suchePersonal" placeholder="Suche nach Name, Spind..." oninput="renderPersonalView()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+        
+        <select id="filterFunktion" onchange="renderPersonalView()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+            <option value="">Alle Funktionen</option>
+            <option value="Kommandant">Kommandant</option>
+            <option value="stellv. Kommandant">stellv. Kommandant</option>
+            <option value="Gruppenführer">Gruppenführer</option>
+            <option value="Gerätewart">Gerätewart</option>
+            <option value="Maschinist">Maschinist</option>
+            <option value="Atemschutzträger">Atemschutzträger</option>
+        </select>
+
+        <select id="filterG26" onchange="renderPersonalView()" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
+            <option value="">G26.3 Status (Alle)</option>
+            <option value="gueltig">Gültig</option>
+            <option value="abgelaufen">Abgelaufen</option>
+        </select>
+
+        <button type="button" class="btn btn-primary" onclick="openPersonalModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">➕ Neues Mitglied</button>
+        <button type="button" class="btn btn-secondary" onclick="exportPersonalCSV()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">📥 CSV Export</button>
+        
+        <label style="padding:8px 12px; background:#28a745; color:white; border-radius:4px; cursor:pointer; margin:0; display:inline-block;">
+            📤 CSV Import <input type="file" accept=".csv" onchange="importPersonalCSV(event)" style="display: none;">
+        </label>
+        
+        <button type="button" class="btn btn-info" onclick="exportPersonalPDF()" style="padding:8px 12px; background:#17a2b8; color:white; border:none; border-radius:4px; cursor:pointer;">📄 PDF Export</button>
+    </div>
+
+    <!-- Feste Tabelle -->
+    <div class="table-responsive" style="width:100%; overflow-x:auto;">
+        <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse; background: white;">
+            <thead class="table-dark">
+                <tr>
+                    <th style="padding: 12px;">Spind</th>
+                    <th style="padding: 12px;">Name</th>
+                    <th style="padding: 12px;">Funktion</th>
+                    <th style="padding: 12px;">G26.3 Status</th>
+                    <th style="padding: 12px;">Qualifikationen</th>
+                    <th style="padding: 12px; text-align: center;" class="no-print">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody id="personal-table-body">
+                <!-- JS fügt die Daten hier ein -->
+            </tbody>
+        </table>
+    </div>
+</section>
 
             <!-- 8. AUSWERTUNGEN -->
             <section id="seite-auswertungen" class="seite-ansicht" style="display: none;">
