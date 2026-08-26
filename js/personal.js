@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Personalverwaltung (v1.3.3 COMPLETE FIX)
+// FFW Manager - Personalverwaltung (v1.3.4 FLEX-FIX)
 // ==========================================
 
 let personalDaten = ladeDaten("personal") || [];
@@ -59,7 +59,7 @@ function erstellePersonalModalFallsNichtVorhanden() {
             <div class="modal-dialog modal-lg" style="max-width: 600px; margin: 50px auto; background: #fff; border-radius: 8px; padding: 20px;">
                 <div class="modal-content" style="border:none;">
                     <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px;">
-                        <h5 class="modal-title" id="personalModalTitle" style="margin:0; font-size:1.25rem;">Mitglied bearbeiten</h5>
+                        <h5 class="modal-title" id="personalModalTitle" style="margin:0; font-size:1.25rem; color:#333;">Mitglied bearbeiten</h5>
                         <button type="button" onclick="schliessePersonalModal()" style="border:none; background:none; font-size:1.5rem; cursor:pointer;">&times;</button>
                     </div>
                     <div class="modal-body" style="padding: 15px 0;">
@@ -67,30 +67,30 @@ function erstellePersonalModalFallsNichtVorhanden() {
                             <input type="hidden" id="pers-id">
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <div style="flex:1;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Spind-Nr.</label>
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px; color:#333;">Spind-Nr.</label>
                                     <input type="text" id="pers-spind" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:2;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Vorname</label>
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px; color:#333;">Vorname</label>
                                     <input type="text" id="pers-vorname" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:2;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Nachname *</label>
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px; color:#333;">Nachname *</label>
                                     <input type="text" id="pers-nachname" class="form-control" required style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                             </div>
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <div style="flex:1;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Dienstgrad / Funktion</label>
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px; color:#333;">Dienstgrad / Funktion</label>
                                     <input type="text" id="pers-funktion" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:1;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">G26.3 Ablaufdatum</label>
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px; color:#333;">G26.3 Ablaufdatum</label>
                                     <input type="date" id="pers-g26ablauf" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                             </div>
                             <div style="margin-bottom:10px;">
-                                <label style="display:block; font-weight:bold; margin-bottom:3px;">Qualifikationen (kommagetrennt)</label>
+                                <label style="display:block; font-weight:bold; margin-bottom:3px; color:#333;">Qualifikationen (kommagetrennt)</label>
                                 <input type="text" id="pers-qualifikationen" class="form-control" placeholder="z.B. Truppführer, AGT, Maschinist" style="width:100%; padding:8px; box-sizing:border-box;">
                             </div>
                         </form>
@@ -268,50 +268,48 @@ function exportPersonalPDF() {
 }
 
 // ------------------------------------------
-// RENDER ENGINE FOR PRE-EXISTING DOM LAYOUT
+// RENDER ENGINE (LAYOUT DYNAMISCH ERGÄNZEN)
 // ------------------------------------------
 
 function renderPersonalView() {
-    // 1. Suche den Container oder erstelle dynamisch eine Tabelle falls keine da ist
-    let table = document.querySelector("table");
-    let tbody = document.querySelector("tbody");
-
-    // Falls die HTML-Struktur noch keine Tabelle hat:
-    if (!tbody && table) {
-        tbody = document.createElement("tbody");
-        table.appendChild(tbody);
-    }
-
-    // Buttons in der Menüleiste ergänzen/verdrahten
+    // 1. Buttons verknüpfen
     const allBtns = Array.from(document.querySelectorAll("button"));
     const neuBtn = allBtns.find(b => b.textContent.includes("Neues Mitglied"));
-
     if (neuBtn) {
         neuBtn.onclick = () => openPersonalModal();
+    }
 
-        // Export/Import-Buttons daneben einfügen, falls nicht vorhanden
-        if (!document.getElementById('pers-export-csv-btn')) {
-            const wrapper = neuBtn.parentElement;
-            if (wrapper) {
-                const extraDiv = document.createElement('span');
-                extraDiv.style.marginLeft = "10px";
-                extraDiv.innerHTML = `
-                    <button id="pers-export-csv-btn" onclick="exportPersonalCSV()" class="btn btn-secondary" style="padding:6px 10px; margin-right:5px; background:#6c757d; color:#fff; border:none; border-radius:4px; cursor:pointer;">📥 CSV Export</button>
-                    ${hatPersonalSchreibRecht() ? `
-                    <label class="btn btn-success" style="padding:6px 10px; margin-right:5px; background:#28a745; color:#fff; border-radius:4px; cursor:pointer; display:inline-block;">
-                        📤 CSV Import <input type="file" accept=".csv" onchange="importPersonalCSV(event)" style="display:none;">
-                    </label>` : ''}
-                    <button id="pers-export-pdf-btn" onclick="exportPersonalPDF()" class="btn btn-info" style="padding:6px 10px; background:#17a2b8; color:#fff; border:none; border-radius:4px; cursor:pointer;">📄 PDF Export</button>
-                `;
-                neuBtn.after(extraDiv);
-            }
+    // Export-Buttons sichern
+    const csvExportBtn = document.querySelector("button:contains('CSV Export')") || allBtns.find(b => b.textContent.includes("CSV Export"));
+    if (csvExportBtn) csvExportBtn.onclick = () => exportPersonalCSV();
+
+    const pdfExportBtn = document.querySelector("button:contains('PDF Export')") || allBtns.find(b => b.textContent.includes("PDF Export"));
+    if (pdfExportBtn) pdfExportBtn.onclick = () => exportPersonalPDF();
+
+    // 2. Daten-Container finden oder erstellen
+    let listContainer = document.getElementById("personal-dynamic-list");
+    
+    if (!listContainer) {
+        listContainer = document.createElement("div");
+        listContainer.id = "personal-dynamic-list";
+        listContainer.style.marginTop = "10px";
+        
+        // Suche nach den Spaltenüberschriften (Spind, Name, Funktion...)
+        const headerRow = Array.from(document.querySelectorAll("div, span, p")).find(el => 
+            el.textContent.includes("Spind") && el.textContent.includes("Aktionen") && el.children.length > 0
+        );
+
+        if (headerRow) {
+            headerRow.after(listContainer);
+        } else {
+            // Fallback: Einfach unter die Toolbar/Button-Zeile hängen
+            const toolbar = document.querySelector("input[placeholder*='Suche']")?.parentElement?.parentElement || document.body;
+            toolbar.appendChild(listContainer);
         }
     }
 
-    if (!tbody) return;
-
     if (!hatPersonalLeseRecht()) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:red;">🔒 Access Denied / Gast-Zugriff verweigert</td></tr>`;
+        listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:red; font-weight:bold;">🔒 Access Denied / Gast-Zugriff verweigert</div>`;
         return;
     }
 
@@ -319,7 +317,10 @@ function renderPersonalView() {
     const kannSchreiben = hatPersonalSchreibRecht();
 
     if (!meins || meins.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">Keine Personaldaten vorhanden. Klicke auf "+ Neues Mitglied".</td></tr>`;
+        listContainer.innerHTML = `
+            <div style="text-align:center; padding:30px; color:#777; background:#fff; border-radius:6px; margin-top:10px;">
+                Keine Personaldaten vorhanden. Klicke oben auf <strong>"+ Neues Mitglied"</strong> oder nutze den <strong>"CSV Import"</strong>.
+            </div>`;
         return;
     }
 
@@ -329,7 +330,7 @@ function renderPersonalView() {
         const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
         const safeId = escapeHtmlPersonal(p.id);
 
-        let g26Badge = '<span style="color:#28a745; font-weight:bold;">🟢 ' + (p.g26Ablauf || 'Gültig') + '</span>';
+        let g26Badge = '<span style="color:#28a745; font-weight:bold;">🟢 Gültig ' + (p.g26Ablauf ? '(' + p.g26Ablauf + ')' : '') + '</span>';
         if (p.g26Ablauf) {
             const ablaufDatum = new Date(p.g26Ablauf);
             if (ablaufDatum < new Date()) {
@@ -338,26 +339,27 @@ function renderPersonalView() {
         }
 
         const aktionen = kannSchreiben ? `
-            <button title="Bearbeiten" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:3px 8px; border-radius:4px;">✏️</button>
-            <button title="Löschen" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:3px 8px; border-radius:4px;">🗑️</button>
+            <button title="Bearbeiten" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px; margin-right:5px;">✏️</button>
+            <button title="Löschen" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:4px 8px; border-radius:4px;">🗑️</button>
         ` : '👁️';
 
+        // Zeilen im Flexbox-Grid passend zu deiner Kopfzeile
         html += `
-        <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding:10px; font-weight:bold;">${escapeHtmlPersonal(p.spind || '-')}</td>
-            <td style="padding:10px; font-weight:bold;">${fullName}</td>
-            <td style="padding:10px;">${escapeHtmlPersonal(p.funktion || '-')}</td>
-            <td style="padding:10px;">${g26Badge}</td>
-            <td style="padding:10px;">${escapeHtmlPersonal(qualis)}</td>
-            <td style="padding:10px; text-align:center;">${aktionen}</td>
-        </tr>`;
+        <div style="display:flex; align-items:center; background:#fff; padding:12px 10px; border-bottom:1px solid #eee; margin-bottom:2px; border-radius:4px;">
+            <div style="flex: 0 0 80px; font-weight:bold;">${escapeHtmlPersonal(p.spind || '-')}</div>
+            <div style="flex: 1.5; font-weight:bold;">${fullName}</div>
+            <div style="flex: 1.5;">${escapeHtmlPersonal(p.funktion || '-')}</div>
+            <div style="flex: 1.2;">${g26Badge}</div>
+            <div style="flex: 2; font-size: 0.9em; color:#555;">${escapeHtmlPersonal(qualis)}</div>
+            <div style="flex: 0 0 100px; text-align:right;">${aktionen}</div>
+        </div>`;
     });
 
-    tbody.innerHTML = html;
+    listContainer.innerHTML = html;
 }
 
 // ------------------------------------------
-// LIFECYCLE HOOKS
+// INITIALISIERUNG
 // ------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -369,10 +371,9 @@ document.addEventListener("personalGeaendert", () => {
     renderPersonalView();
 });
 
-// Fallback Rendering
 setTimeout(() => {
     renderPersonalView();
-}, 200);
+}, 250);
 
 window.holePersonalDaten = holePersonalDaten;
 window.speicherePersonalDaten = speicherePersonalDaten;
