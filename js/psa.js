@@ -32,7 +32,7 @@ function ladePSA() {
     }
 }
 
-// 2. PSA-Daten speichern
+// 2. PSA-Daten speichern (KORRIGIERT)
 function speicherePSA(psaListe) {
     if (!hatPSASchreibrechte()) {
         alert("⚠️ Keine Berechtigung zum Speichern.");
@@ -42,17 +42,21 @@ function speicherePSA(psaListe) {
     try {
         const bereinigteDaten = Array.isArray(psaListe) ? psaListe : [];
 
+        // 1. Primär: Zentrale Speicherfunktion nutzen
         if (typeof window.speichereDaten === 'function') {
             window.speichereDaten('psa', bereinigteDaten);
         } else if (typeof window.speicherePsaData === 'function') {
             window.speicherePsaData(bereinigteDaten);
-        } else {
-            localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
-            localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
         }
 
+        // 2. Immer auch lokal zur Sicherheit ablegen (Fallback)
+        localStorage.setItem('ffw_psa', JSON.stringify(bereinigteDaten));
+        localStorage.setItem('ffw_psa_daten', JSON.stringify(bereinigteDaten));
+
         document.dispatchEvent(new Event("psaGeaendert"));
-        return true;
+        
+        // WICHTIG: Explizit true zurückgeben!
+        return true; 
     } catch (e) {
         console.error("PSA Speicherfehler:", e);
         alert("❌ Fehler beim Speichern der PSA-Daten.");
