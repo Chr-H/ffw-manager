@@ -512,72 +512,70 @@
     <script src="js/benutzer.js"></script>
     <script src="js/einstellungen.js"></script>
 
-    <!-- PSA Modal (Dialogfenster für neue/zu bearbeitende PSA) -->
-<div class="modal fade" id="psa-modal" tabindex="-1" aria-hidden="true" style="display: none; background: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-lg" style="margin: 1.75rem auto; max-width: 700px;">
-        <div class="modal-content" style="background: #fff; padding: 20px; border-radius: 8px; position: relative;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
-                <h5 class="modal-title" id="psa-modal-titel" style="margin: 0;">🧯 PSA-Eintrag bearbeiten</h5>
-                <button type="button" class="btn-close" onclick="document.getElementById('psa-modal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            </div>
-            <div class="modal-body" style="padding-top: 15px;">
-                <form id="psa-form">
-                    <input type="hidden" id="psa-id">
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <label for="psa-spind"><strong>Spind:</strong></label>
-                            <input type="text" id="psa-spind" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-traeger"><strong>Träger / Name *:</strong></label>
-                            <input type="text" id="psa-traeger" class="form-control" required style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-hersteller"><strong>Hersteller:</strong></label>
-                            <input type="text" id="psa-hersteller" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-typ"><strong>Typ:</strong></label>
-                            <input type="text" id="psa-typ" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-bezeichnung"><strong>Ausrüstung / Bezeichn.:</strong></label>
-                            <input type="text" id="psa-bezeichnung" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-groesse"><strong>Größe:</strong></label>
-                            <input type="text" id="psa-groesse" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-zubehoer"><strong>Zubehör:</strong></label>
-                            <input type="text" id="psa-zubehoer" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-seriennummer"><strong>Inv.- / Serien-Nr.:</strong></label>
-                            <input type="text" id="psa-seriennummer" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-naechstePruefung"><strong>Nächste Prüfung:</strong></label>
-                            <input type="date" id="psa-naechstePruefung" class="form-control" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label for="psa-status"><strong>Status:</strong></label>
-                            <select id="psa-status" class="form-select" style="width: 100%; padding: 6px; box-sizing: border-box;">
-                                <option value="Aktiv">🟢 Aktiv / Einsatzbereit</option>
-                                <option value="Wartung">🟡 In Prüfung / Wartung</option>
-                                <option value="Defekt">🔴 Ausgemustert / Defekt</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 20px; text-align: right; border-top: 1px solid #dee2e6; padding-top: 10px;">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('psa-modal').style.display='none'" style="padding: 6px 12px; margin-right: 5px;">Abbrechen</button>
-                        <button type="submit" class="btn btn-primary" style="padding: 6px 12px;">Speichern</button>
-                    </div>
-                </form>
-            </div>
+    <!-- PSA Modal Dialog (Reines HTML/CSS) -->
+<div id="psa-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center;">
+    <div style="background: #fff; border-radius: 8px; max-width: 650px; width: 90%; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 id="psa-modal-titel" style="margin: 0;">🧯 PSA-Eintrag verwalten</h3>
+            <button type="button" onclick="document.getElementById('psa-modal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
         </div>
+
+        <form id="psa-form">
+            <input type="hidden" id="psa-id">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label for="psa-spind">Spind-Nr.:</label>
+                    <input type="text" id="psa-spind" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-traeger">Träger / Name *:</label>
+                    <input type="text" id="psa-traeger" required style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-hersteller">Hersteller:</label>
+                    <input type="text" id="psa-hersteller" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-typ">Typ / Kategorie:</label>
+                    <input type="text" id="psa-typ" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-bezeichnung">Ausrüstung / Bezeichn.:</label>
+                    <input type="text" id="psa-bezeichnung" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-groesse">Größe:</label>
+                    <input type="text" id="psa-groesse" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-zubehoer">Zubehör:</label>
+                    <input type="text" id="psa-zubehoer" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-seriennummer">Inv.- / Serien-Nr.:</label>
+                    <input type="text" id="psa-seriennummer" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-naechstePruefung">Nächste Prüfung:</label>
+                    <input type="date" id="psa-naechstePruefung" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="psa-status">Status:</label>
+                    <select id="psa-status" style="width: 100%; padding: 6px; box-sizing: border-box;">
+                        <option value="Aktiv">🟢 Aktiv / Einsatzbereit</option>
+                        <option value="Wartung">🟡 In Prüfung / Wartung</option>
+                        <option value="Defekt">🔴 Ausgemustert / Defekt</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right; border-top: 1px solid #ddd; padding-top: 10px;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('psa-modal').style.display='none'" style="padding: 6px 12px; margin-right: 8px;">Abbrechen</button>
+                <button type="submit" class="btn btn-primary" style="padding: 6px 12px;">Speichern</button>
+            </div>
+        </form>
     </div>
 </div>
 </body>
