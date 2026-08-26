@@ -1,13 +1,10 @@
 // ==========================================
-// FFW Manager - Personalverwaltung (v1.3.1 KORRIGIERT & VOLLSTÄNDIG)
+// FFW Manager - Personalverwaltung (v1.3.2 FIX)
 // ==========================================
 
 let personalDaten = ladeDaten("personal") || [];
 let bearbeitungsPersonalId = null;
 
-/**
- * Aktuelle Benutzerrolle aus allen verfügbaren Quellen ermitteln
- */
 function holePersonalUserRolle() {
     try {
         const user = JSON.parse(
@@ -15,34 +12,24 @@ function holePersonalUserRolle() {
             localStorage.getItem('ffw_user') || 
             sessionStorage.getItem('ffw_user') || '{}'
         );
-        const rolle = localStorage.getItem('ffw_aktive_rolle') || user.rolle || 'gast';
-        return String(rolle).toLowerCase().trim();
+        return String(localStorage.getItem('ffw_aktive_rolle') || user.rolle || 'gast').toLowerCase().trim();
     } catch (e) {
         return 'gast';
     }
 }
 
 function hatPersonalLeseRecht() {
-    const rolle = holePersonalUserRolle();
-    return ['viewer', 'editor', 'admin'].includes(rolle);
+    return ['viewer', 'editor', 'admin'].includes(holePersonalUserRolle());
 }
 
 function hatPersonalSchreibRecht() {
-    if (typeof window.hatRecht === "function") {
-        if (window.hatRecht('personal_schreiben')) return true;
-    }
-    const rolle = holePersonalUserRolle();
-    return ['editor', 'admin'].includes(rolle);
+    if (typeof window.hatRecht === "function" && window.hatRecht('personal_schreiben')) return true;
+    return ['editor', 'admin'].includes(holePersonalUserRolle());
 }
 
 function escapeHtmlPersonal(text) {
     if (text === null || text === undefined) return '';
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function holePersonalDaten() {
@@ -61,126 +48,15 @@ function speicherePersonalDaten(daten) {
 }
 
 // ------------------------------------------
-// 1. IMPORT & EXPORT (CSV & PDF)
-// ------------------------------------------
-
-function exportPersonalCSV() {
-    if (!hatPersonalLeseRecht()) {
-        alert("🔒 Keine Berechtigung zum Exportieren.");
-        return;
-    }
-    const daten = holePersonalDaten();
-    if (!daten || daten.length === 0) {
-        alert("⚠️ Keine Personaldaten zum Exportieren vorhanden.");
-        return;
-    }
-
-    const headers = ["ID", "Spind", "Vorname", "Nachname", "Funktion", "G26.3 Status", "G26.3 Ablauf", "Qualifikationen", "Bemerkung"];
-    const rows = daten.map(p => [
-        p.id || '',
-        p.spind || '',
-        p.vorname || '',
-        p.nachname || p.name || '',
-        p.funktion || '',
-        p.g26Status || '',
-        p.g26Ablauf || '',
-        Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || ''),
-        p.bemerkung || ''
-    ]);
-
-    const heute = new Date().toISOString().split('T')[0];
-    const dateiname = `Personalliste_FFW_${heute}.csv`;
-
-    if (typeof window.downloadCSV === "function") {
-        window.downloadCSV(dateiname, headers, rows);
-    } else {
-        const csvLines = [headers.join(";")];
-        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
-        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = dateiname;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
-
-function importPersonalCSV(inputOrEvent) {
-    if (!hatPersonalSchreibRecht()) {
-        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Importieren.");
-        return;
-    }
-
-    let inputElement = inputOrEvent && inputOrEvent.target ? inputOrEvent.target : inputOrEvent;
-    const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
-    if (!file) return;
-
-    const meeresErsetzen = confirm("Soll die bestehende Personalliste VOLLSTÄNDIG ÜBERSCHRIEBEN werden?\n\n[OK] = Überschreiben | [Abbrechen] = Zusammenführen");
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        let text = e.target.result;
-        if (text.startsWith('\uFEFF')) text = text.slice(1);
-
-        const zeilen = text.split(/\r\n|\n/).map(z => z.trim()).filter(z => z.length > 0);
-        if (zeilen.length < 2) {
-            alert("⚠️ Die CSV-Datei enthält keine verwertbaren Daten.");
-            if (inputElement) inputElement.value = '';
-            return;
-        }
-
-        const delim = zeilen[0].includes(';') ? ';' : ',';
-        let meins = meeresErsetzen ? [] : holePersonalDaten();
-        let hinzugefuegt = 0;
-
-        for (let i = 1; i < zeilen.length; i++) {
-            const sp = zeilen[i].split(delim).map(s => s.replace(/^"|"$/g, '').trim());
-            if (!sp[1] && !sp[2] && !sp[3]) continue;
-
-            const item = {
-                id: 'PERS_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                spind: sp[1] || sp[0] || '',
-                vorname: sp[2] || '',
-                nachname: sp[3] || sp[2] || 'Unbenannt',
-                funktion: sp[4] || 'Feuerwehrmann',
-                g26Status: sp[5] || 'Keine',
-                g26Ablauf: sp[6] || '',
-                qualifikationen: sp[7] ? sp[7].split(',').map(q => q.trim()) : [],
-                bemerkung: sp[8] || ''
-            };
-
-            meins.push(item);
-            hinzugefuegt++;
-        }
-
-        speicherePersonalDaten(meins);
-        renderPersonalView();
-        if (inputElement) inputElement.value = '';
-        alert(`✅ Import abgeschlossen: ${hinzugefuegt} Mitglieder verarbeitet.`);
-    };
-
-    reader.readAsText(file, 'UTF-8');
-}
-
-function exportPersonalPDF() {
-    if (!hatPersonalLeseRecht()) {
-        alert("🔒 Keine Berechtigung zum Exportieren.");
-        return;
-    }
-    window.print();
-}
-
-// ------------------------------------------
-// 2. MODAL & BEARBEITEN
+// MODAL & FORMULAR (Mitglied anlegen / bearbeiten)
 // ------------------------------------------
 
 function erstellePersonalModalFallsNichtVorhanden() {
     let modalEl = document.getElementById('personalAkteModal');
     if (!modalEl) {
         const modalHTML = `
-        <div class="modal fade" id="personalAkteModal" tabindex="-1" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999;" aria-hidden="true">
-            <div class="modal-dialog modal-lg" style="max-width: 600px; margin: 30px auto; background: #fff; border-radius: 8px; padding: 20px;">
+        <div class="modal fade" id="personalAkteModal" tabindex="-1" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999;">
+            <div class="modal-dialog modal-lg" style="max-width: 600px; margin: 50px auto; background: #fff; border-radius: 8px; padding: 20px;">
                 <div class="modal-content" style="border:none;">
                     <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px;">
                         <h5 class="modal-title" id="personalModalTitle" style="margin:0; font-size:1.25rem;">Mitglied bearbeiten</h5>
@@ -192,36 +68,36 @@ function erstellePersonalModalFallsNichtVorhanden() {
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <div style="flex:1;">
                                     <label style="display:block; font-weight:bold; margin-bottom:3px;">Spind-Nr.</label>
-                                    <input type="text" class="form-control" id="pers-spind" style="width:100%; padding:8px; box-sizing:border-box;">
+                                    <input type="text" id="pers-spind" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:2;">
                                     <label style="display:block; font-weight:bold; margin-bottom:3px;">Vorname</label>
-                                    <input type="text" class="form-control" id="pers-vorname" style="width:100%; padding:8px; box-sizing:border-box;">
+                                    <input type="text" id="pers-vorname" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:2;">
                                     <label style="display:block; font-weight:bold; margin-bottom:3px;">Nachname *</label>
-                                    <input type="text" class="form-control" id="pers-nachname" required style="width:100%; padding:8px; box-sizing:border-box;">
+                                    <input type="text" id="pers-nachname" class="form-control" required style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                             </div>
                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                 <div style="flex:1;">
-                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Dienstgrad / Funktion</label>
-                                    <input type="text" class="form-control" id="pers-funktion" style="width:100%; padding:8px; box-sizing:border-box;">
+                                    <label style="display:block; font-weight:bold; margin-bottom:3px;">Funktion / Dienstgrad</label>
+                                    <input type="text" id="pers-funktion" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                                 <div style="flex:1;">
                                     <label style="display:block; font-weight:bold; margin-bottom:3px;">G26.3 Ablaufdatum</label>
-                                    <input type="date" class="form-control" id="pers-g26ablauf" style="width:100%; padding:8px; box-sizing:border-box;">
+                                    <input type="date" id="pers-g26ablauf" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
                                 </div>
                             </div>
                             <div style="margin-bottom:10px;">
                                 <label style="display:block; font-weight:bold; margin-bottom:3px;">Qualifikationen (kommagetrennt)</label>
-                                <input type="text" class="form-control" id="pers-qualifikationen" placeholder="z.B. AGT, Maschinist, Truppführer" style="width:100%; padding:8px; box-sizing:border-box;">
+                                <input type="text" id="pers-qualifikationen" class="form-control" placeholder="z.B. Truppführer, AGT, Maschinist" style="width:100%; padding:8px; box-sizing:border-box;">
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #ddd; padding-top:10px;">
-                        <button type="button" class="btn btn-secondary" onclick="schliessePersonalModal()" style="padding:8px 12px; background:#6c757d; color:#fff; border:none; border-radius:4px; cursor:pointer;">Abbrechen</button>
-                        <button type="button" class="btn btn-success" onclick="speicherePersonalItem()" style="padding:8px 12px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Speichern</button>
+                        <button type="button" onclick="schliessePersonalModal()" style="padding:8px 12px; background:#6c757d; color:#fff; border:none; border-radius:4px; cursor:pointer;">Abbrechen</button>
+                        <button type="button" onclick="speicherePersonalItem()" style="padding:8px 12px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Speichern</button>
                     </div>
                 </div>
             </div>
@@ -232,7 +108,7 @@ function erstellePersonalModalFallsNichtVorhanden() {
 
 function openPersonalModal(id = null) {
     if (!hatPersonalSchreibRecht()) {
-        alert("🔒 Schreibschutz aktiv! Keine Berechtigung.");
+        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Bearbeiten.");
         return;
     }
 
@@ -243,7 +119,7 @@ function openPersonalModal(id = null) {
 
     if (id) {
         const daten = holePersonalDaten();
-        const item = daten.find(p => p.id === id);
+        const item = daten.find(p => String(p.id) === String(id));
         if (item) {
             if (modalTitle) modalTitle.innerText = "Mitglied bearbeiten";
             document.getElementById('pers-id').value = item.id || '';
@@ -256,7 +132,8 @@ function openPersonalModal(id = null) {
         }
     } else {
         if (modalTitle) modalTitle.innerText = "Neues Mitglied anlegen";
-        document.getElementById('personalAkteForm').reset();
+        const form = document.getElementById('personalAkteForm');
+        if (form) form.reset();
         document.getElementById('pers-id').value = '';
     }
 
@@ -298,7 +175,7 @@ function speicherePersonalItem() {
     };
 
     if (id) {
-        const idx = liste.findIndex(p => p.id === id);
+        const idx = liste.findIndex(p => String(p.id) === String(id));
         if (idx !== -1) liste[idx] = itemData;
     } else {
         liste.push(itemData);
@@ -311,106 +188,168 @@ function speicherePersonalItem() {
 
 function loeschePersonalItem(id) {
     if (!hatPersonalSchreibRecht()) {
-        alert("🔒 Schreibschutz aktiv! Keine Berechtigung.");
+        alert("🔒 Schreibschutz aktiv! Keine Berechtigung zum Löschen.");
         return;
     }
     if (!confirm("Mitglied wirklich löschen?")) return;
 
-    let liste = holePersonalDaten().filter(p => p.id !== id);
+    let liste = holePersonalDaten().filter(p => String(p.id) !== String(id));
     speicherePersonalDaten(liste);
     renderPersonalView();
 }
 
 // ------------------------------------------
-// 3. ANZEIGE & RENDER-LOGIK
+// CSV & PDF EXPORT / IMPORT
 // ------------------------------------------
 
-function renderPersonalView() {
-    const container = document.getElementById('personal-container');
-    if (!container) return;
-
+function exportPersonalCSV() {
     if (!hatPersonalLeseRecht()) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px; background: #fff; border-radius: 8px;">
-                <h2 style="color: #721c24;">🔒 Zugriff verweigert</h2>
-                <p style="color: #721c24;">Als <strong>Gast</strong> hast du keine Berechtigung für die Personalverwaltung.</p>
-            </div>`;
+        alert("🔒 Keine Berechtigung zum Exportieren.");
+        return;
+    }
+    const daten = holePersonalDaten();
+    if (!daten || daten.length === 0) {
+        alert("⚠️ Keine Personaldaten vorhanden.");
         return;
     }
 
-    const kannSchreiben = hatPersonalSchreibRecht();
-    const daten = holePersonalDaten();
-    const sucheInput = document.getElementById('suchePersonal');
-    const suche = sucheInput ? sucheInput.value.toLowerCase() : '';
+    const headers = ["ID", "Spind", "Vorname", "Nachname", "Funktion", "G26.3 Ablauf", "Qualifikationen"];
+    const rows = daten.map(p => [
+        p.id || '',
+        p.spind || '',
+        p.vorname || '',
+        p.nachname || p.name || '',
+        p.funktion || '',
+        p.g26Ablauf || '',
+        Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '')
+    ]);
 
-    const gefiltert = daten.filter(p => {
-        const full = ((p.vorname || '') + ' ' + (p.nachname || p.name || '')).toLowerCase();
-        const spind = (p.spind || '').toLowerCase();
-        const funk = (p.funktion || '').toLowerCase();
-        return full.includes(suche) || spind.includes(suche) || funk.includes(suche);
-    });
-
-    let html = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:10px; align-items:center;">
-            <input type="text" id="suchePersonal" placeholder="🔍 Name, Spind..." oninput="renderPersonalView()" value="${escapeHtmlPersonal(suche)}" style="padding:8px; border-radius:4px; border:1px solid #ccc;">
-            ${kannSchreiben ? `<button class="btn btn-primary" onclick="openPersonalModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Neues Mitglied</button>` : ''}
-        </div>
-        <div style="display:flex; gap:5px;">
-            <button onclick="exportPersonalCSV()" style="padding:6px 10px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">📥 CSV Export</button>
-            ${kannSchreiben ? `
-                <label style="padding:6px 10px; background:#28a745; color:white; border-radius:4px; cursor:pointer; margin:0;">
-                    📤 CSV Import <input type="file" accept=".csv" onchange="importPersonalCSV(event)" style="display:none;">
-                </label>
-            ` : ''}
-            <button onclick="exportPersonalPDF()" style="padding:6px 10px; background:#17a2b8; color:white; border:none; border-radius:4px; cursor:pointer;">📄 PDF Export</button>
-        </div>
-    </div>
-
-    <table class="table table-striped" style="width:100%; border-collapse: collapse; background:#fff;">
-        <thead style="background:#343a40; color:#fff;">
-            <tr>
-                <th style="padding:10px; border:1px solid #dee2e6;">Spind</th>
-                <th style="padding:10px; border:1px solid #dee2e6;">Name</th>
-                <th style="padding:10px; border:1px solid #dee2e6;">Funktion</th>
-                <th style="padding:10px; border:1px solid #dee2e6;">G26.3 Ablauf</th>
-                <th style="padding:10px; border:1px solid #dee2e6;">Qualifikationen</th>
-                <th style="padding:10px; border:1px solid #dee2e6; text-align:center;">Aktionen</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    if (gefiltert.length === 0) {
-        html += `<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">Keine Mitglieder gefunden.</td></tr>`;
+    const dateiname = `Personalliste_FFW_${new Date().toISOString().split('T')[0]}.csv`;
+    if (typeof window.downloadCSV === "function") {
+        window.downloadCSV(dateiname, headers, rows);
     } else {
-        gefiltert.forEach(p => {
-            const name = escapeHtmlPersonal((p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || ''));
-            const quasis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
-            const safeId = escapeHtmlPersonal(p.id);
-
-            const aktionenHTML = kannSchreiben ? `
-                <button title="Bearbeiten" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; background:none; border:none;">✏️</button>
-                <button title="Löschen" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; background:none; border:none;">🗑️</button>
-            ` : `<span style="color:#777;">👁️</span>`;
-
-            html += `
-            <tr style="border-bottom:1px solid #dee2e6;">
-                <td style="padding:8px; border:1px solid #dee2e6;"><strong>${escapeHtmlPersonal(p.spind || '-')}</strong></td>
-                <td style="padding:8px; border:1px solid #dee2e6;"><strong>${name}</strong></td>
-                <td style="padding:8px; border:1px solid #dee2e6;">${escapeHtmlPersonal(p.funktion || '-')}</td>
-                <td style="padding:8px; border:1px solid #dee2e6;">${escapeHtmlPersonal(p.g26Ablauf || '-')}</td>
-                <td style="padding:8px; border:1px solid #dee2e6;">${escapeHtmlPersonal(quasis)}</td>
-                <td style="padding:8px; border:1px solid #dee2e6; text-align:center;">${aktionenHTML}</td>
-            </tr>`;
-        });
+        const csvLines = [headers.join(";")];
+        rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
+        const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = dateiname;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
+}
 
-    html += `</tbody></table>`;
-    container.innerHTML = html;
+function importPersonalCSV(inputOrEvent) {
+    if (!hatPersonalSchreibRecht()) {
+        alert("🔒 Keine Berechtigung zum Importieren.");
+        return;
+    }
+    let inputElement = inputOrEvent && inputOrEvent.target ? inputOrEvent.target : inputOrEvent;
+    const file = (inputElement && inputElement.files) ? inputElement.files[0] : null;
+    if (!file) return;
+
+    const meeresErsetzen = confirm("Bestehende Daten komplett überschreiben?");
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        let text = e.target.result;
+        if (text.startsWith('\uFEFF')) text = text.slice(1);
+        const zeilen = text.split(/\r\n|\n/).map(z => z.trim()).filter(z => z.length > 0);
+        if (zeilen.length < 2) return;
+
+        const delim = zeilen[0].includes(';') ? ';' : ',';
+        let meins = meeresErsetzen ? [] : holePersonalDaten();
+
+        for (let i = 1; i < zeilen.length; i++) {
+            const sp = zeilen[i].split(delim).map(s => s.replace(/^"|"$/g, '').trim());
+            if (!sp[1] && !sp[2] && !sp[3]) continue;
+            meins.push({
+                id: 'PERS_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                spind: sp[1] || sp[0] || '',
+                vorname: sp[2] || '',
+                nachname: sp[3] || sp[2] || 'Unbenannt',
+                funktion: sp[4] || 'Feuerwehrmann',
+                g26Ablauf: sp[5] || '',
+                qualifikationen: sp[6] ? sp[6].split(',').map(q => q.trim()) : []
+            });
+        }
+        speicherePersonalDaten(meins);
+        renderPersonalView();
+        if (inputElement) inputElement.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+function exportPersonalPDF() {
+    if (!hatPersonalLeseRecht()) return;
+    window.print();
 }
 
 // ------------------------------------------
-// EVENT LISTENER & EXPORTE
+// RENDER-LOGIK (Fügt Daten direkt in deine bestehende HTML-Tabelle ein)
+// ------------------------------------------
+
+function renderPersonalView() {
+    const tbody = document.querySelector("#personal-table tbody, table tbody");
+    if (!tbody) return;
+
+    if (!hatPersonalLeseRecht()) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:red;">🔒 Access Denied / Gast-Zugriff verweigert</td></tr>`;
+        return;
+    }
+
+    const meins = holePersonalDaten();
+    const kannSchreiben = hatPersonalSchreibRecht();
+
+    // Event-Handler für den "+ Neues Mitglied" Button verdrahten
+    const neuBtn = document.querySelector("button:contains('Neues Mitglied')") || document.querySelector("button.btn-primary");
+    const allBtns = Array.from(document.querySelectorAll("button"));
+    const buttonAdd = allBtns.find(b => b.textContent.includes("Neues Mitglied"));
+    if (buttonAdd) {
+        buttonAdd.onclick = () => openPersonalModal();
+    }
+
+    if (!meins || meins.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">Keine Personaldaten gefunden. Klicke auf "+ Neues Mitglied".</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    meins.forEach(p => {
+        const fullName = escapeHtmlPersonal((p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || ''));
+        const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
+        const safeId = escapeHtmlPersonal(p.id);
+
+        let g26Badge = '<span style="color:green;">🟢 ' + (p.g26Ablauf || 'Gültig') + '</span>';
+        if (p.g26Ablauf) {
+            const ablaufDatum = new Date(p.g26Ablauf);
+            if (ablaufDatum < new Date()) {
+                g26Badge = '<span style="color:red; font-weight:bold;">🔴 Abgelaufen (' + p.g26Ablauf + ')</span>';
+            }
+        }
+
+        const aktionen = kannSchreiben ? `
+            <button class="btn btn-sm btn-outline-secondary" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; border:1px solid #ccc; background:#fff; padding:2px 6px; border-radius:4px;">✏️</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; border:1px solid #dc3545; background:#fff; color:#dc3545; padding:2px 6px; border-radius:4px;">🗑️</button>
+        ` : '👁️';
+
+        html += `
+        <tr>
+            <td style="padding:10px; font-weight:bold;">${escapeHtmlPersonal(p.spind || '-')}</td>
+            <td style="padding:10px; font-weight:bold;">${fullName}</td>
+            <td style="padding:10px;">${escapeHtmlPersonal(p.funktion || '-')}</td>
+            <td style="padding:10px;"><span style="background:#e8f4fd; padding:3px 8px; border-radius:4px; color:#0056b3;">${escapeHtmlPersonal(p.funktion || 'Mitglied')}</span></td>
+            <td style="padding:10px;">${g26Badge}</td>
+            <td style="padding:10px;">${escapeHtmlPersonal(qualis)}</td>
+            <td style="padding:10px; text-align:center;">${aktionen}</td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+}
+
+// ------------------------------------------
+// INITIALISIERUNG & WINDOW EXPORT
 // ------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
