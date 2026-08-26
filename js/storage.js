@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Speicher & Cloud-Sync (v1.5 Optimiert)
+// FFW Manager - Speicher & Cloud-Sync (v1.6 Korrigiert)
 // ==========================================
 
 // 1. Daten aus dem Speicher laden (Fallback auf LocalStorage)
@@ -16,38 +16,38 @@ function ladeDaten(schluessel) {
 
 // Personal-Helper
 function ladePersonalData() { return ladeDaten('personal'); }
-function speicherePersonalData(daten) { speichereDaten('personal', daten); }
+function speicherePersonalData(daten) { return speichereDaten('personal', daten); }
 
 function speichereMitgliedData(mitglied) {
     let alle = ladePersonalData();
     const index = alle.findIndex(m => String(m.id) === String(mitglied.id));
     if (index >= 0) alle[index] = mitglied;
     else alle.push(mitglied);
-    speicherePersonalData(alle);
+    return speicherePersonalData(alle);
 }
 
 function loescheMitgliedData(id) {
     let alle = ladePersonalData();
     alle = alle.filter(m => String(m.id) !== String(id));
-    speicherePersonalData(alle);
+    return speicherePersonalData(alle);
 }
 
 // PSA-Helper
 function ladePsaData() { return ladeDaten('psa'); }
-function speicherePsaData(daten) { speichereDaten('psa', daten); }
+function speicherePsaData(daten) { return speichereDaten('psa', daten); }
 
 function speicherePsaEintrag(psaItem) {
     let alle = ladePsaData();
     const index = alle.findIndex(p => String(p.id) === String(psaItem.id));
     if (index >= 0) alle[index] = psaItem;
     else alle.push(psaItem);
-    speicherePsaData(alle);
+    return speicherePsaData(alle);
 }
 
 function loeschePsaEintrag(id) {
     let alle = ladePsaData();
     alle = alle.filter(p => String(p.id) !== String(id));
-    speicherePsaData(alle);
+    return speicherePsaData(alle);
 }
 
 // 2. Daten lokal & in Firebase Cloud speichern
@@ -70,6 +70,8 @@ function speichereDaten(schluessel, daten) {
             console.error(`❌ Firebase Speicherfehler bei ${schluessel}:`, err);
         });
     }
+
+    return true; // WICHTIG: Rückgabe für psajs/Verarbeitung
 }
 
 let cloudSyncGestartet = false;
@@ -92,9 +94,9 @@ function starteCloudSync() {
                         const cloudDaten = doc.data().eintraege;
                         const lokaleDaten = ladeDaten(schluessel);
 
-                        // Schutz vor Überschreiben bei leerer Cloud
-                        if (cloudDaten.length === 0 && lokaleDaten.length > 0) {
-                            console.warn(`[Cloud Sync] Cloud-Dokument für ${schluessel} ist leer. Pushe lokale Daten...`);
+                        // Schutz vor Überschreiben: Wenn lokal MEHR Daten sind als in der Cloud, pushen statt überschreiben
+                        if (lokaleDaten.length > cloudDaten.length) {
+                            console.warn(`[Cloud Sync] Lokale Daten für ${schluessel} sind neuer/umfangreicher. Synchronisiere Cloud...`);
                             speichereDaten(schluessel, lokaleDaten);
                             return;
                         }
