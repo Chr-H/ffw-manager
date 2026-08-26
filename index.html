@@ -332,7 +332,7 @@
             </section>
 
            <!-- 4. PSA BEREICH -->
-<section id="seite-psa" class="seite-ansicht" style="display: none;">
+<section id="seite-psa" class="seite-ansicht" style="display: none; padding: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
         <div style="display: flex; gap: 10px;" class="no-print">
@@ -340,40 +340,42 @@
             <button type="button" class="btn btn-secondary" onclick="document.getElementById('importPSAInput').click()">📥 CSV Import</button>
             <input type="file" id="importPSAInput" style="display:none;" accept=".csv" onchange="importPSACSV(this)">
             <button type="button" class="btn btn-secondary" onclick="exportPSACSV()">📊 CSV Export</button>
-            <button type="button" class="btn btn-secondary" onclick="druckeListe('PSA-Bestandsliste', 'psa-container')">🖨️ PSA-Liste drucken / PDF</button>
+            <button type="button" class="btn btn-secondary" onclick="exportPSAPDF()">🖨️ PSA-Liste drucken / PDF</button>
         </div>
     </div>
     
     <!-- Filter- & Suchleiste -->
     <div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <input type="text" id="psa-suche" placeholder="🔍 Suche nach Träger, Spind, Gerät..." style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; flex-grow: 1;">
-        <select id="psa-status-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-            <option value="alle">Alle Status</option>
-            <option value="Aktiv">🟢 Aktiv / Einsatzbereit</option>
-            <option value="Wartung">🟡 In Prüfung / Wartung</option>
-            <option value="Defekt">🔴 Ausgemustert / Defekt</option>
+        <input type="text" id="suchePSA" placeholder="🔍 Suche nach Träger, Spind, Gerät..." oninput="renderPSAView()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; flex-grow: 1;">
+        <select id="filterPSAStatus" onchange="renderPSAView()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="">Alle Status</option>
+            <option value="ok">🟢 Aktiv / In Ordnung</option>
+            <option value="fällig">🟡 Prüfung fällig</option>
+            <option value="defekt">🔴 Ausgemustert / Defekt</option>
         </select>
     </div>
 
     <!-- Umschließender Container für Rechtesteuerung & Tabelle -->
     <div id="psa-container">
         <div id="psa-tabelle-bereich" class="table-responsive">
-            <table class="geraete-tabelle" style="width:100%;">
-                <thead>
+            <table class="table table-striped table-hover geraete-tabelle" style="width:100%; border-collapse: collapse; background: white;">
+                <thead style="background: #b30000; color: white;">
                     <tr>
-                        <th class="no-print">Aktionen</th>
-                        <th>Spind</th>
-                        <th>Träger</th>
-                        <th>Hersteller</th>
-                        <th>Typ</th>
-                        <th>Ausrüstung / Bezeichn.</th>
-                        <th>Größe</th>
-                        <th>Zubehör</th>
-                        <th>Inv.- / Serien-Nr.</th>
-                        <th>Nächste Prüfung</th>
+                        <th class="no-print" style="padding: 10px; text-align: center;">Aktionen</th>
+                        <th style="padding: 10px;">Spind</th>
+                        <th style="padding: 10px;">Träger</th>
+                        <th style="padding: 10px;">Hersteller</th>
+                        <th style="padding: 10px;">Typ</th>
+                        <th style="padding: 10px;">Ausrüstung / Bezeichn.</th>
+                        <th style="padding: 10px;">Größe</th>
+                        <th style="padding: 10px;">Zubehör</th>
+                        <th style="padding: 10px;">Inv.- / Serien-Nr.</th>
+                        <th style="padding: 10px;">Nächste Prüfung</th>
                     </tr>
                 </thead>
-                <tbody id="psa-tabelle-body"></tbody>
+                <tbody id="psa-table-body">
+                    <!-- JS befüllt diese Zeilen sauber und stabil -->
+                </tbody>
             </table>
         </div>
     </div>
