@@ -54,31 +54,35 @@ function loeschePsaEintrag(id) {
 function ladeFahrzeugeData() { return ladeDaten('fahrzeuge'); }
 function speichereFahrzeugeData(daten) { return speichereDaten('fahrzeuge', daten); }
 
-// 2. Daten lokal & in Firebase Cloud speichern
+// 2. Daten lokal & in Firebase Cloud speichern (Robuste Version)
 function speichereDaten(schluessel, daten) {
     const bereinigteDaten = Array.isArray(daten) ? daten : [];
     
     // 1. IMMER sofort im Browser speichern
     localStorage.setItem('ffw_' + schluessel, JSON.stringify(bereinigteDaten));
 
-    // 2. In Firebase Cloud speichern mit hartem Fallback-Check
-    if (typeof window.db !== 'undefined' && window.db !== null) {
-        window.db.collection('ffw_data').doc(schluessel).set({
-            eintraege: bereinigteDaten,
-            aktualisiertAm: new Date().toISOString()
-        })
-        .then(() => {
-            console.log(`[Cloud Sync] ${schluessel} erfolgreich in Firebase gespeichert.`);
-        })
-        .catch(err => {
-            console.error(`❌ Firebase Speicherfehler bei ${schluessel}:`, err);
-            alert("Firebase-Fehler beim Speichern: " + err.message);
-        });
-    } else {
-        console.warn("⚠️ ACHTUNG: window.db ist nicht definiert! Daten wurden nur lokal gespeichert.");
-        alert("Achtung: Keine Verbindung zur Cloud (window.db fehlt). Daten werden nach dem Neuladen weg sein!");
-    }
+    // 2. In Firebase speichern mit automatischer Wartefunktion, falls db noch lädt
+    const versucheSpeichern = (versuch = 1) => {
+        if (typeof window.db !== 'undefined' && window.db !== null) {
+            window.db.collection('ffw_data').doc(schluessel).set({
+                eintraege: bereinigteDaten,
+                aktualisiertAm: new Date().toISOString()
+            })
+            .then(() => {
+                console.log(`[Cloud Sync] ${schluessel} erfolgreich in Firebase gespeichert.`);
+            })
+            .catch(err => {
+                console.error(`❌ Firebase Speicherfehler bei ${schluessel}:`, err);
+            });
+        } else if (versuch < 5) {
+            // Falls Firebase noch nicht geladen ist, 0.5 Sekunden warten und nochmal versuchen
+            setTimeout(() => versucheSpeichern(versuch + 1), 500);
+        } else {
+            console.error(`❌ Konnte ${schluessel} nicht in Firebase speichern: window.db ist nicht verfügbar.`);
+        }
+    };
 
+    versucheSpeichern();
     return true;
 }
 
