@@ -274,54 +274,36 @@ function exportPersonalPDF() {
 // ------------------------------------------
 
 function renderPersonalView() {
-    // 1. Richtige ID aus dem HTML verwenden
-    const tbody = document.getElementById("personal-tabelle-body") || document.getElementById("personal-dynamic-list");
+    // 1. Sucht exakt die ID aus deiner index.html
+    const tbody = document.getElementById("personal-tabelle-body");
     if (!tbody) return;
 
-    // 2. Rechte-Prüfung & Button-Sichtbarkeit
+    // 2. Gast-Prüfung
     const rolle = (localStorage.getItem("userRole") || localStorage.getItem("rolle") || "GAST").toUpperCase();
     const istGast = (rolle === "GAST");
 
-    // "➕ Neues Mitglied"-Button und Export-Buttons für Gäste verstecken
-    document.querySelectorAll("button[onclick*='MitgliedModal'], button[onclick*='Personal'], button[onclick*='exportPersonal']")
-        .forEach(btn => btn.style.display = istGast ? "none" : "inline-block");
-
-    // Gast-Sperre als Tabellenzeile anzeigen
     if (istGast) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#dc3545; font-weight:bold;">🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, die Personaldaten einzusehen.</td></tr>`;
         return;
     }
 
     // 3. Daten laden
-    const meins = holePersonalDaten();
-    const kannSchreiben = (typeof hatPersonalSchreibRecht === 'function') ? hatPersonalSchreibRecht() : !istGast;
+    const meins = typeof holePersonalDaten === 'function' ? holePersonalDaten() : [];
 
     if (!meins || meins.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">Keine Personaldaten vorhanden. Klicke oben auf <strong>"+ Neues Mitglied"</strong>.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">Keine Personaldaten vorhanden.</td></tr>`;
         return;
     }
 
-    // 4. Daten als saubere <tr> / <td> Zeilen rendern
+    // 4. Als echte Tabellenzeilen (<tr>/<td>) rendern
     tbody.innerHTML = meins.map(p => {
-        const fullName = typeof escapeHtmlPersonal === 'function' 
-            ? escapeHtmlPersonal((p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || ''))
-            : (p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || '');
-
+        const fullName = (p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || '');
         const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
-        const safeId = p.id;
 
         let g26Badge = '<span style="color:#28a745; font-weight:bold;">🟢 Gültig</span>';
-        if (p.g26Ablauf) {
-            const ablaufDatum = new Date(p.g26Ablauf);
-            if (ablaufDatum < new Date()) {
-                g26Badge = '<span style="color:#dc3545; font-weight:bold;">🔴 Abgelaufen</span>';
-            }
+        if (p.g26Ablauf && new Date(p.g26Ablauf) < new Date()) {
+            g26Badge = '<span style="color:#dc3545; font-weight:bold;">🔴 Abgelaufen</span>';
         }
-
-        const aktionen = kannSchreiben ? `
-            <button title="Bearbeiten" onclick="openPersonalModal('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px; margin-right:5px;">✏️</button>
-            <button title="Löschen" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:4px 8px; border-radius:4px;">🗑️</button>
-        ` : '👁️';
 
         return `
         <tr>
@@ -330,10 +312,15 @@ function renderPersonalView() {
             <td style="padding:10px;">${p.funktion || '-'}</td>
             <td style="padding:10px;">${g26Badge}</td>
             <td style="padding:10px; color:#555;">${qualis}</td>
-            <td class="no-print" style="padding:10px; text-align:right;">${aktionen}</td>
+            <td class="no-print" style="padding:10px; text-align:right;">
+                <button title="Bearbeiten" onclick="oeffneMitgliedModal('${p.id}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px;">✏️</button>
+                <button title="Löschen" onclick="loeschePersonalItem('${p.id}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:4px 8px; border-radius:4px;">🗑️</button>
+            </td>
         </tr>`;
     }).join('');
 }
+
+
 // ------------------------------------------
 // INITIALISIERUNG
 // ------------------------------------------
