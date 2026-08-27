@@ -57,74 +57,24 @@ function renderFahrzeugeView() {
     });
 }
 
-// 2. Neues Fahrzeug speichern oder bestehendes aktualisieren
-function neuesFahrzeugSpeichern() {
-    const funkruf = document.getElementById('fz-funkruf')?.value.trim();
-    const kennzeichen = document.getElementById('fz-kennzeichen')?.value.trim();
-    const typ = document.getElementById('fz-typ')?.value.trim();
-    const baujahr = document.getElementById('fz-baujahr')?.value;
-    const tuev = document.getElementById('fz-tuev')?.value;
-    const sp = document.getElementById('fz-sp')?.value;
-    const status = document.getElementById('fz-status')?.value || 'Einsatzbereit';
+function bearbeiteFahrzeug(id) {
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const f = fahrzeuge.find(x => String(x.id) === String(id));
+    if (!f) return;
 
-    if (!funkruf && !typ) {
-        alert('Bitte mindestens einen Funkrufnamen oder Fahrzeugtyp eingeben!');
-        return;
+    // ID zum Bearbeiten im Formular-Feld hinterlegen
+    const funkrufEl = document.getElementById('fz-funkruf');
+    if (funkrufEl) {
+        funkrufEl.value = f.callSign || f.name || '';
+        funkrufEl.dataset.editId = f.id;
     }
 
-    let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-
-    // Prüfen, ob wir uns im Bearbeiten-Modus befinden
-    if (aktuellesFahrzeugId) {
-        const idx = fahrzeuge.findIndex(x => x.id === aktuellesFahrzeugId);
-        if (idx !== -1) {
-            fahrzeuge[idx] = {
-                ...fahrzeuge[idx],
-                callSign: funkruf,
-                name: funkruf || typ,
-                kennzeichen: kennzeichen,
-                licensePlate: kennzeichen,
-                typ: typ,
-                baujahr: baujahr,
-                tuev: tuev,
-                nextHU: tuev,
-                sp: sp,
-                nextSP: sp,
-                status: status
-            };
-        }
-    } else {
-        // Neu anlegen mit eindeutiger UUID-Kombination
-        const neuesFahrzeug = {
-            id: 'VEH-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-            callSign: funkruf,
-            name: funkruf || typ,
-            kennzeichen: kennzeichen,
-            licensePlate: kennzeichen,
-            typ: typ,
-            baujahr: baujahr,
-            tuev: tuev,
-            nextHU: tuev,
-            sp: sp,
-            nextSP: sp,
-            status: status,
-            historie: []
-        };
-        fahrzeuge.push(neuesFahrzeug);
-        aktuellesFahrzeugId = neuesFahrzeug.id;
-    }
-
-    speichereUndSynchronisiere(fahrzeuge);
-
-    // Formular leeren
-    ['fz-funkruf', 'fz-kennzeichen', 'fz-typ', 'fz-baujahr', 'fz-tuev', 'fz-sp'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-
-    renderFahrzeugeView();
-    if (aktuellesFahrzeugId) oeffneFahrzeugAkte(aktuellesFahrzeugId);
-    if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
+    if (document.getElementById('fz-kennzeichen')) document.getElementById('fz-kennzeichen').value = f.licensePlate || f.kennzeichen || '';
+    if (document.getElementById('fz-typ')) document.getElementById('fz-typ').value = f.typ || '';
+    if (document.getElementById('fz-baujahr')) document.getElementById('fz-baujahr').value = f.baujahr || '';
+    if (document.getElementById('fz-tuev')) document.getElementById('fz-tuev').value = f.nextHU || f.tuev || '';
+    if (document.getElementById('fz-sp')) document.getElementById('fz-sp').value = f.nextSP || f.sp || '';
+    if (document.getElementById('fz-status')) document.getElementById('fz-status').value = f.status || 'Einsatzbereit';
 }
 
 // Fahrzeug in Formular laden zum Bearbeiten
