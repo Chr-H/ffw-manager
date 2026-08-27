@@ -274,28 +274,40 @@ function exportPersonalPDF() {
 // ------------------------------------------
 
 function renderPersonalView() {
-    // 1. Sucht exakt die ID aus deiner index.html
     const tbody = document.getElementById("personal-tabelle-body");
     if (!tbody) return;
 
-    // 2. Gast-Prüfung
-    const rolle = (localStorage.getItem("userRole") || localStorage.getItem("rolle") || "GAST").toUpperCase();
-    const istGast = (rolle === "GAST");
+    // 1. Rolle genauso dynamisch & sicher auslesen wie im PSA-Modul
+    let rolle = 'gast';
+    try {
+        const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user') || '{}');
+        rolle = (localStorage.getItem('ffw_aktive_rolle') || localStorage.getItem('userRole') || localStorage.getItem('rolle') || user.rolle || 'gast').toLowerCase().trim();
+    } catch (e) {
+        rolle = 'gast';
+    }
 
+    const istGast = (rolle === 'gast');
+    const kannSchreiben = ['editor', 'admin'].includes(rolle);
+
+    // 2. Buttons verbergen / anzeigen
+    const neuBtn = document.querySelector("button[onclick*='MitgliedModal']");
+    if (neuBtn) neuBtn.style.display = kannSchreiben ? "inline-block" : "none";
+
+    // 3. Gast-Sperre anzeigen (NUR wenn wirklich Gast!)
     if (istGast) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#dc3545; font-weight:bold;">🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, die Personaldaten einzusehen.</td></tr>`;
         return;
     }
 
-    // 3. Daten laden
-    const meins = typeof holePersonalDaten === 'function' ? holePersonalDaten() : [];
+    // 4. Daten laden
+    const meins = (typeof holePersonalDaten === 'function') ? holePersonalDaten() : [];
 
     if (!meins || meins.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">Keine Personaldaten vorhanden.</td></tr>`;
         return;
     }
 
-    // 4. Als echte Tabellenzeilen (<tr>/<td>) rendern
+    // 5. Tabelle rendern
     tbody.innerHTML = meins.map(p => {
         const fullName = (p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || '');
         const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
@@ -305,6 +317,11 @@ function renderPersonalView() {
             g26Badge = '<span style="color:#dc3545; font-weight:bold;">🔴 Abgelaufen</span>';
         }
 
+        const aktionen = kannSchreiben ? `
+            <button title="Bearbeiten" onclick="oeffneMitgliedModal('${p.id}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px;">✏️</button>
+            <button title="Löschen" onclick="loeschePersonalItem('${p.id}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:4px 8px; border-radius:4px;">🗑️</button>
+        ` : '👁️';
+
         return `
         <tr>
             <td style="padding:10px; font-weight:bold;">${p.spind || '-'}</td>
@@ -312,14 +329,10 @@ function renderPersonalView() {
             <td style="padding:10px;">${p.funktion || '-'}</td>
             <td style="padding:10px;">${g26Badge}</td>
             <td style="padding:10px; color:#555;">${qualis}</td>
-            <td class="no-print" style="padding:10px; text-align:right;">
-                <button title="Bearbeiten" onclick="oeffneMitgliedModal('${p.id}')" style="cursor:pointer; background:#fff; border:1px solid #ccc; padding:4px 8px; border-radius:4px;">✏️</button>
-                <button title="Löschen" onclick="loeschePersonalItem('${p.id}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:4px 8px; border-radius:4px;">🗑️</button>
-            </td>
+            <td class="no-print" style="padding:10px; text-align:right;">${aktionen}</td>
         </tr>`;
     }).join('');
 }
-
 
 // ------------------------------------------
 // INITIALISIERUNG
