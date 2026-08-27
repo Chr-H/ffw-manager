@@ -11,10 +11,6 @@ function speichereUndSynchronisiere(fahrzeuge) {
     } else {
         localStorage.setItem('ffw_fahrzeuge', JSON.stringify(fahrzeuge));
     }
-    // Triggert den Sync in storage.js, damit Cloud-Daten nicht veralten
-    if (typeof syncToCloud === 'function') {
-        syncToCloud('fahrzeuge', fahrzeuge);
-    }
 }
 
 // 1. Tabelle auf der linken Seite rendern
@@ -25,13 +21,12 @@ function renderFahrzeugeView() {
     const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
     tbody.innerHTML = '';
 
-    if (fahrzeuge.length === 0) {
+    if (!Array.isArray(fahrzeuge) || fahrzeuge.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">Keine Fahrzeuge vorhanden.</td></tr>`;
         return;
     }
 
     fahrzeuge.forEach(f => {
-        // Falls Alt-Daten keine ID hatten, nachträglich vergeben
         if (!f.id) f.id = 'VEH-' + Math.random().toString(36).substr(2, 9);
 
         const tr = document.createElement('tr');
@@ -57,12 +52,104 @@ function renderFahrzeugeView() {
     });
 }
 
+// 2. Neues Fahrzeug speichern oder bestehendes aktualisieren
+function neuesFahrzeugSpeichern() {
+    try {
+        const funkrufInput = document.getElementById('fz-funkruf');
+        const kennzeichenInput = document.getElementById('fz-kennzeichen');
+        const typInput = document.getElementById('fz-typ');
+        const baujahrInput = document.getElementById('fz-baujahr');
+        const tuevInput = document.getElementById('fz-tuev');
+        const spInput = document.getElementById('fz-sp');
+        const statusInput = document.getElementById('fz-status');
+
+        const funkruf = funkrufInput ? funkrufInput.value.trim() : '';
+        const kennzeichen = kennzeichenInput ? kennzeichenInput.value.trim() : '';
+        const typ = typInput ? typInput.value.trim() : '';
+        const baujahr = baujahrInput ? baujahrInput.value : '';
+        const tuev = tuevInput ? tuevInput.value : '';
+        const sp = spInput ? spInput.value : '';
+        const status = statusInput ? statusInput.value : 'Einsatzbereit';
+
+        if (!funkruf && !typ) {
+            alert('Bitte mindestens einen Funkrufnamen oder Fahrzeugtyp eingeben!');
+            return;
+        }
+
+        let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+        if (!Array.isArray(fahrzeuge)) fahrzeuge = [];
+
+        const editId = funkrufInput ? funkrufInput.dataset.editId : null;
+
+        if (editId) {
+            // Bearbeiten
+            const idx = fahrzeuge.findIndex(x => String(x.id) === String(editId));
+            if (idx !== -1) {
+                fahrzeuge[idx] = {
+                    ...fahrzeuge[idx],
+                    callSign: funkruf,
+                    name: funkruf || typ,
+                    kennzeichen: kennzeichen,
+                    licensePlate: kennzeichen,
+                    typ: typ,
+                    baujahr: baujahr,
+                    tuev: tuev,
+                    nextHU: tuev,
+                    sp: sp,
+                    nextSP: sp,
+                    status: status
+                };
+            }
+            if (funkrufInput) delete funkrufInput.dataset.editId;
+        } else {
+            // Neu anlegen
+            const neuesFahrzeug = {
+                id: 'VEH-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                callSign: funkruf,
+                name: funkruf || typ,
+                kennzeichen: kennzeichen,
+                licensePlate: kennzeichen,
+                typ: typ,
+                baujahr: baujahr,
+                tuev: tuev,
+                nextHU: tuev,
+                sp: sp,
+                nextSP: sp,
+                status: status,
+                historie: []
+            };
+            fahrzeuge.push(neuesFahrzeug);
+            aktuellesFahrzeugId = neuesFahrzeug.id;
+        }
+
+        // Speichern & Synchronisieren
+        speichereUndSynchronisiere(fahrzeuge);
+
+        // Formular leeren
+        if (funkrufInput) funkrufInput.value = '';
+        if (kennzeichenInput) kennzeichenInput.value = '';
+        if (typInput) typInput.value = '';
+        if (baujahrInput) baujahrInput.value = '';
+        if (tuevInput) tuevInput.value = '';
+        if (spInput) spInput.value = '';
+        if (statusInput) statusInput.value = 'Einsatzbereit';
+
+        renderFahrzeugeView();
+        if (aktuellesFahrzeugId) oeffneFahrzeugAkte(aktuellesFahrzeugId);
+        if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
+
+    } catch (err) {
+        alert('Fehler beim Speichern: ' + err.message);
+        console.error(err);
+    }
+}
+
+// Fahrzeug in Formular laden zum Bearbeiten
 function bearbeiteFahrzeug(id) {
     const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
     const f = fahrzeuge.find(x => String(x.id) === String(id));
     if (!f) return;
 
-    // ID zum Bearbeiten im Formular-Feld hinterlegen
     const funkrufEl = document.getElementById('fz-funkruf');
     if (funkrufEl) {
         funkrufEl.value = f.callSign || f.name || '';
@@ -77,24 +164,7 @@ function bearbeiteFahrzeug(id) {
     if (document.getElementById('fz-status')) document.getElementById('fz-status').value = f.status || 'Einsatzbereit';
 }
 
-// Fahrzeug in Formular laden zum Bearbeiten
-function bearbeiteFahrzeug(id) {
-    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-    const f = fahrzeuge.find(x => x.id === id);
-    if (!f) return;
-
-    aktuellesFahrzeugId = f.id;
-
-    if (document.getElementById('fz-funkruf')) document.getElementById('fz-funkruf').value = f.callSign || f.name || '';
-    if (document.getElementById('fz-kennzeichen')) document.getElementById('fz-kennzeichen').value = f.licensePlate || f.kennzeichen || '';
-    if (document.getElementById('fz-typ')) document.getElementById('fz-typ').value = f.typ || '';
-    if (document.getElementById('fz-baujahr')) document.getElementById('fz-baujahr').value = f.baujahr || '';
-    if (document.getElementById('fz-tuev')) document.getElementById('fz-tuev').value = f.nextHU || f.tuev || '';
-    if (document.getElementById('fz-sp')) document.getElementById('fz-sp').value = f.nextSP || f.sp || '';
-    if (document.getElementById('fz-status')) document.getElementById('fz-status').value = f.status || 'Einsatzbereit';
-}
-
-// 3. Fahrzeugakte öffnen & Template befüllen
+// 3. Fahrzeugakte öffnen
 function oeffneFahrzeugAkte(id) {
     aktuellesFahrzeugId = id;
     const container = document.getElementById('fahrzeugAkteContainer');
@@ -102,7 +172,7 @@ function oeffneFahrzeugAkte(id) {
     if (!container || !template) return;
 
     const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-    const f = fahrzeuge.find(x => x.id === id);
+    const f = fahrzeuge.find(x => String(x.id) === String(id));
 
     if (!f) {
         container.innerHTML = `<h2>📋 Fahrzeugakte</h2><p style="color:#777;">Fahrzeug nicht gefunden.</p>`;
@@ -121,7 +191,7 @@ function oeffneFahrzeugAkte(id) {
     renderHistorieListe(f);
 }
 
-// 4. Geräteraum-Ausrüstung filtern (Klick auf Grafik)
+// 4. Geräteraum-Ausrüstung filtern
 function zeigeGeraeteAusRaum(raumKuerzel) {
     if (!aktuellesFahrzeugId) {
         alert("Bitte zuerst ein Fahrzeug auswählen.");
@@ -129,7 +199,7 @@ function zeigeGeraeteAusRaum(raumKuerzel) {
     }
 
     const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-    const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
+    const f = fahrzeuge.find(x => String(x.id) === String(aktuellesFahrzeugId));
     const fzgName = f ? (f.callSign || f.name) : "";
 
     const alleGeraete = typeof ladeDaten === 'function' ? ladeDaten('geraete') : [];
@@ -168,7 +238,7 @@ function speichereHistorieEintrag() {
     }
 
     let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-    const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
+    const f = fahrzeuge.find(x => String(x.id) === String(aktuellesFahrzeugId));
 
     if (f) {
         if (!f.historie) f.historie = [];
@@ -184,9 +254,9 @@ function speichereHistorieEintrag() {
 
         speichereUndSynchronisiere(fahrzeuge);
 
-        document.getElementById('hist-titel').value = '';
-        document.getElementById('hist-beschreibung').value = '';
-        document.getElementById('hist-kosten').value = '';
+        if (document.getElementById('hist-titel')) document.getElementById('hist-titel').value = '';
+        if (document.getElementById('hist-beschreibung')) document.getElementById('hist-beschreibung').value = '';
+        if (document.getElementById('hist-kosten')) document.getElementById('hist-kosten').value = '';
 
         renderHistorieListe(f);
     }
@@ -220,7 +290,7 @@ function loescheHistorieEintrag(index) {
     if (!aktuellesFahrzeugId) return;
 
     let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-    const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
+    const f = fahrzeuge.find(x => String(x.id) === String(aktuellesFahrzeugId));
 
     if (f && f.historie && f.historie[index]) {
         f.historie.splice(index, 1);
@@ -233,7 +303,7 @@ function loescheHistorieEintrag(index) {
 function loescheFahrzeug(id) {
     if (confirm('Möchtest du dieses Fahrzeug wirklich löschen?')) {
         let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-        fahrzeuge = fahrzeuge.filter(x => x.id !== id);
+        fahrzeuge = fahrzeuge.filter(x => String(x.id) !== String(id));
 
         speichereUndSynchronisiere(fahrzeuge);
 
@@ -345,33 +415,31 @@ function importFahrzeugeCSV(inputOrEvent) {
 }
 
 function exportFahrzeugHistorieCSV(fahrzeugId) {
-    const daten = typeof holeFahrzeugDaten === "function" ? holeFahrzeugDaten() : (ladeDaten("fahrzeuge") || []);
-    const fahrzeug = daten.find(f => f.id === fahrzeugId);
+    const daten = typeof ladeDaten === 'function' ? ladeDaten("fahrzeuge") : [];
+    const fahrzeug = daten.find(f => String(f.id) === String(fahrzeugId));
 
     if (!fahrzeug) {
         alert("⚠️ Fahrzeug nicht gefunden.");
         return;
     }
 
-    const historie = fahrzeug.historie || fahrzeug.reparaturen || fahrzeug.wartungen || [];
+    const historie = fahrzeug.historie || [];
 
     if (!Array.isArray(historie) || historie.length === 0) {
-        alert("⚠️ Keine Historie/Reparaturen für dieses Fahrzeug vorhanden.");
+        alert("⚠️ Keine Historie für dieses Fahrzeug vorhanden.");
         return;
     }
 
-    const headers = ["Datum", "Kategorie / Typ", "Beschreibung / Maßnahme", "Durchgeführt von / Werkstatt", "Kosten (€)", "Kilometerstand", "Status"];
+    const headers = ["Datum", "Kategorie / Typ", "Titel", "Beschreibung", "Kosten (€)"];
     const rows = historie.map(h => [
         h.datum || '',
-        h.typ || h.kategorie || 'Reparatur',
-        h.beschreibung || h.tätigkeit || '',
-        h.werkstatt || h.durchgefuehrtVon || '',
-        h.kosten || '0',
-        h.kmStand || h.kilometer || '',
-        h.status || 'Erledigt'
+        h.typ || 'Sonstiges',
+        h.titel || '',
+        h.beschreibung || '',
+        h.kosten || '0'
     ]);
 
-    const fzgName = (fahrzeug.name || fahrzeug.funkrufname || 'Fahrzeug').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fzgName = (fahrzeug.name || fahrzeug.callSign || 'Fahrzeug').replace(/[^a-zA-Z0-9_-]/g, '_');
     const heute = new Date().toISOString().split('T')[0];
     const dateiname = `Akte_${fzgName}_Historie_${heute}.csv`;
 
@@ -394,15 +462,15 @@ function exportFahrzeugHistorieCSV(fahrzeugId) {
 }
 
 function druckeEinzelFahrzeugAkte(fahrzeugId) {
-    const daten = typeof holeFahrzeugDaten === "function" ? holeFahrzeugDaten() : (ladeDaten("fahrzeuge") || []);
-    const f = daten.find(item => item.id === fahrzeugId);
+    const daten = typeof ladeDaten === 'function' ? ladeDaten("fahrzeuge") : [];
+    const f = daten.find(item => String(item.id) === String(fahrzeugId));
 
     if (!f) {
         alert("⚠️ Fahrzeugakte nicht gefunden.");
         return;
     }
 
-    const historie = f.historie || f.reparaturen || f.wartungen || [];
+    const historie = f.historie || [];
     const heute = new Date().toLocaleDateString('de-DE');
 
     let historieHtml = '';
