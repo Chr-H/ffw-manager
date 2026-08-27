@@ -376,8 +376,12 @@ function setTileValue(elementId, text) {
 
 document.addEventListener('DOMContentLoaded', () => {
     aktualisiereDashboard();
+    
+    // Cloud-Sync beim Start der Anwendung initialisieren
+    if (typeof starteCloudSync === 'function') {
+        starteCloudSync();
+    }
 });
-
 
 // ==========================================
 // Modul: Zulassung beantragen
