@@ -286,7 +286,7 @@ function renderPersonalView() {
     const pdfExportBtn = allBtns.find(b => b.textContent.includes("PDF Export"));
     if (pdfExportBtn) pdfExportBtn.onclick = () => exportPersonalPDF();
 
-    // 2. Daten-Container finden oder erstellen
+   // 2. Daten-Container finden oder erstellen
     let listContainer = document.getElementById("personal-dynamic-list");
     
     if (!listContainer) {
@@ -294,18 +294,9 @@ function renderPersonalView() {
         listContainer.id = "personal-dynamic-list";
         listContainer.style.marginTop = "10px";
         
-        // Suche nach den Spaltenüberschriften (Spind, Name, Funktion...)
-        const headerRow = Array.from(document.querySelectorAll("div, span, p")).find(el => 
-            el.textContent.includes("Spind") && el.textContent.includes("Aktionen") && el.children.length > 0
-        );
-
-        if (headerRow) {
-            headerRow.after(listContainer);
-        } else {
-            // Fallback: Einfach unter die Toolbar/Button-Zeile hängen
-            const toolbar = document.querySelector("input[placeholder*='Suche']")?.parentElement?.parentElement || document.body;
-            toolbar.appendChild(listContainer);
-        }
+        // Fügt den Container direkt in den Haupt-Inhaltsbereich ein
+        const mainContent = document.querySelector(".main-content") || document.querySelector("main") || document.body;
+        mainContent.appendChild(listContainer);
     }
 
     if (!hatPersonalLeseRecht()) {
