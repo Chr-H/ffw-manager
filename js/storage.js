@@ -61,19 +61,22 @@ function speichereDaten(schluessel, daten) {
     // 1. IMMER sofort im Browser speichern
     localStorage.setItem('ffw_' + schluessel, JSON.stringify(bereinigteDaten));
 
-    // 2. In Firebase Cloud speichern (falls verknüpft)
+    // 2. In Firebase Cloud speichern mit hartem Fallback-Check
     if (typeof window.db !== 'undefined' && window.db !== null) {
         window.db.collection('ffw_data').doc(schluessel).set({
             eintraege: bereinigteDaten,
             aktualisiertAm: new Date().toISOString()
         })
         .then(() => {
-            console.log(`[Cloud Sync] ${schluessel} erfolgreich hochgeladen.`);
+            console.log(`[Cloud Sync] ${schluessel} erfolgreich in Firebase gespeichert.`);
         })
         .catch(err => {
             console.error(`❌ Firebase Speicherfehler bei ${schluessel}:`, err);
-            alert("Fehler beim Cloud-Speichern: " + err.message); // <--- Das fängt den Fehler ab!
+            alert("Firebase-Fehler beim Speichern: " + err.message);
         });
+    } else {
+        console.warn("⚠️ ACHTUNG: window.db ist nicht definiert! Daten wurden nur lokal gespeichert.");
+        alert("Achtung: Keine Verbindung zur Cloud (window.db fehlt). Daten werden nach dem Neuladen weg sein!");
     }
 
     return true;
