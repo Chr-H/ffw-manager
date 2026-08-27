@@ -296,9 +296,20 @@ function renderPersonalView() {
         listContainer.id = "personal-dynamic-list";
         listContainer.style.marginTop = "10px";
         
-        // Fügt den Container direkt in den Haupt-Inhaltsbereich ein
-        const mainContent = document.querySelector(".main-content") || document.querySelector("main") || document.body;
-        mainContent.appendChild(listContainer);
+        // Versucht das spezifische Personal-Tab/View zu finden
+        const personalView = document.getElementById("personal") || document.getElementById("personalView") || document.querySelector(".personal-section");
+        
+        if (personalView) {
+            personalView.appendChild(listContainer);
+        } else {
+            // Fallback: An das Elternelement der Spaltenüberschriften im Personalbereich hängen
+            const headerRow = Array.from(document.querySelectorAll("div, span, p")).find(el => 
+                el.textContent.includes("Spind") && el.textContent.includes("Aktionen") && el.children.length > 0
+            );
+            if (headerRow && headerRow.parentElement) {
+                headerRow.parentElement.appendChild(listContainer);
+            }
+        }
     }
 
     if (!hatPersonalLeseRecht()) {
