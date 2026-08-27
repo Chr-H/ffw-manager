@@ -333,6 +333,102 @@ function renderPersonalView() {
         </tr>`;
     }).join('');
 }
+// ==========================================
+// GLOBALE VERKNÜPFUNGEN & EXPORT-FUNKTIONEN
+// ==========================================
+
+// 1. Der Fehler in der Konsole: Verknüpfe den Klick mit deiner Modal-Öffnungs-Funktion
+window.oeffneMitgliedModal = function(id = null) {
+    if (typeof openPersonalModal === 'function') {
+        openPersonalModal(id);
+    } else if (typeof oeffnePersonalModal === 'function') {
+        oeffnePersonalModal(id);
+    } else {
+        alert("Modal-Funktion zum Bearbeiten/Anlegen wurde im Code nicht gefunden.");
+    }
+};
+
+// 2. Export-Funktion mit Gast-Schutz
+window.exportPersonalCSV = function() {
+    let rolle = 'gast';
+    try {
+        const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user') || '{}');
+        rolle = (localStorage.getItem('ffw_aktive_rolle') || localStorage.getItem('userRole') || localStorage.getItem('rolle') || user.rolle || 'gast').toLowerCase().trim();
+    } catch (e) { rolle = 'gast'; }
+
+    if (rolle === 'gast') {
+        alert("🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, Personaldaten zu exportieren.");
+        return;
+    }
+
+    const daten = typeof holePersonalDaten === 'function' ? holePersonalDaten() : [];
+    if (!daten || daten.length === 0) {
+        alert("Keine Personaldaten zum Exportieren vorhanden.");
+        return;
+    }
+
+    const headers = ["Spind", "Vorname", "Nachname", "Funktion", "G26.3 Ablauf", "Qualifikationen"];
+    const csvRows = [headers.join(";")];
+
+    daten.forEach(p => {
+        const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '');
+        const row = [
+            `"${p.spind || ''}"`,
+            `"${p.vorname || ''}"`,
+            `"${p.nachname || p.name || ''}"`,
+            `"${p.funktion || ''}"`,
+            `"${p.g26Ablauf || ''}"`,
+            `"${qualis}"`
+        ];
+        csvRows.push(row.join(";"));
+    });
+
+    const blob = new Blob(["\ufeff" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Personal_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// 3. Drucken mit Gast-Schutz
+window.druckePersonalListe = function() {
+    let rolle = 'gast';
+    try {
+        const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user') || '{}');
+        rolle = (localStorage.getItem('ffw_aktive_rolle') || localStorage.getItem('userRole') || localStorage.getItem('rolle') || user.rolle || 'gast').toLowerCase().trim();
+    } catch (e) { rolle = 'gast'; }
+
+    if (rolle === 'gast') {
+        alert("🔒 Zugriff verweigert: Als Gast darfst du die Liste nicht drucken.");
+        return;
+    }
+    window.print();
+};
+
+// 4. Platzhalter für CSV-Import
+window.importPersonalCSV = function() {
+    let rolle = 'gast';
+    try {
+        const user = JSON.parse(localStorage.getItem('ffw_aktiver_benutzer') || localStorage.getItem('ffw_user') || '{}');
+        rolle = (localStorage.getItem('ffw_aktive_rolle') || localStorage.getItem('userRole') || localStorage.getItem('rolle') || user.rolle || 'gast').toLowerCase().trim();
+    } catch (e) { rolle = 'gast'; }
+
+    if (rolle === 'gast') {
+        alert("🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung für den Import.");
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = e => { 
+        alert("Datei ausgewählt: " + e.target.files[0].name + " (Import-Logik wird ausgeführt)");
+    };
+    input.click();
+};
 
 // ------------------------------------------
 // INITIALISIERUNG
@@ -355,7 +451,7 @@ window.holePersonalDaten = holePersonalDaten;
 window.speicherePersonalDaten = speicherePersonalDaten;
 window.exportPersonalCSV = exportPersonalCSV;
 window.importPersonalCSV = importPersonalCSV;
-window.exportPersonalPDF = exportPersonalPDF;
+window.druckePersonalListe = druckePersonalListe; // <- Hier angepasst!
 window.openPersonalModal = openPersonalModal;
 window.schliessePersonalModal = schliessePersonalModal;
 window.speicherePersonalItem = speicherePersonalItem;

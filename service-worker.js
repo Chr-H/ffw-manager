@@ -1,8 +1,8 @@
 // ==========================================
-// FFW Manager - Service Worker (v5.7.8.)
+// FFW Manager - Service Worker (v5.7.9.)
 // ==========================================
 
-const CACHE_NAME = 'ffw-manager-v5.7.8'; // Version erhöht für Icon-Caching
+const CACHE_NAME = 'ffw-manager-v5.7.9'; // Version erhöht für Icon-Caching
 
 const ASSETS_TO_CACHE = [
   './',
