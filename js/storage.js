@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Speicher & Cloud-Sync (v1.7 Korrigiert)
+// FFW Manager - Speicher & Cloud-Sync (v1.8 Korrigiert & Stabil)
 // ==========================================
 
 // 1. Daten aus dem Speicher laden (Fallback auf LocalStorage)
@@ -50,6 +50,10 @@ function loeschePsaEintrag(id) {
     return speicherePsaData(alle);
 }
 
+// Fahrzeug-Helper (Neu hinzugefügt für Konsistenz)
+function ladeFahrzeugeData() { return ladeDaten('fahrzeuge'); }
+function speichereFahrzeugeData(daten) { return speichereDaten('fahrzeuge', daten); }
+
 // 2. Daten lokal & in Firebase Cloud speichern
 function speichereDaten(schluessel, daten) {
     const bereinigteDaten = Array.isArray(daten) ? daten : [];
@@ -76,7 +80,7 @@ function speichereDaten(schluessel, daten) {
 
 let cloudSyncGestartet = false;
 
-// 3. Live-Synchronisation mit Firebase
+// 3. Live-Synchronisation mit Firebase (mit Schutz vor Überschreiben)
 function starteCloudSync() {
     if (typeof window.db === 'undefined' || window.db === null) return;
     if (cloudSyncGestartet) return; 
@@ -93,6 +97,15 @@ function starteCloudSync() {
 
                     if (doc.exists && doc.data() && Array.isArray(doc.data().eintraege)) {
                         const cloudDaten = doc.data().eintraege;
+                        const lokaleDaten = ladeDaten(schluessel);
+
+                        // SCHUTZ: Wenn Cloud leer ist, aber wir lokal Daten haben -> nicht überschreiben!
+                        if (cloudDaten.length === 0 && lokaleDaten.length > 0) {
+                            console.warn(`[Cloud Sync] Ignoriere leere Cloud-Daten für '${schluessel}', da lokale Daten existieren.`);
+                            // Lokale Daten hochladen um Cloud zu reparieren
+                            speichereDaten(schluessel, lokaleDaten);
+                            return;
+                        }
 
                         // Daten synchronisieren und UI anpassen
                         localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
@@ -151,4 +164,6 @@ window.ladePsaData = ladePsaData;
 window.speicherePsaData = speicherePsaData;
 window.speicherePsaEintrag = speicherePsaEintrag;
 window.loeschePsaEintrag = loeschePsaEintrag;
+window.ladeFahrzeugeData = ladeFahrzeugeData;
+window.speichereFahrzeugeData = speichereFahrzeugeData;
 window.starteCloudSync = starteCloudSync;
