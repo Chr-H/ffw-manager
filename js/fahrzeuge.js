@@ -5,11 +5,19 @@
 let aktuellesFahrzeugId = null;
 
 // Hilfsfunktion: Sicheres Speichern inklusive Cloud-Sync
+// Direktes Speichern in LocalStorage und Firebase
 function speichereUndSynchronisiere(fahrzeuge) {
+    // Direkt die globale speichereDaten-Funktion aus der storage.js aufrufen
     if (typeof speichereDaten === 'function') {
         speichereDaten('fahrzeuge', fahrzeuge);
     } else {
         localStorage.setItem('ffw_fahrzeuge', JSON.stringify(fahrzeuge));
+        if (typeof window.db !== 'undefined' && window.db !== null) {
+            window.db.collection('ffw_data').doc('fahrzeuge').set({
+                eintraege: fahrzeuge,
+                aktualisiertAm: new Date().toISOString()
+            });
+        }
     }
 }
 
