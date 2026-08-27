@@ -176,20 +176,6 @@ function renderPSAView() {
     const tbody = document.getElementById("psa-table-body");
     if (!tbody) return;
 
-    // 1. Rollen-Check: Buttons verbergen & Gast-Zugriff blockieren
-    const rolle = (localStorage.getItem("userRole") || localStorage.getItem("rolle") || "GAST").toUpperCase();
-    const istGast = (rolle === "GAST");
-
-    // Alle Aktion-Buttons für Gäste ausblenden (Import, Export, Neu)
-    document.querySelectorAll("button[onclick*='PSAModal'], button[onclick*='exportPSA'], button[onclick*='importPSA'], button[onclick*='exportPSAPDF']")
-        .forEach(btn => btn.style.display = istGast ? "none" : "inline-block");
-
-    if (istGast) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#dc3545; font-weight:bold;">🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, die PSA-Daten einzusehen.</td></tr>`;
-        return;
-    }
-
-    // 2. Regulärer Ablauf (Daten filtern & anzeigen)
     const daten = holePSADaten();
     const suche = (document.getElementById("suchePSA")?.value || '').toLowerCase();
     const filterStatus = document.getElementById("filterPSAStatus")?.value || '';
@@ -208,7 +194,7 @@ function renderPSAView() {
         return matchSuche && matchStatus;
     });
 
-
+    
     if (gefiltert.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#888;">Keine PSA-Einträge vorhanden. Klicke auf <strong>"+ Neue PSA anlegen"</strong>.</td></tr>`;
         return;
