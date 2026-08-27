@@ -72,6 +72,7 @@ function speichereDaten(schluessel, daten) {
         })
         .catch(err => {
             console.error(`❌ Firebase Speicherfehler bei ${schluessel}:`, err);
+            alert("Fehler beim Cloud-Speichern: " + err.message); // <--- Das fängt den Fehler ab!
         });
     }
 
