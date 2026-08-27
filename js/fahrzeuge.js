@@ -4,6 +4,19 @@
 
 let aktuellesFahrzeugId = null;
 
+// Hilfsfunktion: Sicheres Speichern inklusive Cloud-Sync
+function speichereUndSynchronisiere(fahrzeuge) {
+    if (typeof speichereDaten === 'function') {
+        speichereDaten('fahrzeuge', fahrzeuge);
+    } else {
+        localStorage.setItem('ffw_fahrzeuge', JSON.stringify(fahrzeuge));
+    }
+    // Triggert den Sync in storage.js, damit Cloud-Daten nicht veralten
+    if (typeof syncToCloud === 'function') {
+        syncToCloud('fahrzeuge', fahrzeuge);
+    }
+}
+
 // 1. Tabelle auf der linken Seite rendern
 function renderFahrzeugeView() {
     const tbody = document.getElementById('fahrzeugeListe');
@@ -18,6 +31,9 @@ function renderFahrzeugeView() {
     }
 
     fahrzeuge.forEach(f => {
+        // Falls Alt-Daten keine ID hatten, nachträglich vergeben
+        if (!f.id) f.id = 'VEH-' + Math.random().toString(36).substr(2, 9);
+
         const tr = document.createElement('tr');
         
         let statusBadge = '🟢 Einsatzbereit';
@@ -27,6 +43,7 @@ function renderFahrzeugeView() {
         tr.innerHTML = `
             <td class="no-print">
                 <button onclick="oeffneFahrzeugAkte('${f.id}')" title="Fahrzeugakte öffnen" style="padding:4px 8px; cursor:pointer;">👁️</button>
+                <button onclick="bearbeiteFahrzeug('${f.id}')" title="Fahrzeug bearbeiten" style="padding:4px 8px; cursor:pointer;">✏️</button>
                 <button onclick="loescheFahrzeug('${f.id}')" title="Fahrzeug löschen" style="padding:4px 8px; cursor:pointer; background:#dc3545; color:white; border:none; border-radius:3px;">🗑️</button>
             </td>
             <td><strong>${f.callSign || f.name || '-'}</strong></td>
@@ -40,11 +57,11 @@ function renderFahrzeugeView() {
     });
 }
 
-// 2. Neues Fahrzeug speichern
+// 2. Neues Fahrzeug speichern oder bestehendes aktualisieren
 function neuesFahrzeugSpeichern() {
-    const funkruf = document.getElementById('fz-funkruf')?.value;
-    const kennzeichen = document.getElementById('fz-kennzeichen')?.value;
-    const typ = document.getElementById('fz-typ')?.value;
+    const funkruf = document.getElementById('fz-funkruf')?.value.trim();
+    const kennzeichen = document.getElementById('fz-kennzeichen')?.value.trim();
+    const typ = document.getElementById('fz-typ')?.value.trim();
     const baujahr = document.getElementById('fz-baujahr')?.value;
     const tuev = document.getElementById('fz-tuev')?.value;
     const sp = document.getElementById('fz-sp')?.value;
@@ -55,39 +72,76 @@ function neuesFahrzeugSpeichern() {
         return;
     }
 
-    const neuesFahrzeug = {
-        id: 'VEH-' + Date.now(),
-        callSign: funkruf,
-        name: funkruf || typ,
-        kennzeichen: kennzeichen,
-        licensePlate: kennzeichen,
-        typ: typ,
-        baujahr: baujahr,
-        tuev: tuev,
-        nextHU: tuev,
-        sp: sp,
-        nextSP: sp,
-        status: status,
-        historie: []
-    };
-
     let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
-    fahrzeuge.push(neuesFahrzeug);
 
-    if (typeof speichereDaten === 'function') {
-        speichereDaten('fahrzeuge', fahrzeuge);
+    // Prüfen, ob wir uns im Bearbeiten-Modus befinden
+    if (aktuellesFahrzeugId) {
+        const idx = fahrzeuge.findIndex(x => x.id === aktuellesFahrzeugId);
+        if (idx !== -1) {
+            fahrzeuge[idx] = {
+                ...fahrzeuge[idx],
+                callSign: funkruf,
+                name: funkruf || typ,
+                kennzeichen: kennzeichen,
+                licensePlate: kennzeichen,
+                typ: typ,
+                baujahr: baujahr,
+                tuev: tuev,
+                nextHU: tuev,
+                sp: sp,
+                nextSP: sp,
+                status: status
+            };
+        }
+    } else {
+        // Neu anlegen mit eindeutiger UUID-Kombination
+        const neuesFahrzeug = {
+            id: 'VEH-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+            callSign: funkruf,
+            name: funkruf || typ,
+            kennzeichen: kennzeichen,
+            licensePlate: kennzeichen,
+            typ: typ,
+            baujahr: baujahr,
+            tuev: tuev,
+            nextHU: tuev,
+            sp: sp,
+            nextSP: sp,
+            status: status,
+            historie: []
+        };
+        fahrzeuge.push(neuesFahrzeug);
+        aktuellesFahrzeugId = neuesFahrzeug.id;
     }
 
-    // Felder leeren
+    speichereUndSynchronisiere(fahrzeuge);
+
+    // Formular leeren
     ['fz-funkruf', 'fz-kennzeichen', 'fz-typ', 'fz-baujahr', 'fz-tuev', 'fz-sp'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
 
     renderFahrzeugeView();
-    oeffneFahrzeugAkte(neuesFahrzeug.id);
-
+    if (aktuellesFahrzeugId) oeffneFahrzeugAkte(aktuellesFahrzeugId);
     if (typeof aktualisiereDashboard === 'function') aktualisiereDashboard();
+}
+
+// Fahrzeug in Formular laden zum Bearbeiten
+function bearbeiteFahrzeug(id) {
+    const fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const f = fahrzeuge.find(x => x.id === id);
+    if (!f) return;
+
+    aktuellesFahrzeugId = f.id;
+
+    if (document.getElementById('fz-funkruf')) document.getElementById('fz-funkruf').value = f.callSign || f.name || '';
+    if (document.getElementById('fz-kennzeichen')) document.getElementById('fz-kennzeichen').value = f.licensePlate || f.kennzeichen || '';
+    if (document.getElementById('fz-typ')) document.getElementById('fz-typ').value = f.typ || '';
+    if (document.getElementById('fz-baujahr')) document.getElementById('fz-baujahr').value = f.baujahr || '';
+    if (document.getElementById('fz-tuev')) document.getElementById('fz-tuev').value = f.nextHU || f.tuev || '';
+    if (document.getElementById('fz-sp')) document.getElementById('fz-sp').value = f.nextSP || f.sp || '';
+    if (document.getElementById('fz-status')) document.getElementById('fz-status').value = f.status || 'Einsatzbereit';
 }
 
 // 3. Fahrzeugakte öffnen & Template befüllen
@@ -105,18 +159,15 @@ function oeffneFahrzeugAkte(id) {
         return;
     }
 
-    // Template in den Container klonen
     container.innerHTML = '';
     const clone = template.content.cloneNode(true);
     container.appendChild(clone);
 
-    // Akte-Titel setzen
     const akteTitel = document.getElementById('akte-titel');
     const akteSubtitel = document.getElementById('akte-subtitel');
     if (akteTitel) akteTitel.textContent = `📋 Fahrzeugakte: ${f.callSign || f.name}`;
     if (akteSubtitel) akteSubtitel.textContent = `${f.typ || ''} | Kennzeichen: ${f.kennzeichen || f.licensePlate || '-'} | Status: ${f.status || 'Einsatzbereit'}`;
 
-    // Historie rendern
     renderHistorieListe(f);
 }
 
@@ -131,10 +182,8 @@ function zeigeGeraeteAusRaum(raumKuerzel) {
     const f = fahrzeuge.find(x => x.id === aktuellesFahrzeugId);
     const fzgName = f ? (f.callSign || f.name) : "";
 
-    // Lade Geräte
     const alleGeraete = typeof ladeDaten === 'function' ? ladeDaten('geraete') : [];
 
-    // Filter nach Fahrzeugname und Geräteraum
     const gefundeneGeraete = alleGeraete.filter(g => {
         const st = (g.standort || "").toUpperCase();
         return (fzgName === "" || st.includes(fzgName.toUpperCase())) && st.includes(raumKuerzel.toUpperCase());
@@ -183,9 +232,8 @@ function speichereHistorieEintrag() {
             kosten: kosten
         });
 
-        if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
+        speichereUndSynchronisiere(fahrzeuge);
 
-        // Formular zurücksetzen
         document.getElementById('hist-titel').value = '';
         document.getElementById('hist-beschreibung').value = '';
         document.getElementById('hist-kosten').value = '';
@@ -226,7 +274,7 @@ function loescheHistorieEintrag(index) {
 
     if (f && f.historie && f.historie[index]) {
         f.historie.splice(index, 1);
-        if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
+        speichereUndSynchronisiere(fahrzeuge);
         renderHistorieListe(f);
     }
 }
@@ -237,7 +285,11 @@ function loescheFahrzeug(id) {
         let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
         fahrzeuge = fahrzeuge.filter(x => x.id !== id);
 
-        if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
+        speichereUndSynchronisiere(fahrzeuge);
+
+        if (aktuellesFahrzeugId === id) {
+            aktuellesFahrzeugId = null;
+        }
 
         renderFahrzeugeView();
 
@@ -316,7 +368,7 @@ function importFahrzeugeCSV(inputOrEvent) {
                     if (spalten.length < 2) continue;
 
                     fahrzeuge.push({
-                        id: spalten[0] || 'VEH-' + Date.now() + '_' + i,
+                        id: spalten[0] || 'VEH-' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                         callSign: spalten[1],
                         name: spalten[1],
                         typ: spalten[2],
@@ -329,7 +381,7 @@ function importFahrzeugeCSV(inputOrEvent) {
                     });
                 }
 
-                if (typeof speichereDaten === 'function') speichereDaten('fahrzeuge', fahrzeuge);
+                speichereUndSynchronisiere(fahrzeuge);
                 renderFahrzeugeView();
                 alert("✅ Fahrzeuge erfolgreich importiert!");
             } catch (err) {
@@ -341,7 +393,7 @@ function importFahrzeugeCSV(inputOrEvent) {
         alert("Fehler beim Import: " + err.message);
     }
 }
-// CSV-Export für die Historie/Reparaturen eines einzelnen Fahrzeugs
+
 function exportFahrzeugHistorieCSV(fahrzeugId) {
     const daten = typeof holeFahrzeugDaten === "function" ? holeFahrzeugDaten() : (ladeDaten("fahrzeuge") || []);
     const fahrzeug = daten.find(f => f.id === fahrzeugId);
@@ -351,7 +403,6 @@ function exportFahrzeugHistorieCSV(fahrzeugId) {
         return;
     }
 
-    // Historie-Array aus dem Fahrzeugobjekt auslesen (je nach Ihrer Datenstruktur historie/reparaturen/pruefungen)
     const historie = fahrzeug.historie || fahrzeug.reparaturen || fahrzeug.wartungen || [];
 
     if (!Array.isArray(historie) || historie.length === 0) {
@@ -359,16 +410,7 @@ function exportFahrzeugHistorieCSV(fahrzeugId) {
         return;
     }
 
-    const headers = [
-        "Datum", 
-        "Kategorie / Typ", 
-        "Beschreibung / Maßnahme", 
-        "Durchgeführt von / Werkstatt", 
-        "Kosten (€)", 
-        "Kilometerstand", 
-        "Status"
-    ];
-
+    const headers = ["Datum", "Kategorie / Typ", "Beschreibung / Maßnahme", "Durchgeführt von / Werkstatt", "Kosten (€)", "Kilometerstand", "Status"];
     const rows = historie.map(h => [
         h.datum || '',
         h.typ || h.kategorie || 'Reparatur',
@@ -387,7 +429,6 @@ function exportFahrzeugHistorieCSV(fahrzeugId) {
     rows.forEach(r => csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")));
 
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
-    
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
@@ -401,8 +442,7 @@ function exportFahrzeugHistorieCSV(fahrzeugId) {
         URL.revokeObjectURL(url);
     }, 100);
 }
-// Vollständige Einzel-Fahrzeugakte als Druck/PDF erzeugen
-// Vollständige Einzel-Fahrzeugakte als Druck/PDF erzeugen
+
 function druckeEinzelFahrzeugAkte(fahrzeugId) {
     const daten = typeof holeFahrzeugDaten === "function" ? holeFahrzeugDaten() : (ladeDaten("fahrzeuge") || []);
     const f = daten.find(item => item.id === fahrzeugId);
@@ -499,7 +539,6 @@ function druckeEinzelFahrzeugAkte(fahrzeugId) {
         druckFenster.print();
     }, 250);
 }
-// Wrapper-Funktionen zur Behebung der Namensabweichungen:
 
 function exportFahrzeugEinzelnCSV() {
     if (!aktuellesFahrzeugId) {
@@ -517,11 +556,10 @@ function druckeFahrzeugAkte() {
     druckeEinzelFahrzeugAkte(aktuellesFahrzeugId);
 }
 
-
-
 // Global registrieren
 window.renderFahrzeugeView = renderFahrzeugeView;
 window.neuesFahrzeugSpeichern = neuesFahrzeugSpeichern;
+window.bearbeiteFahrzeug = bearbeiteFahrzeug;
 window.oeffneFahrzeugAkte = oeffneFahrzeugAkte;
 window.zeigeGeraeteAusRaum = zeigeGeraeteAusRaum;
 window.speichereHistorieEintrag = speichereHistorieEintrag;
@@ -532,7 +570,6 @@ window.importFahrzeugeCSV = importFahrzeugeCSV;
 window.exportFahrzeugHistorieCSV = exportFahrzeugHistorieCSV;
 window.druckeEinzelFahrzeugAkte = druckeEinzelFahrzeugAkte;
 window.druckeFahrzeugAkte = druckeFahrzeugAkte;
-
 
 document.addEventListener('DOMContentLoaded', () => {
     renderFahrzeugeView();

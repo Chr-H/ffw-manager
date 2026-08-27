@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Speicher & Cloud-Sync (v1.6 Korrigiert)
+// FFW Manager - Speicher & Cloud-Sync (v1.7 Korrigiert)
 // ==========================================
 
 // 1. Daten aus dem Speicher laden (Fallback auf LocalStorage)
@@ -71,7 +71,7 @@ function speichereDaten(schluessel, daten) {
         });
     }
 
-    return true; // WICHTIG: Rückgabe für psajs/Verarbeitung
+    return true;
 }
 
 let cloudSyncGestartet = false;
@@ -88,23 +88,15 @@ function starteCloudSync() {
         window.db.collection('ffw_data').doc(schluessel)
             .onSnapshot(
                 (doc) => {
+                    // Eigene lokale Schreiboperationen ignorieren
                     if (doc.metadata && doc.metadata.hasPendingWrites) return;
 
                     if (doc.exists && doc.data() && Array.isArray(doc.data().eintraege)) {
                         const cloudDaten = doc.data().eintraege;
-                        const lokaleDaten = ladeDaten(schluessel);
 
-                        // Schutz vor Überschreiben: Wenn lokal MEHR Daten sind als in der Cloud, pushen statt überschreiben
-                        if (lokaleDaten.length > cloudDaten.length) {
-                            console.warn(`[Cloud Sync] Lokale Daten für ${schluessel} sind neuer/umfangreicher. Synchronisiere Cloud...`);
-                            speichereDaten(schluessel, lokaleDaten);
-                            return;
-                        }
-
-                        // Im lokalen Speicher ablegen
+                        // Daten synchronisieren und UI anpassen
                         localStorage.setItem('ffw_' + schluessel, JSON.stringify(cloudDaten));
                         
-                        // Live-UI Updates
                         switch (schluessel) {
                             case 'psa':
                                 if (typeof window.renderPSAView === 'function') window.renderPSAView();
