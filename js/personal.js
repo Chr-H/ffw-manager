@@ -291,24 +291,31 @@ function renderPersonalView() {
    // 2. Daten-Container finden oder erstellen
     let listContainer = document.getElementById("personal-dynamic-list");
     
-    if (!listContainer) {
-        listContainer = document.createElement("div");
-        listContainer.id = "personal-dynamic-list";
-        listContainer.style.marginTop = "10px";
-        
-        // Versucht das spezifische Personal-Tab/View zu finden
-        const personalView = document.getElementById("personal") || document.getElementById("personalView") || document.querySelector(".personal-section");
-        
+    // Falls der Container existiert, aber an der falschen Stelle hängt, entfernen wir ihn kurz
+    if (listContainer) {
+        listContainer.remove();
+    }
+
+    listContainer = document.createElement("div");
+    listContainer.id = "personal-dynamic-list";
+    listContainer.style.marginTop = "10px";
+
+    // Suche die Überschriften-Zeile (Spind, Name, Funktion, Aktionen...)
+    const headerRow = Array.from(document.querySelectorAll("div, header, section")).find(el => 
+        el.textContent.includes("Spind") && 
+        el.textContent.includes("Name") && 
+        el.textContent.includes("Aktionen") &&
+        el.children.length > 2
+    );
+
+    if (headerRow && headerRow.parentElement) {
+        // Platziert den Container DIREKT UNTER die Überschriften-Zeile
+        headerRow.insertAdjacentElement('afterend', listContainer);
+    } else {
+        // Fallback: Sucht das Element für die Personalansicht
+        const personalView = document.getElementById("personal") || document.getElementById("personalView");
         if (personalView) {
             personalView.appendChild(listContainer);
-        } else {
-            // Fallback: An das Elternelement der Spaltenüberschriften im Personalbereich hängen
-            const headerRow = Array.from(document.querySelectorAll("div, span, p")).find(el => 
-                el.textContent.includes("Spind") && el.textContent.includes("Aktionen") && el.children.length > 0
-            );
-            if (headerRow && headerRow.parentElement) {
-                headerRow.parentElement.appendChild(listContainer);
-            }
         }
     }
 
