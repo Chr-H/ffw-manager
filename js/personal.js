@@ -274,77 +274,47 @@ function exportPersonalPDF() {
 // ------------------------------------------
 
 function renderPersonalView() {
-    // 1. Buttons verknüpfen
-    const allBtns = Array.from(document.querySelectorAll("button"));
-    const neuBtn = allBtns.find(b => b.textContent.includes("Neues Mitglied"));
-    if (neuBtn) {
-        neuBtn.onclick = () => openPersonalModal();
-    }
+    // 1. Richtige ID aus dem HTML verwenden
+    const tbody = document.getElementById("personal-tabelle-body") || document.getElementById("personal-dynamic-list");
+    if (!tbody) return;
 
-    // Export-Buttons sichern
-    const csvExportBtn = allBtns.find(b => b.textContent.includes("CSV Export"));
-    if (csvExportBtn) csvExportBtn.onclick = () => exportPersonalCSV();
+    // 2. Rechte-Prüfung & Button-Sichtbarkeit
+    const rolle = (localStorage.getItem("userRole") || localStorage.getItem("rolle") || "GAST").toUpperCase();
+    const istGast = (rolle === "GAST");
 
-    const pdfExportBtn = allBtns.find(b => b.textContent.includes("PDF Export"));
-    if (pdfExportBtn) pdfExportBtn.onclick = () => exportPersonalPDF();
+    // "➕ Neues Mitglied"-Button und Export-Buttons für Gäste verstecken
+    document.querySelectorAll("button[onclick*='MitgliedModal'], button[onclick*='Personal'], button[onclick*='exportPersonal']")
+        .forEach(btn => btn.style.display = istGast ? "none" : "inline-block");
 
-   // 2. Daten-Container finden (NUR im Personal-Bereich)
-    let listContainer = document.getElementById("personal-dynamic-list");
-    
-    // Falls das HTML-Element noch gar nicht in der Personal-Ansicht existiert, 
-    // bricht das Rendering ab, damit nichts in fremden Modulen landet.
-    if (!listContainer) {
-        // Sucht das statische Parent-Element der Personalverwaltung
-        const personalWrapper = document.getElementById("personalView") || document.getElementById("personal");
-        if (personalWrapper) {
-            listContainer = document.createElement("div");
-            listContainer.id = "personal-dynamic-list";
-            listContainer.style.marginTop = "10px";
-            personalWrapper.appendChild(listContainer);
-        } else {
-            // Nicht in der Personalansicht -> Rendern sauber abbrechen!
-            return;
-        }
-    }
-
-    if (headerRow && headerRow.parentElement) {
-        // Platziert den Container DIREKT UNTER die Überschriften-Zeile
-        headerRow.insertAdjacentElement('afterend', listContainer);
-    } else {
-        // Fallback: Sucht das Element für die Personalansicht
-        const personalView = document.getElementById("personal") || document.getElementById("personalView");
-        if (personalView) {
-            personalView.appendChild(listContainer);
-        }
-    }
-
-    if (!hatPersonalLeseRecht()) {
-        listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:red; font-weight:bold;">🔒 Access Denied / Gast-Zugriff verweigert</div>`;
+    // Gast-Sperre als Tabellenzeile anzeigen
+    if (istGast) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#dc3545; font-weight:bold;">🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, die Personaldaten einzusehen.</td></tr>`;
         return;
     }
 
+    // 3. Daten laden
     const meins = holePersonalDaten();
-    const kannSchreiben = hatPersonalSchreibRecht();
+    const kannSchreiben = (typeof hatPersonalSchreibRecht === 'function') ? hatPersonalSchreibRecht() : !istGast;
 
     if (!meins || meins.length === 0) {
-        listContainer.innerHTML = `
-            <div style="text-align:center; padding:30px; color:#777; background:#fff; border-radius:6px; margin-top:10px;">
-                Keine Personaldaten vorhanden. Klicke oben auf <strong>"+ Neues Mitglied"</strong> oder nutze den <strong>"CSV Import"</strong>.
-            </div>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">Keine Personaldaten vorhanden. Klicke oben auf <strong>"+ Neues Mitglied"</strong>.</td></tr>`;
         return;
     }
 
-    let html = '';
-    meins.forEach(p => {
-        const fullName = escapeHtmlPersonal((p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || ''));
-        const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
-        const safeId = escapeHtmlPersonal(p.id);
+    // 4. Daten als saubere <tr> / <td> Zeilen rendern
+    tbody.innerHTML = meins.map(p => {
+        const fullName = typeof escapeHtmlPersonal === 'function' 
+            ? escapeHtmlPersonal((p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || ''))
+            : (p.vorname ? p.vorname + ' ' : '') + (p.nachname || p.name || '');
 
-        let g26Badge = '<span style="color:#28a745; font-weight:bold;">🟢 Gültig ' + (p.g26Ablauf ? '(' + p.g26Ablauf + ')' : '') + '</span>';
+        const qualis = Array.isArray(p.qualifikationen) ? p.qualifikationen.join(", ") : (p.qualifikationen || '-');
+        const safeId = p.id;
+
+        let g26Badge = '<span style="color:#28a745; font-weight:bold;">🟢 Gültig</span>';
         if (p.g26Ablauf) {
             const ablaufDatum = new Date(p.g26Ablauf);
             if (ablaufDatum < new Date()) {
-                g26Badge = '<span style="color:#dc3545; font-weight:bold;">🔴 Abgelaufen (' + p.g26Ablauf + ')</span>';
+                g26Badge = '<span style="color:#dc3545; font-weight:bold;">🔴 Abgelaufen</span>';
             }
         }
 
@@ -353,21 +323,17 @@ function renderPersonalView() {
             <button title="Löschen" onclick="loeschePersonalItem('${safeId}')" style="cursor:pointer; background:#fff; border:1px solid #dc3545; color:#dc3545; padding:4px 8px; border-radius:4px;">🗑️</button>
         ` : '👁️';
 
-        // Zeilen im Flexbox-Grid passend zu deiner Kopfzeile
-        html += `
-        <div style="display:flex; align-items:center; background:#fff; padding:12px 10px; border-bottom:1px solid #eee; margin-bottom:2px; border-radius:4px;">
-            <div style="flex: 0 0 80px; font-weight:bold;">${escapeHtmlPersonal(p.spind || '-')}</div>
-            <div style="flex: 1.5; font-weight:bold;">${fullName}</div>
-            <div style="flex: 1.5;">${escapeHtmlPersonal(p.funktion || '-')}</div>
-            <div style="flex: 1.2;">${g26Badge}</div>
-            <div style="flex: 2; font-size: 0.9em; color:#555;">${escapeHtmlPersonal(qualis)}</div>
-            <div style="flex: 0 0 100px; text-align:right;">${aktionen}</div>
-        </div>`;
-    });
-
-    listContainer.innerHTML = html;
+        return `
+        <tr>
+            <td style="padding:10px; font-weight:bold;">${p.spind || '-'}</td>
+            <td style="padding:10px; font-weight:bold;">${fullName}</td>
+            <td style="padding:10px;">${p.funktion || '-'}</td>
+            <td style="padding:10px;">${g26Badge}</td>
+            <td style="padding:10px; color:#555;">${qualis}</td>
+            <td class="no-print" style="padding:10px; text-align:right;">${aktionen}</td>
+        </tr>`;
+    }).join('');
 }
-
 // ------------------------------------------
 // INITIALISIERUNG
 // ------------------------------------------
@@ -395,3 +361,4 @@ window.schliessePersonalModal = schliessePersonalModal;
 window.speicherePersonalItem = speicherePersonalItem;
 window.loeschePersonalItem = loeschePersonalItem;
 window.renderPersonalView = renderPersonalView;
+window.renderePersonalTabelle = renderPersonalView;
