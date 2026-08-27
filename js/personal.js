@@ -280,10 +280,10 @@ function renderPersonalView() {
     }
 
     // Export-Buttons sichern
-    const csvExportBtn = document.querySelector("button:contains('CSV Export')") || allBtns.find(b => b.textContent.includes("CSV Export"));
+    const csvExportBtn = allBtns.find(b => b.textContent.includes("CSV Export"));
     if (csvExportBtn) csvExportBtn.onclick = () => exportPersonalCSV();
 
-    const pdfExportBtn = document.querySelector("button:contains('PDF Export')") || allBtns.find(b => b.textContent.includes("PDF Export"));
+    const pdfExportBtn = allBtns.find(b => b.textContent.includes("PDF Export"));
     if (pdfExportBtn) pdfExportBtn.onclick = () => exportPersonalPDF();
 
     // 2. Daten-Container finden oder erstellen
