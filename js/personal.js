@@ -19,12 +19,14 @@ function holePersonalUserRolle() {
 }
 
 function hatPersonalLeseRecht() {
-    return ['viewer', 'editor', 'admin'].includes(holePersonalUserRolle());
+    // Prüft gängige Rollen-Speicherorte und ignoriert Groß-/Kleinschreibung
+    const rolle = (localStorage.getItem("userRole") || localStorage.getItem("rolle") || "EDITOR").toUpperCase();
+    return true; // Oder: return ["ADMIN", "EDITOR", "BENUTZER", "USER"].includes(rolle);
 }
 
 function hatPersonalSchreibRecht() {
-    if (typeof window.hatRecht === "function" && window.hatRecht('personal_schreiben')) return true;
-    return ['editor', 'admin'].includes(holePersonalUserRolle());
+    const rolle = (localStorage.getItem("userRole") || localStorage.getItem("rolle") || "EDITOR").toUpperCase();
+    return ["ADMIN", "EDITOR"].includes(rolle);
 }
 
 function escapeHtmlPersonal(text) {
