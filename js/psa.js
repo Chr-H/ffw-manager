@@ -326,7 +326,67 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("psaGeaendert", () => {
     filterPSA();
 });
+// ==========================================
+// 7. EXPORT-FUNKTIONEN (INKLUSIVE GAST-SPERRE)
+// ==========================================
 
+function exportPSA() {
+    // Gast-Prüfung: Blockiert Gäste sofort beim Klick
+    if (!hatPSALeserechte()) {
+        alert("🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, PSA-Daten zu exportieren.");
+        return;
+    }
+
+    const daten = ladePSA();
+    if (!daten || daten.length === 0) {
+        alert("Keine Daten zum Exportieren vorhanden.");
+        return;
+    }
+
+    // CSV-Header und Spalten definieren
+    const headers = ["Spind", "Traeger", "Hersteller", "Typ", "Bezeichnung", "Groesse", "Zubehoer", "Seriennummer", "NaechstePruefung", "Status"];
+    const csvRows = [headers.join(";")];
+
+    daten.forEach(item => {
+        const row = [
+            `"${item.spind || ''}"`,
+            `"${item.traeger || item.name || ''}"`,
+            `"${item.hersteller || ''}"`,
+            `"${item.typ || ''}"`,
+            `"${item.bezeichnung || item.ausruestung || ''}"`,
+            `"${item.groesse || ''}"`,
+            `"${item.zubehoer || ''}"`,
+            `"${item.seriennummer || item.inventarnummer || ''}"`,
+            `"${item.naechstePruefung || ''}"`,
+            `"${item.status || 'Aktiv'}"`
+        ];
+        csvRows.push(row.join(";"));
+    });
+
+    // CSV-Datei erzeugen und Download auslösen
+    const blob = new Blob(["\ufeff" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `PSA_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Gleiche Schutzlogik für den Druck / PDF-Export
+function druckePSAListe() {
+    if (!hatPSALeserechte()) {
+        alert("🔒 Zugriff verweigert: Als Gast hast du keine Berechtigung, die PSA-Liste zu drucken.");
+        return;
+    }
+    window.print();
+}
+
+// Globale Freigaben für das HTML
+window.exportPSA = exportPSA;
+window.exportPSACSV = exportPSA;
+window.druckePSAListe = druckePSAListe;
 // Globale Freigaben
 window.ladePSA = ladePSA;
 window.speicherePSA = speicherePSA;
