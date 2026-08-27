@@ -124,7 +124,19 @@ function ladeDaten(key) {
 
 function speichereDaten(key, daten) {
     try {
+        // 1. Lokal speichern
         localStorage.setItem('ffw_' + key, JSON.stringify(daten));
+
+        // 2. Sofort in die Firebase-Cloud schreiben!
+        if (typeof window.db !== 'undefined' && window.db !== null) {
+            window.db.collection('ffw_data').doc(key).set({
+                eintraege: daten,
+                aktualisiertAm: new Date().toISOString()
+            }).catch(err => {
+                console.error(`Fehler beim Cloud-Speichern für ${key}:`, err);
+            });
+        }
+
         if (typeof aktualisiereDashboard === 'function') {
             aktualisiereDashboard();
         }
