@@ -131,7 +131,14 @@ function neuesFahrzeugSpeichern() {
         }
 
         // Speichern & Synchronisieren
-        speichereUndSynchronisiere(fahrzeuge);
+        if (typeof speichereFahrzeugeData === 'function') {
+    speichereFahrzeugeData(fahrzeuge);
+} else if (typeof speichereDaten === 'function') {
+    speichereDaten('fahrzeuge', fahrzeuge);
+} else {
+    localStorage.setItem('ffw_fahrzeuge', JSON.stringify(fahrzeuge));
+}
+
 
         // Formular leeren
         if (funkrufInput) funkrufInput.value = '';
