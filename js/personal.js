@@ -288,25 +288,24 @@ function renderPersonalView() {
     const pdfExportBtn = allBtns.find(b => b.textContent.includes("PDF Export"));
     if (pdfExportBtn) pdfExportBtn.onclick = () => exportPersonalPDF();
 
-   // 2. Daten-Container finden oder erstellen
+   // 2. Daten-Container finden (NUR im Personal-Bereich)
     let listContainer = document.getElementById("personal-dynamic-list");
     
-    // Falls der Container existiert, aber an der falschen Stelle hängt, entfernen wir ihn kurz
-    if (listContainer) {
-        listContainer.remove();
+    // Falls das HTML-Element noch gar nicht in der Personal-Ansicht existiert, 
+    // bricht das Rendering ab, damit nichts in fremden Modulen landet.
+    if (!listContainer) {
+        // Sucht das statische Parent-Element der Personalverwaltung
+        const personalWrapper = document.getElementById("personalView") || document.getElementById("personal");
+        if (personalWrapper) {
+            listContainer = document.createElement("div");
+            listContainer.id = "personal-dynamic-list";
+            listContainer.style.marginTop = "10px";
+            personalWrapper.appendChild(listContainer);
+        } else {
+            // Nicht in der Personalansicht -> Rendern sauber abbrechen!
+            return;
+        }
     }
-
-    listContainer = document.createElement("div");
-    listContainer.id = "personal-dynamic-list";
-    listContainer.style.marginTop = "10px";
-
-    // Suche die Überschriften-Zeile (Spind, Name, Funktion, Aktionen...)
-    const headerRow = Array.from(document.querySelectorAll("div, header, section")).find(el => 
-        el.textContent.includes("Spind") && 
-        el.textContent.includes("Name") && 
-        el.textContent.includes("Aktionen") &&
-        el.children.length > 2
-    );
 
     if (headerRow && headerRow.parentElement) {
         // Platziert den Container DIREKT UNTER die Überschriften-Zeile
