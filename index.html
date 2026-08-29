@@ -61,69 +61,72 @@
             </nav>
         </aside>
 
-        <!-- Hauptinhaltsbereich -->
-        <main class="content">
+     <!-- Hauptinhaltsbereich -->
+<main class="content">
 
-            <!-- 1. DASHBOARD -->
-            <section id="seite-dashboard" class="seite-ansicht">
-                <section class="welcome">
-                    <h1>👋 Willkommen im FFW Manager</h1>
-                    <p>Schön, dass du da bist.</p>
-                    <p id="heute"></p>
-                </section>
+    <!-- 1. DASHBOARD -->
+    <section id="seite-dashboard" class="seite-ansicht">
+        <section class="welcome">
+            <h1>👋 Willkommen im FFW Manager</h1>
+            <p>Schön, dass du da bist.</p>
+            <p id="heute"></p>
+        </section>
 
-                <section class="status">
-                    <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
-                        <h3>🔴 Prüfungen</h3>
-                        <p id="stat-pruefungen-ueberfaellig">0 überfällig</p>
-                    </div>
-                    <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;">
-                        <h3>🟡 Wartung & Fristen</h3>
-                        <p id="stat-wartung-faellig">0 fällig</p>
-                    </div>
-                    <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
-                        <h3>🟢 Einsatzbereit</h3>
-                        <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p>
-                    </div>
-                    <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
-                        <h3>⚫ Außer Dienst / Defekt</h3>
-                        <p id="stat-defekt">0 inaktiv</p>
-                    </div>
-                </section>
+        <!-- OBEN: Module -->
+        <h2>Module</h2>
+        <div class="cards" style="margin-bottom: 25px;">
+            <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
+                <h2>🔧 Geräte</h2>
+                <p id="stat-modul-geraete" class="card-geraete-count">0 Geräte</p>
+            </div>
+            <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;">
+                <h2>🚒 Fahrzeuge</h2>
+                <p id="stat-modul-fahrzeuge">0 Fahrzeuge</p>
+            </div>
+            <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;">
+                <h2>🧯 PSA</h2>
+                <p id="stat-modul-psa">0 PSA's</p>
+            </div>
+            <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
+                <h2>📋 Prüfungen</h2>
+                <p id="stat-modul-pruefungen">0 fällig</p>
+            </div>
+            <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
+                <h2>📦 Lager</h2>
+                <p id="stat-modul-lager">0 Artikel</p>
+            </div>
+            <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
+                <h2>👥 Personal</h2>
+                <p id="stat-modul-personal">0 Mitglieder</p>
+            </div>
+            <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
+                <h2>🔐 Rechte & Benutzer</h2>
+                <p>Zugang & Rollen</p>
+            </div>
+        </div>
 
-                <h2>Module</h2>
-                
-                <div class="cards">
-                    <div class="card" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
-                        <h2>🔧 Geräte</h2>
-                        <p id="stat-modul-geraete" class="card-geraete-count">0 Geräte</p>
-                    </div>
-                    <div class="card" onclick="zeigeSeite('fahrzeuge')" style="cursor: pointer;">
-                        <h2>🚒 Fahrzeuge</h2>
-                        <p id="stat-modul-fahrzeuge">0 Fahrzeuge</p>
-                    </div>
-                    <div class="card" onclick="zeigeSeite('psa')" style="cursor: pointer;">
-                        <h2>🧯 PSA</h2>
-                        <p id="stat-modul-psa">0 PSA's</p>
-                    </div>
-                    <div class="card" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
-                        <h2>📋 Prüfungen</h2>
-                        <p id="stat-modul-pruefungen">0 fällig</p>
-                    </div>
-                    <div class="card" onclick="zeigeSeite('lager')" style="cursor: pointer;">
-                        <h2>📦 Lager</h2>
-                        <p id="stat-modul-lager">0 Artikel</p>
-                    </div>
-                    <div class="card" onclick="zeigeSeite('personal')" style="cursor: pointer;">
-                        <h2>👥 Personal</h2>
-                        <p id="stat-modul-personal">0 Mitglieder</p>
-                    </div>
-                    <div class="card" onclick="zeigeSeite('benutzer')" style="cursor: pointer;">
-                        <h2>🔐 Rechte & Benutzer</h2>
-                        <p>Zugang & Rollen</p>
-                    </div>
-                </div>
-            </section>
+        <!-- UNTEN: Prüfungen, Status & Fristen -->
+        <h2>Übersicht & Fristen</h2>
+        <section class="status">
+            <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
+                <h3>🔴 Prüfungen</h3>
+                <p id="stat-pruefungen-ueberfaellig">0 überfällig</p>
+            </div>
+            <div class="status-card orange" onclick="filtereGeraeteNachDashboard('Wartung')" style="cursor: pointer;">
+                <h3>🟡 Wartung & Fristen</h3>
+                <p id="stat-wartung-faellig">0 fällig</p>
+            </div>
+            <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
+                <h3>🟢 Einsatzbereit</h3>
+                <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p>
+            </div>
+            <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
+                <h3>⚫ Außer Dienst / Defekt</h3>
+                <p id="stat-defekt">0 inaktiv</p>
+            </div>
+        </section>
+    </section>
+</main>
 
             <!-- 2. GERÄTE BEREICH -->
             <section id="seite-geraete" class="seite-ansicht" style="display: none;">
