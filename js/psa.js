@@ -249,6 +249,7 @@ function oeffnePSAModal(id = null) {
 function savePSAFromModal() {
     const id = getInputValue('psa-id');
     const traeger = getInputValue('psa-traeger');
+    const seriennummer = getInputValue('psa-seriennummer');
 
     if (!traeger) {
         alert("Bitte geben Sie einen Träger an.");
@@ -257,6 +258,20 @@ function savePSAFromModal() {
 
     let allePSA = ladePSA();
     const index = allePSA.findIndex(p => String(p.id) === String(id));
+
+    // PRÜFUNG: Doppelte Serien- / Inventarnummer abfangen
+    if (seriennummer && seriennummer !== '') {
+        const doppelt = allePSA.some((p, i) => {
+            if (index >= 0 && i === index) return false; // Eigenen Datensatz beim Bearbeiten ignorieren
+            const vorhandeneNummer = p.seriennummer || p.inventarnummer || '';
+            return kohärentePruefungNummer(vorhandeneNummer, seriennummer);
+        });
+
+        if (doppelt) {
+            alert(`⚠️ Die Serien- / Inventarnummer "${seriennummer}" ist bereits in der PSA-Verwaltung vergeben!`);
+            return;
+        }
+    }
 
     const neuerEintrag = {
         id,
@@ -267,7 +282,7 @@ function savePSAFromModal() {
         bezeichnung: getInputValue('psa-bezeichnung'),
         groesse: getInputValue('psa-groesse'),
         zubehoer: getInputValue('psa-zubehoer'),
-        seriennummer: getInputValue('psa-seriennummer'),
+        seriennummer: seriennummer,
         naechstePruefung: getInputValue('psa-naechstePruefung'),
         status: getInputValue('psa-status') || 'Aktiv',
         geaendertAm: new Date().toISOString()
@@ -289,6 +304,12 @@ function savePSAFromModal() {
         }
         filterPSA();
     }
+}
+
+// Interne Hilfsfunktion für den Nummernvergleich (Groß-/Kleinschreibung ignorieren)
+function kohärentePruefungNummer(num1, num2) {
+    if (!num1 || !num2) return false;
+    return String(num1).toLowerCase().trim() === String(num2).toLowerCase().trim();
 }
 
 function loeschePSAEintragModal(id) {
