@@ -826,24 +826,10 @@ function filtereGeraeteNachDashboard(typ) {
     // 1. Filter im localStorage speichern
     localStorage.setItem('aktiverDashboardFilter', typ);
 
-    // 2. Zur Geräteseite wechseln (falls vorhanden)
+    // 2. Zur Geräteseite wechseln
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('geraete');
     }
-
-    // 3. Sofort nach dem Seitenwechsel das Neuladen und Filtern erzwingen
-    setTimeout(() => {
-        // Suchfeld leeren
-        const sucheInput = document.getElementById('sucheGeraet');
-        if (sucheInput) sucheInput.value = ''; 
-
-        // Falls es eine globale Lade-/Anzeigefunktion für die Geräteseite gibt, diese aufrufen
-        if (typeof ladeUndZeigeGeraete === 'function') {
-            ladeUndZeigeGeraete();
-        } else if (typeof filterGeraete === 'function') {
-            filterGeraete();
-        }
-    }, 100);
 }
 
 // Global für alle Module bereitstellen
