@@ -349,18 +349,35 @@ function aktualisiereDashboard() {
         const pruefungen = ladeDaten('pruefungen');
 
         const heute = new Date();
+        heute.setHours(0, 0, 0, 0); // Uhrzeit für exakten Tagesvergleich nullen
         
-        const ueberfaellig = pruefungen.filter(p => new Date(p.datum) < heute && p.status !== 'erledigt').length;
-        
-        const in30Tagen = new Date();
-        in30Tagen.setDate(heute.getDate() + 30);
-        const faellig = pruefungen.filter(p => {
+        const ueberfaellig = pruefungen.filter(p => {
+            if (!p.datum || p.status === 'erledigt') return false;
             const d = new Date(p.datum);
-            return d >= heute && d <= in30Tagen && p.status !== 'erledigt';
+            d.setHours(0, 0, 0, 0);
+            return d < heute;
+        }).length;
+        
+        const in30Tagen = new Date(heute);
+        in30Tagen.setDate(heute.getDate() + 30);
+        
+        const faellig = pruefungen.filter(p => {
+            if (!p.datum || p.status === 'erledigt') return false;
+            const d = new Date(p.datum);
+            d.setHours(0, 0, 0, 0);
+            return d >= heute && d <= in30Tagen;
         }).length;
 
-        const einsatzbereitCount = geraete.filter(g => g.status === 'einsatzbereit' || !g.status).length;
-        const defektCount = geraete.filter(g => g.status === 'defekt' || g.status === 'inaktiv').length;
+        // Groß-/Kleinschreibung absichern (akzeptiert 'Einsatzbereit' und 'einsatzbereit')
+        const einsatzbereitCount = geraete.filter(g => 
+            !g.status || g.status.toLowerCase() === 'einsatzbereit' || g.status === 'Aktiv'
+        ).length;
+        
+        const defektCount = geraete.filter(g => {
+            if (!g.status) return false;
+            const s = g.status.toLowerCase();
+            return s === 'defekt' || s === 'inaktiv' || s === 'ausgemustert';
+        }).length;
 
         setTileValue('stat-pruefungen-ueberfaellig', `${ueberfaellig} überfällig`);
         setTileValue('stat-wartung-faellig', `${faellig} fällig`);
@@ -389,7 +406,6 @@ function setTileValue(elementId, text) {
 document.addEventListener('DOMContentLoaded', () => {
     aktualisiereDashboard();
     
-    // Cloud-Sync beim Start der Anwendung initialisieren
     if (typeof starteCloudSync === 'function') {
         starteCloudSync();
     }
