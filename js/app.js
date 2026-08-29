@@ -351,22 +351,40 @@ function aktualisiereDashboard() {
         const heute = new Date();
         heute.setHours(0, 0, 0, 0); // Uhrzeit für exakten Tagesvergleich nullen
         
-        const ueberfaellig = pruefungen.filter(p => {
-            if (!p.datum || p.status === 'erledigt') return false;
-            const d = new Date(p.datum);
-            d.setHours(0, 0, 0, 0);
-            return d < heute;
-        }).length;
-        
         const in30Tagen = new Date(heute);
         in30Tagen.setDate(heute.getDate() + 30);
-        
-        const faellig = pruefungen.filter(p => {
-            if (!p.datum || p.status === 'erledigt') return false;
+
+        let ueberfaellig = 0;
+        let faellig = 0;
+
+        // 1. Fristen direkt aus den Geräten prüfen (Feld: naechstePruefung)
+        geraete.forEach(g => {
+            if (g.naechstePruefung) {
+                const d = new Date(g.naechstePruefung);
+                d.setHours(0, 0, 0, 0);
+                if (!isNaN(d)) {
+                    if (d < heute) {
+                        ueberfaellig++;
+                    } else if (d >= heute && d <= in30Tagen) {
+                        faellig++;
+                    }
+                }
+            }
+        });
+
+        // 2. Einträge aus dem reinen Prüfungsmodul einbeziehen
+        pruefungen.forEach(p => {
+            if (!p.datum || p.status === 'erledigt') return;
             const d = new Date(p.datum);
             d.setHours(0, 0, 0, 0);
-            return d >= heute && d <= in30Tagen;
-        }).length;
+            if (!isNaN(d)) {
+                if (d < heute) {
+                    ueberfaellig++;
+                } else if (d >= heute && d <= in30Tagen) {
+                    faellig++;
+                }
+            }
+        });
 
         // Groß-/Kleinschreibung absichern (akzeptiert 'Einsatzbereit' und 'einsatzbereit')
         const einsatzbereitCount = geraete.filter(g => 
