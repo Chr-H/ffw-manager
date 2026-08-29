@@ -818,6 +818,28 @@ function abmelden() {
     sessionStorage.clear();
     location.reload();
 }
+// ==========================================
+// Dashboard-Klick-Navigation & Filter
+// ==========================================
+
+function filtereGeraeteNachDashboard(typ) {
+    // 1. Zuerst zur Geräteseite wechseln
+    if (typeof zeigeSeite === 'function') {
+        zeigeSeite('geraete');
+    }
+
+    // 2. Kurz warten, bis die Geräteseite im DOM geladen ist, dann filtern
+    setTimeout(() => {
+        const sucheInput = document.getElementById('geraet-suche') || document.getElementById('psa-suche');
+        if (sucheInput) sucheInput.value = ''; 
+
+        sessionStorage.setItem('aktiverDashboardFilter', typ);
+
+        if (typeof filterGeraete === 'function') {
+            filterGeraete();
+        }
+    }, 100);
+}
 
 // Global für alle Module bereitstellen
 window.holeAktuelleRolle = holeAktuelleRolle;

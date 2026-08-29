@@ -208,7 +208,18 @@ function filterGeraete() {
     const kategorie = elKat ? elKat.value : "";
     const status = elStat ? elStat.value : "";
 
-    const heute = new Date().toISOString().split('T')[0];
+    // Prüfen, ob ein Dashboard-Filter übergeben wurde
+    const dashboardFilter = sessionStorage.getItem('aktiverDashboardFilter');
+    // Dashboard-Filter direkt nach dem Auslesen löschen, damit er beim nächsten normalen Filtern weg ist
+    if (dashboardFilter) {
+        sessionStorage.removeItem('aktiverDashboardFilter');
+    }
+
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+
+    const in30Tagen = new Date(heute);
+    in30Tagen.setDate(heute.getDate() + 30);
 
     const gefiltert = geraete.filter(g => {
         const bez = (g.bezeichnung || "").toLowerCase();
@@ -219,10 +230,34 @@ function filterGeraete() {
         const kategorieOK = kategorie === "" || g.kategorie === kategorie;
         
         let statusOK = true;
-        if (status === "FAELLIG") {
-            statusOK = g.naechstePruefung && g.naechstePruefung <= heute;
-        } else if (status !== "") {
-            statusOK = g.status === status;
+
+        // Wenn ein Dashboard-Filter geklickt wurde, hat dieser Vorrang
+        if (dashboardFilter) {
+            if (dashboardFilter === 'ueberfaellig') {
+                if (!g.naechstePruefung) return false;
+                const d = new Date(g.naechstePruefung);
+                d.setHours(0, 0, 0, 0);
+                statusOK = (d < heute);
+            } else if (dashboardFilter === 'faellig') {
+                if (!g.naechstePruefung) return false;
+                const d = new Date(g.naechstePruefung);
+                d.setHours(0, 0, 0, 0);
+                statusOK = (d >= heute && d <= in30Tagen);
+            } else if (dashboardFilter === 'Einsatzbereit') {
+                statusOK = (!g.status || g.status.toLowerCase() === 'einsatzbereit' || g.status === 'Aktiv');
+            } else if (dashboardFilter === 'inaktiv') {
+                statusOK = (g.status && (g.status.toLowerCase() === 'defekt' || g.status.toLowerCase() === 'inaktiv' || g.status === 'Ausgemustert'));
+            }
+        } else {
+            // Ansonsten die normalen Dropdowns/Filter nutzen
+            if (status === "FAELLIG") {
+                if (!g.naechstePruefung) return false;
+                const d = new Date(g.naechstePruefung);
+                d.setHours(0, 0, 0, 0);
+                statusOK = (d < heute);
+            } else if (status !== "") {
+                statusOK = g.status === status;
+            }
         }
 
         return sucheOK && kategorieOK && statusOK;
