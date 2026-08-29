@@ -87,34 +87,63 @@ function renderPSAView() {
 
 function filterPSA() {
     const sucheInput = document.getElementById('psa-suche');
+    const traegerSelect = document.getElementById('psa-traeger-filter');
+    const spindSelect = document.getElementById('psa-spind-filter');
     const statusSelect = document.getElementById('psa-status-filter');
     const tbody = document.getElementById('psa-tabelle-body');
 
     if (!tbody) return;
 
     const suchbegriff = sucheInput ? sucheInput.value.toLowerCase().trim() : '';
+    const traegerFilter = traegerSelect ? traegerSelect.value : 'alle';
+    const spindFilter = spindSelect ? spindSelect.value : 'alle';
     const statusFilter = statusSelect ? statusSelect.value : 'alle';
 
     const allePSA = ladePSA();
 
+    aktualisiereFilterDropdowns(allePSA, traegerFilter, spindFilter);
+
     const gefiltert = allePSA.filter(item => {
         const traegerText = item.traeger || item.name || '';
+        const spindText = String(item.spind || '').trim();
         const bezeichnungText = item.bezeichnung || item.ausruestung || '';
         
         const trefferSuche = !suchbegriff || 
             (traegerText.toLowerCase().includes(suchbegriff)) ||
-            (item.spind && String(item.spind).toLowerCase().includes(suchbegriff)) ||
+            (spindText.toLowerCase().includes(suchbegriff)) ||
             (bezeichnungText.toLowerCase().includes(suchbegriff)) ||
             (item.hersteller && item.hersteller.toLowerCase().includes(suchbegriff)) ||
             (item.seriennummer && item.seriennummer.toLowerCase().includes(suchbegriff)) ||
             (item.typ && item.typ.toLowerCase().includes(suchbegriff));
 
+        const trefferTraeger = (traegerFilter === 'alle') || (traegerText === traegerFilter);
+        const trefferSpind = (spindFilter === 'alle') || (spindText === spindFilter);
         const trefferStatus = (statusFilter === 'alle') || (item.status === statusFilter);
 
-        return trefferSuche && trefferStatus;
+        return trefferSuche && trefferTraeger && trefferSpind && trefferStatus;
     });
 
     renderePSATabelle(gefiltert);
+}
+
+function aktualisiereFilterDropdowns(daten, aktuellerTraeger, aktuellerSpind) {
+    const traegerSelect = document.getElementById('psa-traeger-filter');
+    const spindSelect = document.getElementById('psa-spind-filter');
+
+    if (traegerSelect && traegerSelect.options.length <= 1) {
+        const traegerSet = [...new Set(daten.map(item => item.traeger || item.name).filter(Boolean))].sort();
+        traegerSelect.innerHTML = '<option value="alle">Alle Träger / Personen</option>' + 
+            traegerSet.map(t => `<option value="${t}">${t}</option>`).join('');
+        traegerSelect.value = aktuellerTraeger;
+    }
+
+    if (spindSelect && spindSelect.options.length <= 1) {
+        const spindSet = [...new Set(daten.map(item => String(item.spind || '').trim()).filter(s => s !== '' && s !== '-'))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+        spindSelect.value = 'alle';
+        spindSelect.innerHTML = '<option value="alle">Alle Spinde</option>' + 
+            spindSet.map(s => `<option value="${s}">Spind ${s}</option>`).join('');
+        spindSelect.value = aktuellerSpind;
+    }
 }
 
 // 4. HTML-Tabelle aufbauen mit Rechteschutz
@@ -332,10 +361,14 @@ document.addEventListener("DOMContentLoaded", () => {
     filterPSA();
 
     const sucheInput = document.getElementById('psa-suche');
+    const traegerSelect = document.getElementById('psa-traeger-filter');
+    const spindSelect = document.getElementById('psa-spind-filter');
     const statusSelect = document.getElementById('psa-status-filter');
     const neuBtn = document.getElementById('btn-neues-psa') || document.getElementById('btn-psa-neu');
 
     if (sucheInput) sucheInput.addEventListener('input', filterPSA);
+    if (traegerSelect) traegerSelect.addEventListener('change', filterPSA);
+    if (spindSelect) spindSelect.addEventListener('change', filterPSA);
     if (statusSelect) statusSelect.addEventListener('change', filterPSA);
     
     // Automatisches Verknüpfen des "Neues PSA anlegen"-Buttons
