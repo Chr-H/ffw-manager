@@ -208,12 +208,8 @@ function filterGeraete() {
     const kategorie = elKat ? elKat.value : "";
     const status = elStat ? elStat.value : "";
 
-    // Prüfen, ob ein Dashboard-Filter übergeben wurde
-    const dashboardFilter = sessionStorage.getItem('aktiverDashboardFilter');
-    // Dashboard-Filter direkt nach dem Auslesen löschen, damit er beim nächsten normalen Filtern weg ist
-    if (dashboardFilter) {
-        sessionStorage.removeItem('aktiverDashboardFilter');
-    }
+    // Dashboard-Filter aus dem localStorage holen
+    const dashboardFilter = localStorage.getItem('aktiverDashboardFilter');
 
     const heute = new Date();
     heute.setHours(0, 0, 0, 0);
@@ -231,7 +227,6 @@ function filterGeraete() {
         
         let statusOK = true;
 
-        // Wenn ein Dashboard-Filter geklickt wurde, hat dieser Vorrang
         if (dashboardFilter) {
             if (dashboardFilter === 'ueberfaellig') {
                 if (!g.naechstePruefung) return false;
@@ -249,7 +244,6 @@ function filterGeraete() {
                 statusOK = (g.status && (g.status.toLowerCase() === 'defekt' || g.status.toLowerCase() === 'inaktiv' || g.status === 'Ausgemustert'));
             }
         } else {
-            // Ansonsten die normalen Dropdowns/Filter nutzen
             if (status === "FAELLIG") {
                 if (!g.naechstePruefung) return false;
                 const d = new Date(g.naechstePruefung);
@@ -262,6 +256,11 @@ function filterGeraete() {
 
         return sucheOK && kategorieOK && statusOK;
     });
+
+    // Erst wenn gefiltert wurde, den Dashboard-Filter wieder löschen
+    if (dashboardFilter) {
+        localStorage.removeItem('aktiverDashboardFilter');
+    }
 
     zeigeGefilterteGeraete(gefiltert);
 }

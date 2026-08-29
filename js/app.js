@@ -823,22 +823,23 @@ function abmelden() {
 // ==========================================
 
 function filtereGeraeteNachDashboard(typ) {
-    // 1. Zuerst zur Geräteseite wechseln
+    // 1. Filter im localStorage sichern, damit er den Seitenwechsel überlebt
+    localStorage.setItem('aktiverDashboardFilter', typ);
+
+    // 2. Zur Geräteseite wechseln
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('geraete');
     }
 
-    // 2. Kurz warten, bis die Geräteseite im DOM geladen ist, dann filtern
+    // 3. Kurz warten und Filter erzwingen
     setTimeout(() => {
-        const sucheInput = document.getElementById('geraet-suche') || document.getElementById('psa-suche');
+        const sucheInput = document.getElementById('sucheGeraet');
         if (sucheInput) sucheInput.value = ''; 
-
-        sessionStorage.setItem('aktiverDashboardFilter', typ);
 
         if (typeof filterGeraete === 'function') {
             filterGeraete();
         }
-    }, 100);
+    }, 150);
 }
 
 // Global für alle Module bereitstellen
