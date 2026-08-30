@@ -346,45 +346,52 @@ function aktualisiereDashboard() {
         const fahrzeuge = ladeDaten('fahrzeuge');
         const lager = ladeDaten('lager');
         const psa = ladeDaten('psa');
-        const pruefungen = ladeDaten('pruefungen');
-
-        const heute = new Date();
-        heute.setHours(0, 0, 0, 0);
-        
-        const in30Tagen = new Date(heute);
-        in30Tagen.setDate(heute.getDate() + 30);
 
         let ueberfaellig = 0;
         let faellig = 0;
 
-        // Nur noch die Geräte-Fristen als Basis nutzen, damit Dashboard und Modul übereinstimmen
-        geraete.forEach(g => {
-            if (g.naechstePruefung) {
-                const d = new Date(g.naechstePruefung);
-                d.setHours(0, 0, 0, 0);
-                if (!isNaN(d)) {
-                    if (d < heute) {
-                        ueberfaellig++;
-                    } else if (d >= heute && d <= in30Tagen) {
-                        faellig++;
-                    }
-                }
-            }
-        });
-
-        // 2. Einträge aus dem reinen Prüfungsmodul einbeziehen
-        pruefungen.forEach(p => {
-            if (!p.datum || p.status === 'erledigt') return;
-            const d = new Date(p.datum);
-            d.setHours(0, 0, 0, 0);
-            if (!isNaN(d)) {
-                if (d < heute) {
+        // Nutze die zentrale, gefilterte Prüfungs-Logik falls vorhanden, sonst Fallback
+        if (typeof window.getPruefungen === 'function') {
+            const aktivePruefungen = window.getPruefungen();
+            const heuteStr = new Date().toISOString().split('T')[0];
+            
+            aktivePruefungen.forEach(p => {
+                if (!p.datum) return;
+                if (p.datum < heuteStr) {
                     ueberfaellig++;
-                } else if (d >= heute && d <= in30Tagen) {
+                } else {
                     faellig++;
                 }
-            }
-        });
+            });
+        } else {
+            // Fallback falls die andere Datei noch nicht geladen ist
+            const pruefungen = ladeDaten('pruefungen');
+            const heute = new Date();
+            heute.setHours(0, 0, 0, 0);
+            const in30Tagen = new Date(heute);
+            in30Tagen.setDate(heute.getDate() + 30);
+
+            geraete.forEach(g => {
+                if (g.naechstePruefung) {
+                    const d = new Date(g.naechstePruefung);
+                    d.setHours(0, 0, 0, 0);
+                    if (!isNaN(d)) {
+                        if (d < heute) ueberfaellig++;
+                        else if (d >= heute && d <= in30Tagen) faellig++;
+                    }
+                }
+            });
+
+            pruefungen.forEach(p => {
+                if (!p.datum || p.status === 'erledigt') return;
+                const d = new Date(p.datum);
+                d.setHours(0, 0, 0, 0);
+                if (!isNaN(d)) {
+                    if (d < heute) ueberfaellig++;
+                    else if (d >= heute && d <= in30Tagen) faellig++;
+                }
+            });
+        }
 
         // Groß-/Kleinschreibung absichern (akzeptiert 'Einsatzbereit' und 'einsatzbereit')
         const einsatzbereitCount = geraete.filter(g => 
