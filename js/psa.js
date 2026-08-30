@@ -312,10 +312,21 @@ function oeffnePSAModal(id = null) {
 
 function savePSAFromModal() {
     const id = getInputValue('psa-id');
-    const traeger = getInputValue('psa-traeger');
+    const traegerId = getInputValue('psa-traeger'); // Das ist jetzt die ID oder der Name aus dem Select
     const seriennummer = getInputValue('psa-seriennummer');
 
-    if (!traeger) {
+    // Optional: Wenn eine ID übergeben wurde, den echten Namen aus dem Personal-Modul ermitteln
+    let traegerName = traegerId;
+    if (traegerId) {
+        const mitglieder = typeof ladeDaten === 'function' ? ladeDaten('personal') : [];
+        const gefundenesMitglied = mitglieder.find(m => String(m.id) === String(traegerId));
+        if (gefundenesMitglied) {
+            // Name im Format "Nachname, Vorname" oder "Vorname Nachname" zusammenbauen
+            traegerName = `${gefundenesMitglied.nachname}, ${gefundenesMitglied.vorname}`;
+        }
+    }
+
+    if (!traegerId) {
         alert("Bitte geben Sie einen Träger an.");
         return;
     }
@@ -326,7 +337,7 @@ function savePSAFromModal() {
     // PRÜFUNG: Doppelte Serien- / Inventarnummer abfangen
     if (seriennummer && seriennummer !== '') {
         const doppelt = allePSA.some((p, i) => {
-            if (index >= 0 && i === index) return false; // Eigenen Datensatz beim Bearbeiten ignorieren
+            if (index >= 0 && i === index) return false;
             const vorhandeneNummer = p.seriennummer || p.inventarnummer || '';
             return kohärentePruefungNummer(vorhandeneNummer, seriennummer);
         });
@@ -339,7 +350,8 @@ function savePSAFromModal() {
 
     const neuerEintrag = {
         id,
-        traeger,
+        traeger: traegerName, // <--- Hier speichern wir jetzt den Klarnamen statt der ID!
+        traegerId: traegerId, // <--- (Optional) Die ID für interne Verknüpfungen separat sichern
         spind: getInputValue('psa-spind'),
         hersteller: getInputValue('psa-hersteller'),
         typ: getInputValue('psa-typ'),
