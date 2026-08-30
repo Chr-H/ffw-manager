@@ -599,5 +599,83 @@
         </form>
     </div>
 </div>
+<!-- 9. RECHTE & BENUTZER BEREICH -->
+            <div id="seite-benutzer" class="seite-ansicht" style="display: none;">
+                <!-- (Inhalt des Benutzer-Bereichs) -->
+            </div>
+
+            <!-- NEU: HIER DAS PSA-AKTEN-MODAL EINFÜGEN -->
+            <div id="psa-akte-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center;">
+                <div style="background: #fff; border-radius: 8px; max-width: 800px; width: 95%; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+                    
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b30000; padding-bottom: 10px; margin-bottom: 15px;">
+                        <h3 id="psa-akte-titel" style="margin: 0; color: #b30000;">🛡️ PSA-Akte</h3>
+                        <button type="button" onclick="document.getElementById('psa-akte-modal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+
+                    <!-- Stammdaten-Übersicht -->
+                    <div id="psa-akte-stammdaten" style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; line-height: 1.5;">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+
+                    <!-- Historie (Prüfungen, Waschkarten, Mängel) -->
+                    <h4 style="font-size: 16px; margin-bottom: 10px;">📋 Prüfhistorie, Waschkarten & Protokolle</h4>
+                    <div id="psa-akte-historie-liste" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; border-radius: 4px; padding: 8px;">
+                        <!-- Historien-Einträge -->
+                    </div>
+
+                    <!-- Neuer Eintrag / Protokoll hinzufügen -->
+                    <div style="background: #f1f3f5; padding: 12px; border-radius: 6px;">
+                        <h5 style="font-size: 14px; margin-top: 0; margin-bottom: 10px;">➕ Neuer Eintrag / Prüfung / Waschkarte hinzufügen</h5>
+                        <form id="psa-protokoll-form" onsubmit="event.preventDefault(); speicherePSAProtokoll();">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                                <div>
+                                    <label style="font-size: 12px;">Datum:</label>
+                                    <input type="date" id="psa-protokoll-datum" style="width: 100%; padding: 5px; box-sizing: border-box;" required>
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px;">Art des Eintrags:</label>
+                                    <select id="psa-protokoll-art" style="width: 100%; padding: 5px; box-sizing: border-box;">
+                                        <option value="Prüfung">Reguläre Prüfung / Sichtprüfung</option>
+                                        <option value="Waschkarte">🧽 Reinigung / Waschung</option>
+                                        <option value="Beschädigung">⚠️ Leichte Beschädigung / Mangel</option>
+                                        <option value="Reparatur">🛠️ Reparatur / Instandsetzung</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <label style="font-size: 12px;">Ergebnis / Status:</label>
+                                <select id="psa-protokoll-ergebnis" style="width: 100%; padding: 5px; box-sizing: border-box;">
+                                    <option value="Bestanden / Einsatzbereit">🟢 Bestanden / Einsatzbereit / Ohne Mängel</option>
+                                    <option value="Geringe Mängel">🟡 Geringe Mängel (weiterhin nutzbar)</option>
+                                    <option value="Gesperrt / Defekt">🔴 Gesperrt / Ausgemustert / Defekt</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <label style="font-size: 12px;">Bemerkung / Details (z.B. Waschgang bei 60°C, Kratzer am Visier):</label>
+                                <textarea id="psa-protokoll-bemerkung" rows="2" style="width: 100%; padding: 5px; box-sizing: border-box;" placeholder="Details eintragen..."></textarea>
+                            </div>
+                            <div style="text-align: right;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="speicherePSAProtokoll()" style="padding: 6px 14px;">Eintrag speichern</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('psa-akte-modal').style.display='none'" style="padding: 6px 12px;">Schließen</button>
+                    </div>
+                </div>
+            </div>
+            <!-- ENDE MODAL -->
+
+        </main>
+    </div> <!-- Ende .container -->
+
+    <!-- JavaScript-Dateien (Beispiel) -->
+    <!-- ... -->
+
 </body>
 </html>

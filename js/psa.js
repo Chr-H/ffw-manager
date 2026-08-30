@@ -213,16 +213,167 @@ function renderePSATabelle(liste) {
     });
 }
 
-// Global verfügbare Hilfsfunktion für den Akte-Button
+// ==========================================
+// 8. PSA-AKTEN & PROTOKOLL-FUNKTIONEN
+// ==========================================
+
+// Global verfügbare Funktion zum Öffnen der PSA-Akte inklusive Datenbefüllung
 window.oeffnePSAAkteModal = function(id) {
-    if (typeof window.zeigPSADetails === 'function') {
-        window.zeigPSADetails(id);
-    } else if (typeof window.oeffneAkte === 'function') {
-        window.oeffneAkte('psa', id);
-    } else {
-        alert("Details-Ansicht für Akte (ID: " + id + ") wird vorbereitet.");
+    const allePSA = ladePSA();
+    const eintrag = allePSA.find(p => String(p.id) === String(id));
+    
+    if (!eintrag) {
+        alert("⚠️ PSA-Eintrag nicht gefunden.");
+        return;
+    }
+
+    // 1. Stammdaten im Modal anzeigen
+    const stammdatenDiv = document.getElementById('psa-akte-stammdaten');
+    if (stammdatenDiv) {
+        stammdatenDiv.innerHTML = `
+            <strong>Träger:</strong> ${eintrag.traeger || eintrag.name || 'Unbekannt'}<br>
+            <strong>Spind:</strong> ${eintrag.spind || '-'}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Hersteller:</strong> ${eintrag.hersteller || '-'}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Typ:</strong> ${eintrag.typ || '-'}<br>
+            <strong>Bezeichnung:</strong> ${eintrag.bezeichnung || eintrag.ausruestung || '-'}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Größe:</strong> ${eintrag.groesse || '-'}<br>
+            <strong>Seriennummer:</strong> ${eintrag.seriennummer || eintrag.inventarnummer || '-'}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Nächste Prüfung:</strong> ${eintrag.naechstePruefung || '-'}
+        `;
+    }
+
+    // Modal-Titel anpassen
+    const titelEl = document.getElementById('psa-akte-titel');
+    if (titelEl) {
+        titelEl.textContent = `🛡️ PSA-Akte: ${eintrag.bezeichnung || eintrag.ausruestung || 'Details'} (${eintrag.seriennummer || id})`;
+    }
+
+    // Aktuelle ID im Formular für Protokolle hinterlegen (falls benötigt)
+    window.aktivePsaAktenId = id;
+
+    // 2. Historie / Protokolle laden und anzeigen
+    renderePSAHistorie(eintrag);
+
+    // 3. Datum des neuen Protokolls auf heute voreinstellen
+    const datumInput = document.getElementById('psa-protokoll-datum');
+    if (datumInput) {
+        datumInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    // 4. Modal anzeigen (Bootstrap oder Fallback)
+    const modal = document.getElementById('psa-akte-modal');
+    if (modal) {
+        if (window.bootstrap && bootstrap.Modal) {
+            const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+            bsModal.show();
+        } else {
+            modal.style.display = 'flex';
+        }
     }
 };
+
+// Historie-Einträge in der Akte rendern
+function renderePSAHistorie(eintrag) {
+    const historieListeDiv = document.getElementById('psa-akte-historie-liste');
+    if (!historieListeDiv) return;
+
+    const protokolle = eintrag.protokolle || [];
+
+    if (protokolle.length === 0) {
+        historieListeDiv.innerHTML = `<p class="text-muted text-center m-0" style="font-size: 0.9em;">Keine Prüfungen oder Waschkarten hinterlegt.</p>`;
+        return;
+    }
+
+    let html = '<div style="display: flex; flexDirection: column; gap: 6px;">';
+    protokolle.forEach((p, index) => {
+        let badgeColor = '#28a745'; // Grün
+        if (p.ergebnis && p.ergebnis.includes('Geringe')) badgeColor = '#ffc107'; // Gelb
+        if (p.ergebnis && (p.ergebnis.includes('Gesperrt') || p.ergebnis.includes('Defekt'))) badgeColor = '#dc3545'; // Rot
+
+        html += `
+            <div style="background: #fff; border: 1px solid #ddd; border-left: 4px solid ${badgeColor}; padding: 8px; border-radius: 4px; font-size: 0.9em;">
+                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px;">
+                    <span>${p.art} (${p.datum})</span>
+                    <span style="font-size: 0.85em; color: #555;">${p.ergebnis || ''}</span>
+                </div>
+                <div style="color: #333; margin-bottom: 4px;">${p.bemerkung || 'Keine Details angegeben.'}</div>
+                <div style="text-align: right;">
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.75em; padding: 1px 6px;" onclick="loeschePSAProtokoll('${eintrag.id}', ${index})">Löschen</button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    historieListeDiv.innerHTML = html;
+}
+
+// Neues Protokoll / Prüfung / Waschkarte speichern
+function speicherePSAProtokoll() {
+    if (!hatPSASchreibrechte()) {
+        alert("⚠️ Keine Berechtigung zum Speichern von Protokollen.");
+        return;
+    }
+
+    const id = window.aktivePsaAktenId;
+    if (!id) return;
+
+    const datum = getInputValue('psa-protokoll-datum');
+    const art = getInputValue('psa-protokoll-art');
+    const ergebnis = getInputValue('psa-protokoll-ergebnis');
+    const bemerkung = getInputValue('psa-protokoll-bemerkung');
+
+    if (!datum) {
+        alert("Bitte ein Datum angeben.");
+        return;
+    }
+
+    let allePSA = ladePSA();
+    const index = allePSA.findIndex(p => String(p.id) === String(id));
+
+    if (index < 0) return;
+
+    if (!allePSA[index].protokolle) {
+        allePSA[index].protokolle = [];
+    }
+
+    // Neues Protokoll an den Anfang der Liste setzen
+    allePSA[index].protokolle.unshift({
+        datum,
+        art,
+        ergebnis,
+        bemerkung,
+        erstelltAm: new Date().toISOString()
+    });
+
+    if (speicherePSA(allePSA)) {
+        // Eingabefeld für Bemerkung leeren
+        const bemEl = document.getElementById('psa-protokoll-bemerkung');
+        if (bemEl) bemEl.value = '';
+
+        // Akte direkt aktualisieren
+        oeffnePSAAkteModal(id);
+    }
+}
+
+// Einzelnes Protokoll löschen
+function loeschePSAProtokoll(psaId, protokollIndex) {
+    if (!hatPSASchreibrechte()) {
+        alert("⚠️ Keine Berechtigung zum Löschen.");
+        return;
+    }
+
+    if (!confirm("Möchten Sie diesen Eintrag wirklich löschen?")) return;
+
+    let allePSA = ladePSA();
+    const index = allePSA.findIndex(p => String(p.id) === String(psaId));
+
+    if (index >= 0 && allePSA[index].protokolle) {
+        allePSA[index].protokolle.splice(protokollIndex, 1);
+        if (speicherePSA(allePSA)) {
+            oeffnePSAAkteModal(psaId);
+        }
+    }
+}
 
 function getInputValue(id) {
     const el = document.getElementById(id);
@@ -274,7 +425,17 @@ function oeffnePSAModal(id = null) {
         const allePSA = ladePSA();
         const eintrag = allePSA.find(p => String(p.id) === String(id));
         if (eintrag) {
-            aktuellerTraeger = eintrag.traeger || eintrag.mitgliedId || eintrag.name || '';
+            const rohTraeger = eintrag.traeger || eintrag.mitgliedId || eintrag.name || '';
+            
+            // Abgleich mit Personal-Daten, damit bestehende Namen oder IDs im Dropdown korrekt erkannt werden
+            const mitglieder = typeof ladeDaten === 'function' ? ladeDaten('personal') : [];
+            const gefundenesMitglied = mitglieder.find(m => 
+                String(m.id) === String(rohTraeger) || 
+                `${m.nachname}, ${m.vorname}` === rohTraeger || 
+                `${m.vorname} ${m.nachname}` === rohTraeger
+            );
+            
+            aktuellerTraeger = gefundenesMitglied ? gefundenesMitglied.id : rohTraeger;
             
             // Restliche Felder befüllen
             setInputValue('psa-id', eintrag.id);
@@ -291,7 +452,6 @@ function oeffnePSAModal(id = null) {
     } else {
         setInputValue('psa-id', 'psa_' + Date.now());
     }
-
     // 2. Dropdown mit Personal befüllen und den aktuellen Träger selektieren
     ladePersonalDropdown('psa-traeger', aktuellerTraeger);
 
@@ -497,3 +657,6 @@ window.renderePSATabelle = renderePSATabelle;
 window.oeffnePSAModal = oeffnePSAModal;
 window.savePSAFromModal = savePSAFromModal;
 window.loeschePSAEintragModal = loeschePSAEintragModal;
+// Globale Freigabe für das neue Protokoll
+window.speicherePSAProtokoll = speicherePSAProtokoll;
+window.loeschePSAProtokoll = loeschePSAProtokoll;
