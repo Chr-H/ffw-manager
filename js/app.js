@@ -42,6 +42,31 @@ function zeigeSeite(modul) {
         case 'geraete':
             if (typeof renderGeraeteView === 'function') renderGeraeteView();
             else if (typeof filterGeraete === 'function') filterGeraete();
+
+            // Automatischen Dashboard-Filter anwenden, falls einer hinterlegt wurde
+            setTimeout(() => {
+                const gespeicherterFilter = localStorage.getItem('aktiverDashboardFilter');
+                if (gespeicherterFilter) {
+                    const elStat = document.getElementById("filterStatus");
+                    const elSuche = document.getElementById("sucheGeraet");
+                    const elKat = document.getElementById("filterKategorie");
+
+                    if (elSuche) elSuche.value = "";
+                    if (elKat) elKat.value = "";
+
+                    if (elStat) {
+                        if (gespeicherterFilter === 'ueberfaellig') elStat.value = 'ueberfaellig';
+                        else if (gespeicherterFilter === 'faellig') elStat.value = 'faellig';
+                        else if (gespeicherterFilter === 'Einsatzbereit') elStat.value = 'Einsatzbereit';
+                        else if (gespeicherterFilter === 'inaktiv') elStat.value = 'Defekt';
+                    }
+
+                    if (typeof filterGeraete === 'function') {
+                        filterGeraete();
+                    }
+                    localStorage.removeItem('aktiverDashboardFilter');
+                }
+            }, 50);
             break;
 
         case 'fahrzeuge':
@@ -823,44 +848,13 @@ function abmelden() {
 // ==========================================
 
 function filtereGeraeteNachDashboard(typ) {
-    // 1. Den Filter-Typ direkt im localStorage zwischenspeichern
+    // 1. Direkt den Filter im localStorage speichern
     localStorage.setItem('aktiverDashboardFilter', typ);
 
-    // 2. Zur Geräteseite wechseln (lädt das HTML & stößt dort die Filterung an)
+    // 2. Die Seite wechseln (und dem System sagen: Danach direkt filtern!)
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('geraete');
     }
-
-    // 3. Sicherheits-Intervall: Prüfen, bis die Geräteseite da ist und den Filter anwenden
-    let checkInterval = setInterval(() => {
-        const elStat = document.getElementById("filterStatus");
-        const elSuche = document.getElementById("sucheGeraet");
-        const elKat = document.getElementById("filterKategorie");
-
-        // Sobald das Dropdown auf der neuen Seite existiert...
-        if (elStat) {
-            clearInterval(checkInterval); // Intervall stoppen
-
-            if (elSuche) elSuche.value = "";
-            if (elKat) elKat.value = "";
-
-            // Dropdown-Wert optisch anpassen
-            if (typ === 'ueberfaellig') {
-                elStat.value = 'ueberfaellig';
-            } else if (typ === 'faellig') {
-                elStat.value = 'faellig';
-            } else if (typ === 'Einsatzbereit') {
-                elStat.value = 'Einsatzbereit';
-            } else if (typ === 'inaktiv') {
-                elStat.value = 'Defekt';
-            }
-
-            // Filterung ausführen
-            if (typeof filterGeraete === 'function') {
-                filterGeraete();
-            }
-        }
-    }, 50); // Prüft alle 50ms, ob die Seite geladen ist
 }
 
 // Global für alle Module bereitstellen
