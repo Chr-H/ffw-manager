@@ -130,16 +130,26 @@ function aktualisiereFilterDropdowns(daten, aktuellerTraeger, aktuellerSpind) {
     const traegerSelect = document.getElementById('psa-traeger-filter');
     const spindSelect = document.getElementById('psa-spind-filter');
 
+    // 1. Träger-Filter direkt aus dem Personal-Modul befüllen
     if (traegerSelect && traegerSelect.options.length <= 1) {
-        const traegerSet = [...new Set(daten.map(item => item.traeger || item.name).filter(Boolean))].sort();
-        traegerSelect.innerHTML = '<option value="alle">Alle Träger / Personen</option>' + 
-            traegerSet.map(t => `<option value="${t}">${t}</option>`).join('');
+        const mitglieder = typeof ladeDaten === 'function' ? ladeDaten('personal') : [];
+        
+        let html = '<option value="alle">Alle Träger / Personen</option>';
+        html += '<option value="">-- Kein Träger / Frei --</option>';
+        
+        mitglieder.forEach(m => {
+            const identifier = m.id || `${m.vorname} ${m.nachname}`;
+            const anzeigeName = `${m.nachname}, ${m.vorname}`;
+            html += `<option value="${identifier}">${anzeigeName}</option>`;
+        });
+
+        traegerSelect.innerHTML = html;
         traegerSelect.value = aktuellerTraeger;
     }
 
+    // 2. Spind-Filter wie gewohnt aus den Daten aufbauen
     if (spindSelect && spindSelect.options.length <= 1) {
         const spindSet = [...new Set(daten.map(item => String(item.spind || '').trim()).filter(s => s !== '' && s !== '-'))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
-        spindSelect.value = 'alle';
         spindSelect.innerHTML = '<option value="alle">Alle Spinde</option>' + 
             spindSet.map(s => `<option value="${s}">Spind ${s}</option>`).join('');
         spindSelect.value = aktuellerSpind;
@@ -223,7 +233,25 @@ function setInputValue(id, val) {
     const el = document.getElementById(id);
     if (el) el.value = val || '';
 }
+function ladePersonalDropdown(selektorId, ausgewaehlt = '') {
+    const selectEl = document.getElementById(selektorId);
+    if (!selectEl) return;
 
+    // Versucht die Mitglieder aus dem Personal-Modul zu laden
+    const mitglieder = typeof ladeDaten === 'function' ? ladeDaten('personal') : [];
+    
+    // Option für "Keine Zuweisung" (erlaubt PSA ohne Personal)
+    let html = '<option value="">-- Kein Träger / Frei --</option>';
+    
+    mitglieder.forEach(m => {
+        const identifier = m.id || `${m.vorname} ${m.nachname}`;
+        const anzeigeName = `${m.nachname}, ${m.vorname} (${m.dienstgrad || 'Mitglied'})`;
+        const selected = String(identifier) === String(ausgewaehlt) ? 'selected' : '';
+        html += `<option value="${identifier}" ${selected}>${anzeigeName}</option>`;
+    });
+
+    selectEl.innerHTML = html;
+}
 // 5. Modal-Aktionen
 function oeffnePSAModal(id = null) {
     if (!hatPSASchreibrechte()) {
@@ -240,12 +268,16 @@ function oeffnePSAModal(id = null) {
 
     if (form) form.reset();
 
+    // 1. Ermitteln, welcher Träger beim Bearbeiten ausgewählt war (falls ID übergeben)
+    let aktuellerTraeger = '';
     if (id) {
         const allePSA = ladePSA();
         const eintrag = allePSA.find(p => String(p.id) === String(id));
         if (eintrag) {
+            aktuellerTraeger = eintrag.traeger || eintrag.mitgliedId || eintrag.name || '';
+            
+            // Restliche Felder befüllen
             setInputValue('psa-id', eintrag.id);
-            setInputValue('psa-traeger', eintrag.traeger || eintrag.name);
             setInputValue('psa-spind', eintrag.spind);
             setInputValue('psa-hersteller', eintrag.hersteller);
             setInputValue('psa-typ', eintrag.typ);
@@ -259,6 +291,9 @@ function oeffnePSAModal(id = null) {
     } else {
         setInputValue('psa-id', 'psa_' + Date.now());
     }
+
+    // 2. Dropdown mit Personal befüllen und den aktuellen Träger selektieren
+    ladePersonalDropdown('psa-traeger', aktuellerTraeger);
 
     if (form) {
         form.onsubmit = function(e) {
