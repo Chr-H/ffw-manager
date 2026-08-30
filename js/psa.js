@@ -168,12 +168,16 @@ function aktualisiereFilterDropdowns(daten, aktuellerTraeger, aktuellerSpind) {
         traegerSelect.value = aktuellerTraeger;
     }
 
-    // 2. Spind-Filter wie gewohnt aus den Daten aufbauen
-    if (spindSelect && spindSelect.options.length <= 1) {
+    // 2. Spind-Filter dynamisch aus allen aktuellen Daten aufbauen
+    if (spindSelect) {
+        const aktuellerWert = spindSelect.value;
         const spindSet = [...new Set(daten.map(item => String(item.spind || '').trim()).filter(s => s !== '' && s !== '-'))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+        
         spindSelect.innerHTML = '<option value="alle">Alle Spinde</option>' + 
             spindSet.map(s => `<option value="${s}">Spind ${s}</option>`).join('');
-        spindSelect.value = aktuellerSpind;
+            
+        // Vorherige Auswahl wiederherstellen, falls sie noch existiert
+        spindSelect.value = spindSet.includes(aktuellerWert) ? aktuellerWert : 'alle';
     }
 }
 
