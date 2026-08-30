@@ -108,19 +108,19 @@
        <!-- UNTEN: Prüfungen, Status & Fristen -->
         <h2>Übersicht & Fristen</h2>
         <section class="status">
-            <div class="status-card red" onclick="filtereGeraeteNachDashboard('ueberfaellig')" style="cursor: pointer;">
+            <div class="status-card red" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
                 <h3>🔴 Prüfungen</h3>
                 <p id="stat-pruefungen-ueberfaellig">0 überfällig</p>
             </div>
-            <div class="status-card orange" onclick="filtereGeraeteNachDashboard('faellig')" style="cursor: pointer;">
+            <div class="status-card orange" onclick="zeigeSeite('pruefungen')" style="cursor: pointer;">
                 <h3>🟡 Wartung & Fristen</h3>
                 <p id="stat-wartung-faellig">0 fällig</p>
             </div>
-            <div class="status-card green" onclick="filtereGeraeteNachDashboard('Einsatzbereit')" style="cursor: pointer;">
+            <div class="status-card green" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
                 <h3>🟢 Einsatzbereit</h3>
                 <p id="stat-einsatzbereit">0 Geräte einsatzbereit</p>
             </div>
-            <div class="status-card blue" onclick="filtereGeraeteNachDashboard('inaktiv')" style="cursor: pointer;">
+            <div class="status-card blue" onclick="zeigeSeite('geraete')" style="cursor: pointer;">
                 <h3>⚫ Außer Dienst / Defekt</h3>
                 <p id="stat-defekt">0 inaktiv</p>
             </div>
