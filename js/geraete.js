@@ -211,9 +211,6 @@ function filterGeraete() {
     // Dashboard-Filter aus dem localStorage holen
     const dashboardFilter = localStorage.getItem('aktiverDashboardFilter');
 
-    // Wenn der Nutzer manuell ein Dropdown oder die Suche bedient, löschen wir den Dashboard-Filter aufheben
-    // (Ausnahme: Die Funktion wurde frisch durch den Klick aufgerufen)
-    
     const heute = new Date();
     heute.setHours(0, 0, 0, 0);
 
@@ -230,7 +227,6 @@ function filterGeraete() {
         
         let statusOK = true;
 
-        // Wenn ein Dashboard-Filter aktiv ist und der Nutzer nicht manuell gefiltert hat
         if (dashboardFilter && !suchbegriff && kategorie === "") {
             if (dashboardFilter === 'ueberfaellig') {
                 if (!g.naechstePruefung) return false;
@@ -248,16 +244,20 @@ function filterGeraete() {
                 statusOK = (g.status && (g.status.toLowerCase() === 'defekt' || g.status.toLowerCase() === 'inaktiv' || g.status === 'Ausgemustert'));
             }
         } else {
-            // Sobald der Nutzer etwas tippt oder das Dropdown ändert, greift der normale Filter
             if (dashboardFilter) {
                 localStorage.removeItem('aktiverDashboardFilter');
             }
             
-            if (status === "FAELLIG") {
+            if (status === "ueberfaellig") {
                 if (!g.naechstePruefung) return false;
                 const d = new Date(g.naechstePruefung);
                 d.setHours(0, 0, 0, 0);
                 statusOK = (d < heute);
+            } else if (status === "faellig") {
+                if (!g.naechstePruefung) return false;
+                const d = new Date(g.naechstePruefung);
+                d.setHours(0, 0, 0, 0);
+                statusOK = (d >= heute && d <= in30Tagen);
             } else if (status !== "") {
                 statusOK = g.status === status;
             }

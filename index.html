@@ -187,12 +187,13 @@
                     <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
                     <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
                     <select id="filterStatus" onchange="filterGeraete()">
-                        <option value="">Alle Status</option>
-                        <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                        <option value="Wartung">🟡 Wartung</option>
-                        <option value="Defekt">🔴 Defekt</option>
-                        <option value="Außer Dienst">⚫ Außer Dienst</option>
-                    </select>
+    <option value="">Alle Status</option>
+    <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+    <option value="ueberfaellig">🔴 Überfällig (Prüfung verpasst)</option>
+    <option value="faellig">🟡 Fällig (nächste 30 Tage)</option>
+    <option value="Defekt">🔴 Defekt</option>
+    <option value="Außer Dienst">⚫ Außer Dienst</option>
+</select>
                 </div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:start;">

@@ -823,13 +823,36 @@ function abmelden() {
 // ==========================================
 
 function filtereGeraeteNachDashboard(typ) {
-    // 1. Filter im localStorage speichern
-    localStorage.setItem('aktiverDashboardFilter', typ);
-
-    // 2. Zur Geräteseite wechseln
+    // 1. Zur Geräteseite wechseln
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('geraete');
     }
+
+    // 2. Kurz warten, bis die Geräteseite im DOM da ist, dann die Filter-Dropdowns direkt setzen
+    setTimeout(() => {
+        const elSuche = document.getElementById("sucheGeraet");
+        const elKat = document.getElementById("filterKategorie");
+        const elStat = document.getElementById("filterStatus");
+
+        if (elSuche) elSuche.value = "";
+        if (elKat) elKat.value = "";
+
+        if (elStat) {
+            if (typ === 'ueberfaellig' || typ === 'faellig') {
+                elStat.value = "FAELLIG"; // Nutzt das normale Dropdown
+            } else {
+                elStat.value = typ; // z.B. "Einsatzbereit" oder "Defekt"
+            }
+        }
+
+        // 3. Im localStorage merken, ob es exakt überfällig oder fällig (nächste 30 Tage) ist
+        localStorage.setItem('spezialDashboardFilter', typ);
+
+        // 4. Filterfunktion direkt ausführen
+        if (typeof filterGeraete === 'function') {
+            filterGeraete();
+        }
+    }, 50);
 }
 
 // Global für alle Module bereitstellen
