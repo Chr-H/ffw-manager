@@ -823,22 +823,28 @@ function abmelden() {
 // ==========================================
 
 function filtereGeraeteNachDashboard(typ) {
-    // 1. Zur Geräteseite wechseln
+    // 1. Den Filter-Typ direkt im localStorage zwischenspeichern
+    localStorage.setItem('aktiverDashboardFilter', typ);
+
+    // 2. Zur Geräteseite wechseln (lädt das HTML & stößt dort die Filterung an)
     if (typeof zeigeSeite === 'function') {
         zeigeSeite('geraete');
     }
 
-    // 2. Kurz warten, bis die Geräteseite da ist, dann das Dropdown setzen und filtern
-    setTimeout(() => {
+    // 3. Sicherheits-Intervall: Prüfen, bis die Geräteseite da ist und den Filter anwenden
+    let checkInterval = setInterval(() => {
         const elStat = document.getElementById("filterStatus");
         const elSuche = document.getElementById("sucheGeraet");
         const elKat = document.getElementById("filterKategorie");
 
-        if (elSuche) elSuche.value = "";
-        if (elKat) elKat.value = "";
-
+        // Sobald das Dropdown auf der neuen Seite existiert...
         if (elStat) {
-            // Wir mappen den Dashboard-Typ auf die Werte unseres Dropdowns
+            clearInterval(checkInterval); // Intervall stoppen
+
+            if (elSuche) elSuche.value = "";
+            if (elKat) elKat.value = "";
+
+            // Dropdown-Wert optisch anpassen
             if (typ === 'ueberfaellig') {
                 elStat.value = 'ueberfaellig';
             } else if (typ === 'faellig') {
@@ -846,15 +852,15 @@ function filtereGeraeteNachDashboard(typ) {
             } else if (typ === 'Einsatzbereit') {
                 elStat.value = 'Einsatzbereit';
             } else if (typ === 'inaktiv') {
-                elStat.value = 'Defekt'; // Oder je nachdem, wie dein inaktiv-Wert heißt
+                elStat.value = 'Defekt';
+            }
+
+            // Filterung ausführen
+            if (typeof filterGeraete === 'function') {
+                filterGeraete();
             }
         }
-
-        // 3. Filterfunktion sofort ausführen
-        if (typeof filterGeraete === 'function') {
-            filterGeraete();
-        }
-    }, 100);
+    }, 50); // Prüft alle 50ms, ob die Seite geladen ist
 }
 
 // Global für alle Module bereitstellen
