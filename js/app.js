@@ -828,6 +828,113 @@ function filtereGeraeteNachDashboard(typ) {
         zeigeSeite('geraete');
     }
 }
+// ==========================================
+// Modul: Zentrales Prüfungs- & Fristen-Logbuch
+// ==========================================
+
+function renderPruefungenView() {
+    const ziel = document.getElementById('seite-pruefungen');
+    if (!ziel) return;
+
+    const geraete = ladeDaten("geraete");
+    const psa = ladeDaten("psa");
+    
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+
+    // Alle relevanten Prüffristen aus Geräten und PSA zusammenführen
+    let allePruefungen = [];
+
+    geraete.forEach(g => {
+        if (g.naechstePruefung) {
+            allePruefungen.push({
+                typ: 'Gerät',
+                bezeichnung: g.bezeichnung || 'Unbekanntes Gerät',
+                kennung: g.inventarnummer || g.seriennummer || '-',
+                datum: g.naechstePruefung,
+                statusOrg: g.status || 'Einsatzbereit'
+            });
+        }
+    });
+
+    psa.forEach(p => {
+        if (p.naechstePruefung) {
+            allePruefungen.push({
+                typ: 'PSA',
+                bezeichnung: `${p.traeger || p.person || 'Unbekannt'} - ${p.bezeichnung || p.teil || 'PSA'}`,
+                kennung: p.seriennummer || '-',
+                datum: p.naechstePruefung,
+                statusOrg: p.status || 'Einsatzbereit'
+            });
+        }
+    });
+
+    // Nach Datum sortieren (das Dringendste zuerst)
+    allePruefungen.sort((a, b) => new Date(a.datum) - new Date(b.datum));
+
+    let tabellenZeilen = '';
+
+    if (allePruefungen.length === 0) {
+        tabellenZeilen = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">Keine Prüfungsdaten in Geräten oder PSA hinterlegt.</td></tr>`;
+    } else {
+        allePruefungen.forEach(p => {
+            const pruefDatum = new Date(p.datum);
+            pruefDatum.setHours(0, 0, 0, 0);
+            
+            let badgeStyle = "background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.85em;";
+            let statusText = "Fällig / Fristgerecht";
+
+            if (isNaN(pruefDatum)) {
+                statusText = "Ungültiges Datum";
+                badgeStyle = "background: #6c757d; color: white; padding: 3px 8px; border-radius: 4px;";
+            } else if (pruefDatum < heute) {
+                statusText = "🔴 Überfällig";
+                badgeStyle = "background: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold;";
+            }
+
+            const datumFormatted = !isNaN(pruefDatum) ? pruefDatum.toLocaleDateString('de-DE') : p.datum;
+
+            tabellenZeilen += `
+                <tr>
+                    <td><strong>${p.typ}</strong></td>
+                    <td>${p.bezeichnung}</td>
+                    <td>${p.kennung}</td>
+                    <td>${datumFormatted}</td>
+                    <td><span style="${badgeStyle}">${statusText}</span></td>
+                </tr>
+            `;
+        });
+    }
+
+    ziel.innerHTML = `
+        <h2>📋 Zentrale Prüfungs- & Fristenübersicht</h2>
+        <p style="color: #666; margin-bottom: 20px;">Hier sehen Sie systemweit alle anstehenden und überfälligen Prüfungen aus Geräten und PSA auf einen Blick.</p>
+        
+        <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+            <button onclick="exportPruefungenCSV()" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">📥 Als CSV exportieren</button>
+            <button onclick="druckeListe('Pruefungsliste', 'tabelle-pruefungen-wrap')" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">🖨️ Liste drucken</button>
+        </div>
+
+        <div id="tabelle-pruefungen-wrap" style="background: #fff; border-radius: 8px; border: 1px solid #ddd; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px;">Bereich</th>
+                        <th style="padding: 12px;">Bezeichnung / Inhaber</th>
+                        <th style="padding: 12px;">Kennung / ID</th>
+                        <th style="padding: 12px;">Nächste Prüfung</th>
+                        <th style="padding: 12px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tabellenZeilen}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.renderPruefungenView = renderPruefungenView;
 
 // Global für alle Module bereitstellen
 window.holeAktuelleRolle = holeAktuelleRolle;
