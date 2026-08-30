@@ -39,24 +39,42 @@ function hatPruefungSchreibRecht() {
 }
 
 function getPruefungen() {
-    // Falls Gast: Gar keine Prüfungsdaten zurückliefern
     if (!hatPruefungLeseRecht()) {
         return [];
     }
 
-    let kombiniert = [];
+    let map = new Map();
 
-    // 1. Fristen direkt aus der Geräte-Datenbank holen
+    // Aktuelles Datum für den Fristen-Check vorbereiten (heute 00:00 Uhr)
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+
+    // Definiere hier, wie viele Tage im Voraus fällige Prüfungen angezeigt werden sollen (z.B. 30 Tage)
+    const tageImVoraus = 30;
+    const zukunftsLimit = new Date();
+    zukunftsLimit.setDate(heute.getDate() + tageImVoraus);
+
+    // Hilfsfunktion zur Prüfung, ob ein Datum "relevant" ist (überfällig oder bald fällig)
+    function istRelevant(datumStr) {
+        if (!datumStr) return false;
+        const pruefDate = new Date(datumStr);
+        if (isNaN(pruefDate)) return false;
+        
+        // Relevant, wenn es bereits vergangen (überfällig) ODER innerhalb der nächsten X Tage fällig ist
+        return pruefDate <= zukunftsLimit;
+    }
+
+    // 1. Fristen aus der Geräte-Datenbank holen (nur relevante filtern)
     const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
     geraete.forEach(g => {
-        if (g && (g.naechstePruefung || g.letztePruefung)) {
-            kombiniert.push({
-                id: 'ger_' + (g.id || Math.random()),
-                geraetId: g.id || '',
+        if (g && g.id && istRelevant(g.naechstePruefung)) {
+            map.set('ger_' + g.id, {
+                id: 'ger_' + g.id,
+                geraetId: g.id,
                 objekt: `${g.inventarnummer || '-'} - ${g.bezeichnung || 'Gerät'}`,
                 art: 'Geräteprüfung',
                 datum: g.letztePruefung || '',
-                naechstePruefung: g.naechstePruefung || '',
+                naechstePruefung: g.naechstePruefung,
                 pruefer: g.pruefer || 'Automatisch',
                 ergebnis: g.status === 'Gesperrt' ? 'Nicht bestanden' : 'Bestanden',
                 typ: 'Gerät'
@@ -64,17 +82,17 @@ function getPruefungen() {
         }
     });
 
-    // 2. Fristen direkt aus der PSA-Datenbank holen
+    // 2. Fristen aus der PSA-Datenbank holen (nur relevante filtern)
     const psaListe = ladeDaten("psa") || [];
     psaListe.forEach(p => {
-        if (p && (p.naechstePruefung || p.letztePruefung)) {
-            kombiniert.push({
-                id: 'psa_' + (p.id || Math.random()),
+        if (p && p.id && istRelevant(p.naechstePruefung)) {
+            map.set('psa_' + p.id, {
+                id: 'psa_' + p.id,
                 geraetId: '',
                 objekt: `${p.traeger || p.person || 'Unbekannt'} - ${p.bezeichnung || p.teil || 'PSA'}`,
                 art: 'PSA-Prüfung',
                 datum: p.letztePruefung || '',
-                naechstePruefung: p.naechstePruefung || '',
+                naechstePruefung: p.naechstePruefung,
                 pruefer: p.pruefer || 'Automatisch',
                 ergebnis: p.status === 'Gesperrt' ? 'Nicht bestanden' : 'Bestanden',
                 typ: 'PSA'
@@ -82,21 +100,12 @@ function getPruefungen() {
         }
     });
 
-    // 3. Manuell in der Prüfungs-Tabelle erfasste Einträge laden (falls vorhanden)
-    const manuell = ladeDaten("pruefungen") || [];
-    if (Array.isArray(manuell)) {
-        manuell.forEach(m => {
-            if (m) {
-                kombiniert.push({ ...m, typ: m.typ || 'Manuell' });
-            }
-        });
-    }
-// Nach nächster Prüfung aufsteigend sortieren (dringendste zuerst)
-kombiniert.sort((a, b) => {
-    if (!a.naechstePruefung) return 1;
-    if (!b.naechstePruefung) return -1;
-    return new Date(a.naechstePruefung) - new Date(b.naechstePruefung);
-});
+    // In Array umwandeln und sortieren (dringendste/überfällige zuerst)
+    let kombiniert = Array.from(map.values());
+    kombiniert.sort((a, b) => {
+        return new Date(a.naechstePruefung) - new Date(b.naechstePruefung);
+    });
+
     return kombiniert;
 }
 
