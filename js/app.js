@@ -40,29 +40,9 @@ function zeigeSeite(modul) {
             break;
 
         case 'geraete':
-            // 1. Ganz normal die Ansicht/Tabelle laden lassen
-            if (typeof renderGeraeteView === 'function') {
-                renderGeraeteView();
-            } else if (typeof filterGeraete === 'function') {
-                filterGeraete();
-            }
-
-            // 2. Direkt danach prüfen, ob ein Dashboard-Klick vorliegt (jetzt existiert das HTML sicher!)
-            const gefiltertTyp = localStorage.getItem('aktiverDashboardFilter');
-            if (gefiltertTyp) {
-                const elStat = document.getElementById("filterStatus");
-                if (elStat) {
-                    if (gefiltertTyp === 'ueberfaellig') elStat.value = 'ueberfaellig';
-                    else if (gefiltertTyp === 'faellig') elStat.value = 'faellig';
-                    else if (gefiltertTyp === 'Einsatzbereit') elStat.value = 'Einsatzbereit';
-                    else if (gefiltertTyp === 'inaktiv') elStat.value = 'Defekt';
-                }
-                if (typeof filterGeraete === 'function') {
-                    filterGeraete();
-                }
-                localStorage.removeItem('aktiverDashboardFilter');
-            }
-            break;
+    if (typeof renderGeraeteView === 'function') renderGeraeteView();
+    else if (typeof filterGeraete === 'function') filterGeraete();
+    break;
 
         case 'fahrzeuge':
             if (typeof renderFahrzeugeView === 'function') renderFahrzeugeView();
@@ -843,8 +823,10 @@ function abmelden() {
 // ==========================================
 
 function filtereGeraeteNachDashboard(typ) {
-    localStorage.setItem('aktiverDashboardFilter', typ);
-    zeigeSeite('geraete');
+    // Nur noch zur Geräteseite wechseln
+    if (typeof zeigeSeite === 'function') {
+        zeigeSeite('geraete');
+    }
 }
 
 // Global für alle Module bereitstellen
