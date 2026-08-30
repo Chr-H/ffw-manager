@@ -567,3 +567,27 @@ body {
     color: #ffffff;
     border-color: #0056b3;
 }
+/* ===========================================
+   10. Layout-Korrektur für Module & Tabellen
+=========================================== */
+
+/* Zwingt den Inhaltsbereich dazu, sich den verbleibenden Platz neben der Sidebar sauber zu nehmen */
+.content, main, .main-content {
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* Verhindert das "Nach-Rechts-Wandern" von Tabellen und Formularen */
+table, .table-container, .table-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+    box-sizing: border-box !important;
+}
+
+/* Spezieller Schutz für Module wie Prüfungen, Personal, Lager & Auswertungen */
+.seite-ansicht, section {
+    width: 100%;
+    box-sizing: border-box;
+}

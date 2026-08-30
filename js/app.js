@@ -349,7 +349,7 @@ function aktualisiereDashboard() {
         const pruefungen = ladeDaten('pruefungen');
 
         const heute = new Date();
-        heute.setHours(0, 0, 0, 0); // Uhrzeit für exakten Tagesvergleich nullen
+        heute.setHours(0, 0, 0, 0);
         
         const in30Tagen = new Date(heute);
         in30Tagen.setDate(heute.getDate() + 30);
@@ -357,7 +357,7 @@ function aktualisiereDashboard() {
         let ueberfaellig = 0;
         let faellig = 0;
 
-        // 1. Fristen direkt aus den Geräten prüfen (Feld: naechstePruefung)
+        // Nur noch die Geräte-Fristen als Basis nutzen, damit Dashboard und Modul übereinstimmen
         geraete.forEach(g => {
             if (g.naechstePruefung) {
                 const d = new Date(g.naechstePruefung);
