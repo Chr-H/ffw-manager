@@ -40,33 +40,28 @@ function zeigeSeite(modul) {
             break;
 
         case 'geraete':
-            if (typeof renderGeraeteView === 'function') renderGeraeteView();
-            else if (typeof filterGeraete === 'function') filterGeraete();
+            // 1. Ganz normal die Ansicht/Tabelle laden lassen
+            if (typeof renderGeraeteView === 'function') {
+                renderGeraeteView();
+            } else if (typeof filterGeraete === 'function') {
+                filterGeraete();
+            }
 
-            // Automatischen Dashboard-Filter anwenden, falls einer hinterlegt wurde
-            setTimeout(() => {
-                const gespeicherterFilter = localStorage.getItem('aktiverDashboardFilter');
-                if (gespeicherterFilter) {
-                    const elStat = document.getElementById("filterStatus");
-                    const elSuche = document.getElementById("sucheGeraet");
-                    const elKat = document.getElementById("filterKategorie");
-
-                    if (elSuche) elSuche.value = "";
-                    if (elKat) elKat.value = "";
-
-                    if (elStat) {
-                        if (gespeicherterFilter === 'ueberfaellig') elStat.value = 'ueberfaellig';
-                        else if (gespeicherterFilter === 'faellig') elStat.value = 'faellig';
-                        else if (gespeicherterFilter === 'Einsatzbereit') elStat.value = 'Einsatzbereit';
-                        else if (gespeicherterFilter === 'inaktiv') elStat.value = 'Defekt';
-                    }
-
-                    if (typeof filterGeraete === 'function') {
-                        filterGeraete();
-                    }
-                    localStorage.removeItem('aktiverDashboardFilter');
+            // 2. Direkt danach prüfen, ob ein Dashboard-Klick vorliegt (jetzt existiert das HTML sicher!)
+            const gefiltertTyp = localStorage.getItem('aktiverDashboardFilter');
+            if (gefiltertTyp) {
+                const elStat = document.getElementById("filterStatus");
+                if (elStat) {
+                    if (gefiltertTyp === 'ueberfaellig') elStat.value = 'ueberfaellig';
+                    else if (gefiltertTyp === 'faellig') elStat.value = 'faellig';
+                    else if (gefiltertTyp === 'Einsatzbereit') elStat.value = 'Einsatzbereit';
+                    else if (gefiltertTyp === 'inaktiv') elStat.value = 'Defekt';
                 }
-            }, 50);
+                if (typeof filterGeraete === 'function') {
+                    filterGeraete();
+                }
+                localStorage.removeItem('aktiverDashboardFilter');
+            }
             break;
 
         case 'fahrzeuge':
@@ -848,13 +843,8 @@ function abmelden() {
 // ==========================================
 
 function filtereGeraeteNachDashboard(typ) {
-    // 1. Direkt den Filter im localStorage speichern
     localStorage.setItem('aktiverDashboardFilter', typ);
-
-    // 2. Die Seite wechseln (und dem System sagen: Danach direkt filtern!)
-    if (typeof zeigeSeite === 'function') {
-        zeigeSeite('geraete');
-    }
+    zeigeSeite('geraete');
 }
 
 // Global für alle Module bereitstellen
