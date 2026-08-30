@@ -116,7 +116,28 @@ function filterPSA() {
             (item.seriennummer && item.seriennummer.toLowerCase().includes(suchbegriff)) ||
             (item.typ && item.typ.toLowerCase().includes(suchbegriff));
 
-        const trefferTraeger = (traegerFilter === 'alle') || (traegerText === traegerFilter);
+        // --- HIER DEN BLOCK EINSETZEN ---
+        let trefferTraeger = (traegerFilter === 'alle');
+        if (!trefferTraeger) {
+            if (traegerFilter === '') {
+                trefferTraeger = (!traegerText || traegerText === '-- Kein Träger / Frei --');
+            } else {
+                const mitglieder = typeof ladeDaten === 'function' ? ladeDaten('personal') : [];
+                const gewaehltesMitglied = mitglieder.find(m => 
+                    String(m.id) === String(traegerFilter) || 
+                    `${m.vorname} ${m.nachname}` === traegerFilter || 
+                    `${m.nachname}, ${m.vorname}` === traegerFilter
+                );
+                
+                const gefundenerName = gewaehltesMitglied ? `${gewaehltesMitglied.nachname}, ${gewaehltesMitglied.vorname}` : '';
+                
+                trefferTraeger = (traegerText === traegerFilter) || 
+                                 (item.traegerId && String(item.traegerId) === String(traegerFilter)) ||
+                                 (gefundenerName && traegerText.toLowerCase() === gefundenerName.toLowerCase());
+            }
+        }
+        // ---------------------------------
+
         const trefferSpind = (spindFilter === 'alle') || (spindText === spindFilter);
         const trefferStatus = (statusFilter === 'alle') || (item.status === statusFilter);
 
