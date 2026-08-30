@@ -353,16 +353,23 @@ function aktualisiereDashboard() {
         // Nutze die zentrale, gefilterte Prüfungs-Logik falls vorhanden, sonst Fallback
         if (typeof window.getPruefungen === 'function') {
             const aktivePruefungen = window.getPruefungen();
-            const heuteStr = new Date().toISOString().split('T')[0];
+            const heuteStr = new Date().toISOString().split('T')[0]; // Format "YYYY-MM-DD"
             
             aktivePruefungen.forEach(p => {
-                if (!p.datum) return;
-                if (p.datum < heuteStr) {
-                    ueberfaellig++;
+                // Wir nutzen hier das Feld für die anstehende/nächste Prüfung
+                const pruefFrist = p.naechstePruefung || p.datum;
+                if (!pruefFrist) return;
+
+                // Extrahiere reinen Datums-String (YYYY-MM-DD) falls Uhrzeit dran hängt
+                const fristDatum = pruefFrist.split('T')[0];
+
+                if (fristDatum < heuteStr) {
+                    ueberfaellig++; // Datum liegt in der Vergangenheit
                 } else {
-                    faellig++;
+                    faellig++;      // Datum ist heute oder in der Zukunft (innerhalb des Filters)
                 }
             });
+        
         } else {
             // Fallback falls die andere Datei noch nicht geladen ist
             const pruefungen = ladeDaten('pruefungen');
