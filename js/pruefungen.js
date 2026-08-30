@@ -91,7 +91,12 @@ function getPruefungen() {
             }
         });
     }
-
+// Nach nächster Prüfung aufsteigend sortieren (dringendste zuerst)
+kombiniert.sort((a, b) => {
+    if (!a.naechstePruefung) return 1;
+    if (!b.naechstePruefung) return -1;
+    return new Date(a.naechstePruefung) - new Date(b.naechstePruefung);
+});
     return kombiniert;
 }
 
@@ -188,11 +193,12 @@ function renderPruefungenView() {
             </div>
             <div style="flex:1; min-width:150px;">
                 <select id="pruefung-filter-ergebnis" onchange="filterPruefungen()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                    <option value="">Alle Ergebnisse anzeigen</option>
-                    <option value="Bestanden">🟢 Bestanden</option>
-                    <option value="Mängel">⚠️ Mängel</option>
-                    <option value="Nicht bestanden">🔴 Nicht bestanden</option>
-                </select>
+    <option value="">Alle anzeigen</option>
+    <option value="ueberfaellig">🔴 Nur Überfällige</option>
+    <option value="Bestanden">🟢 Bestanden</option>
+    <option value="Mängel">⚠️ Mängel</option>
+    <option value="Nicht bestanden">🔴 Nicht bestanden</option>
+</select>
             </div>
         </div>
 
@@ -233,6 +239,10 @@ function filterPruefungen() {
     const suchText = (document.getElementById('pruefung-filter-suche')?.value || '').toLowerCase().trim();
     const ergebnisFilter = document.getElementById('pruefung-filter-ergebnis')?.value || '';
 
+    // Datum für den Überfällig-Abgleich vorbereiten (heute mit 00:00 Uhr)
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+
     const gefiltert = liste.filter(item => {
         if (!item) return false;
 
@@ -241,8 +251,16 @@ function filterPruefungen() {
         const pruefer = (item.pruefer || '').toLowerCase();
         const ergebnis = item.ergebnis || 'Bestanden';
 
+        // Prüfen, ob das Element überfällig ist
+        const naechsteDate = item.naechstePruefung ? new Date(item.naechstePruefung) : null;
+        const istUeberfaellig = naechsteDate && naechsteDate < heute;
+
         const passtText = objekt.includes(suchText) || art.includes(suchText) || pruefer.includes(suchText);
-        const passtErgebnis = ergebnisFilter === '' || ergebnis === ergebnisFilter;
+        
+        // Erweiterter Filter: Erfasst jetzt auch "ueberfaellig"
+        const passtErgebnis = ergebnisFilter === '' || 
+            (ergebnisFilter === 'ueberfaellig' && istUeberfaellig) || 
+            ergebnisFilter === ergebnis;
 
         return passtText && passtErgebnis;
     });
