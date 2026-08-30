@@ -43,8 +43,56 @@ function getPruefungen() {
     if (!hatPruefungLeseRecht()) {
         return [];
     }
-    const data = ladeDaten("pruefungen");
-    return Array.isArray(data) ? data : [];
+
+    let kombiniert = [];
+
+    // 1. Fristen direkt aus der Geräte-Datenbank holen
+    const geraete = typeof window.getGeraete === 'function' ? window.getGeraete() : (ladeDaten("geraete") || []);
+    geraete.forEach(g => {
+        if (g && (g.naechstePruefung || g.letztePruefung)) {
+            kombiniert.push({
+                id: 'ger_' + (g.id || Math.random()),
+                geraetId: g.id || '',
+                objekt: `${g.inventarnummer || '-'} - ${g.bezeichnung || 'Gerät'}`,
+                art: 'Geräteprüfung',
+                datum: g.letztePruefung || '',
+                naechstePruefung: g.naechstePruefung || '',
+                pruefer: g.pruefer || 'Automatisch',
+                ergebnis: g.status === 'Gesperrt' ? 'Nicht bestanden' : 'Bestanden',
+                typ: 'Gerät'
+            });
+        }
+    });
+
+    // 2. Fristen direkt aus der PSA-Datenbank holen
+    const psaListe = ladeDaten("psa") || [];
+    psaListe.forEach(p => {
+        if (p && (p.naechstePruefung || p.letztePruefung)) {
+            kombiniert.push({
+                id: 'psa_' + (p.id || Math.random()),
+                geraetId: '',
+                objekt: `${p.traeger || p.person || 'Unbekannt'} - ${p.bezeichnung || p.teil || 'PSA'}`,
+                art: 'PSA-Prüfung',
+                datum: p.letztePruefung || '',
+                naechstePruefung: p.naechstePruefung || '',
+                pruefer: p.pruefer || 'Automatisch',
+                ergebnis: p.status === 'Gesperrt' ? 'Nicht bestanden' : 'Bestanden',
+                typ: 'PSA'
+            });
+        }
+    });
+
+    // 3. Manuell in der Prüfungs-Tabelle erfasste Einträge laden (falls vorhanden)
+    const manuell = ladeDaten("pruefungen") || [];
+    if (Array.isArray(manuell)) {
+        manuell.forEach(m => {
+            if (m) {
+                kombiniert.push({ ...m, typ: m.typ || 'Manuell' });
+            }
+        });
+    }
+
+    return kombiniert;
 }
 
 function speicherePruefungen(liste) {
