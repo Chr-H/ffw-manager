@@ -828,31 +828,33 @@ function filtereGeraeteNachDashboard(typ) {
         zeigeSeite('geraete');
     }
 
-    // 2. Kurz warten, bis die Geräteseite im DOM da ist, dann die Filter-Dropdowns direkt setzen
+    // 2. Kurz warten, bis die Geräteseite da ist, dann das Dropdown setzen und filtern
     setTimeout(() => {
+        const elStat = document.getElementById("filterStatus");
         const elSuche = document.getElementById("sucheGeraet");
         const elKat = document.getElementById("filterKategorie");
-        const elStat = document.getElementById("filterStatus");
 
         if (elSuche) elSuche.value = "";
         if (elKat) elKat.value = "";
 
         if (elStat) {
-            if (typ === 'ueberfaellig' || typ === 'faellig') {
-                elStat.value = "FAELLIG"; // Nutzt das normale Dropdown
-            } else {
-                elStat.value = typ; // z.B. "Einsatzbereit" oder "Defekt"
+            // Wir mappen den Dashboard-Typ auf die Werte unseres Dropdowns
+            if (typ === 'ueberfaellig') {
+                elStat.value = 'ueberfaellig';
+            } else if (typ === 'faellig') {
+                elStat.value = 'faellig';
+            } else if (typ === 'Einsatzbereit') {
+                elStat.value = 'Einsatzbereit';
+            } else if (typ === 'inaktiv') {
+                elStat.value = 'Defekt'; // Oder je nachdem, wie dein inaktiv-Wert heißt
             }
         }
 
-        // 3. Im localStorage merken, ob es exakt überfällig oder fällig (nächste 30 Tage) ist
-        localStorage.setItem('spezialDashboardFilter', typ);
-
-        // 4. Filterfunktion direkt ausführen
+        // 3. Filterfunktion sofort ausführen
         if (typeof filterGeraete === 'function') {
             filterGeraete();
         }
-    }, 50);
+    }, 100);
 }
 
 // Global für alle Module bereitstellen
