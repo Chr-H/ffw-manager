@@ -319,16 +319,22 @@ function renderPersonalView() {
     meins = meins.filter(p => {
         const fullName = ((p.vorname || '') + ' ' + (p.nachname || p.name || '')).toLowerCase();
         const spind = String(p.spind || '').toLowerCase();
-        const funktion = String(p.funktion || '').toLowerCase();
 
         // 1. Freitext-Suche (Name oder Spind)
         if (suchText && !fullName.includes(suchText) && !spind.includes(suchText)) {
             return false;
         }
 
-        // 2. Funktionen-Dropdown Filter
-        if (gewählteFunktion && funktion !== gewählteFunktion.toLowerCase()) {
-            return false;
+        // 2. Funktionen-Dropdown Filter (Flexibel bei Mehrfachnennungen)
+        if (gewählteFunktion) {
+            const funktionenListe = String(p.funktion || '')
+                .toLowerCase()
+                .split(/[\/,]/)
+                .map(f => f.trim());
+
+            if (!funktionenListe.includes(gewählteFunktion.toLowerCase())) {
+                return false;
+            }
         }
 
         // 3. G26.3 Status-Dropdown Filter
