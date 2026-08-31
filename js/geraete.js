@@ -348,12 +348,72 @@ window.oeffneGeraeteAkteModal = function(id) {
     window.aktiveGeraeteAktenId = id;
     rendereGeraeteHistorieModal(g);
 
+    // Formularfelder für neues Protokoll zurücksetzen / vorbelegen
     const heuteISO = new Date().toISOString().split('T')[0];
     const datumInput = document.getElementById('geraete-protokoll-datum');
     if (datumInput) datumInput.value = heuteISO;
 
+    const artInput = document.getElementById('geraete-protokoll-art');
+    if (artInput) artInput.value = 'Funktionsprüfung';
+
+    const ergebnisInput = document.getElementById('geraete-protokoll-ergebnis');
+    if (ergebnisInput) ergebnisInput.value = 'bestanden';
+
+    const bemerkungInput = document.getElementById('geraete-protokoll-bemerkung');
+    if (bemerkungInput) bemerkungInput.value = '';
+
     const modal = document.getElementById('geraete-akte-modal');
     if (modal) modal.style.display = 'flex';
+};
+
+window.speichereGeraeteProtokoll = function() {
+    if (typeof window.aktiveGeraeteAktenId === 'undefined' || !window.aktiveGeraeteAktenId) {
+        alert("⚠️ Kein Gerät ausgewählt.");
+        return;
+    }
+
+    const artEl = document.getElementById('geraete-protokoll-art');
+    const datumEl = document.getElementById('geraete-protokoll-datum');
+    const ergebnisEl = document.getElementById('geraete-protokoll-ergebnis');
+    const bemerkungEl = document.getElementById('geraete-protokoll-bemerkung');
+
+    const art = artEl ? artEl.value : 'Sichtprüfung';
+    const datum = datumEl ? datumEl.value : new Date().toISOString().split('T')[0];
+    const ergebnis = ergebnisEl ? ergebnisEl.value : 'bestanden';
+    const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
+
+    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
+    let g = geraeteListe.find(item => String(item.id) === String(window.aktiveGeraeteAktenId));
+
+    if (g) {
+        if (!g.pruefprotokolle) g.pruefprotokolle = [];
+
+        g.pruefprotokolle.push({
+            id: 'PP_' + Date.now(),
+            art: art,
+            datum: datum,
+            ergebnis: ergebnis,
+            bemerkung: bemerkung,
+            erstelltAm: new Date().toISOString()
+        });
+
+        // Optional: Gerätestatus automatisch auf 'Defekt' setzen, falls Prüfung gescheitert
+        if (ergebnis === 'gesperrt') {
+            g.status = 'Gesperrt / Defekt';
+        }
+
+        if (typeof speichereDaten === 'function') {
+            speichereDaten('geraete', geraeteListe);
+        }
+
+        // Formular nach dem Speichern leeren
+        if (bemerkungEl) bemerkungEl.value = '';
+
+        // Ansicht der Gerätehistorie sofort aktualisieren
+        if (typeof rendereGeraeteHistorieModal === 'function') {
+            rendereGeraeteHistorieModal(g);
+        }
+    }
 };
 
 function rendereGeraeteHistorieModal(g) {
@@ -401,7 +461,7 @@ function speichereGeraeteProtokollModal() {
 
     const datum = document.getElementById('geraete-protokoll-datum').value;
     const pruefartEl = document.getElementById('geraete-protokoll-art');
-    const pruefart = pruefartEl ? pruefartEl.value : 'Regelprüfung';
+    const pruefart = pruefartEl ? pruefartEl.value : 'Sichtprüfung';
     const ergebnis = document.getElementById('geraete-protokoll-ergebnis').value;
     const prueferInputEl = document.getElementById('geraete-protokoll-pruefer');
     const prueferInput = prueferInputEl ? prueferInputEl.value.trim() : '';
@@ -419,7 +479,8 @@ function speichereGeraeteProtokollModal() {
     const g = geraeteListe[index];
     if (!g.historie) g.historie = g.protokolle || [];
 
-    const pruefer = prueferInput || hohleBenutzerProtokollText();
+    const protokollUser = (typeof hohleBenutzerProtokollText === 'function') ? hohleBenutzerProtokollText() : 'Unbekannt';
+    const pruefer = prueferInput || protokollUser;
 
     g.historie.push({
         datum: datum,
@@ -429,13 +490,15 @@ function speichereGeraeteProtokollModal() {
         bemerkung: bemerkung
     });
 
-    const protokollUser = hohleBenutzerProtokollText();
     const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
 
     g.letztePruefung = datum;
-    g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
+    if (typeof berechneNaechstePruefung === 'function') {
+        g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
+    }
     
-    if (ergebnis === "Schwere Mängel / Gesperrt") {
+    // Status anpassen, wenn das Ergebnis auf Defekt/Gesperrt steht
+    if (ergebnis === "Schwere Mängel / Gesperrt" || ergebnis === "gesperrt") {
         g.status = "Defekt";
     }
 
@@ -451,7 +514,7 @@ function speichereGeraeteProtokollModal() {
     if (document.getElementById('geraete-protokoll-bemerkung')) document.getElementById('geraete-protokoll-bemerkung').value = '';
     if (document.getElementById('geraete-protokoll-pruefer')) document.getElementById('geraete-protokoll-pruefer').value = '';
     
-    filterGeraete();
+    if (typeof filterGeraete === 'function') filterGeraete();
     oeffneGeraeteAkteModal(id);
 }
 
