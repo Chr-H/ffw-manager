@@ -300,12 +300,52 @@ function renderPersonalView() {
     }
 
     // 4. Daten laden
-    const meins = (typeof holePersonalDaten === 'function') ? holePersonalDaten() : [];
+    let meins = (typeof holePersonalDaten === 'function') ? holePersonalDaten() : [];
 
     if (!meins || meins.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">Keine Personaldaten vorhanden.</td></tr>`;
         return;
     }
+
+    // --- FILTER-LOGIK AUSLESEN & ANWENDEN ---
+    const suchFeld = document.getElementById('personal-suche');
+    const filterFunktionEl = document.getElementById('personal-filter-funktion');
+    const filterG26El = document.getElementById('personal-filter-g26');
+
+    const suchText = suchFeld ? suchFeld.value.toLowerCase().trim() : '';
+    const gewählteFunktion = filterFunktionEl ? filterFunktionEl.value.trim() : '';
+    const gewählterG26 = filterG26El ? filterG26El.value.trim() : '';
+
+    meins = meins.filter(p => {
+        const fullName = ((p.vorname || '') + ' ' + (p.nachname || p.name || '')).toLowerCase();
+        const spind = String(p.spind || '').toLowerCase();
+        const funktion = String(p.funktion || '').toLowerCase();
+
+        // 1. Freitext-Suche (Name oder Spind)
+        if (suchText && !fullName.includes(suchText) && !spind.includes(suchText)) {
+            return false;
+        }
+
+        // 2. Funktionen-Dropdown Filter
+        if (gewählteFunktion && funktion !== gewählteFunktion.toLowerCase()) {
+            return false;
+        }
+
+        // 3. G26.3 Status-Dropdown Filter
+        if (gewählterG26) {
+            const istAbgelaufen = p.g26Ablauf && new Date(p.g26Ablauf) < new Date();
+            if (gewählterG26 === 'gueltig' && istAbgelaufen) return false;
+            if (gewählterG26 === 'abgelaufen' && !istAbgelaufen) return false;
+        }
+
+        return true;
+    });
+
+    if (meins.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#777;">Keine Einträge für diese Filterkriterien gefunden.</td></tr>`;
+        return;
+    }
+    // ----------------------------------------
 
     // 5. Tabelle rendern
     tbody.innerHTML = meins.map(p => {
