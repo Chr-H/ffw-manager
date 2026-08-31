@@ -437,28 +437,29 @@
             <option value="abgelaufen">Abgelaufen</option>
         </select>
         
-        <!-- Hier liegen jetzt alle Aktions-Buttons nebeneinander -->
+        <!-- Aktions-Buttons -->
         <button class="btn btn-primary btn-speichern" onclick="oeffneMitgliedModal()" style="padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">➕ Neues Mitglied</button>
         <button class="btn btn-secondary" onclick="exportPersonalCSV()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">📥 CSV Export</button>
         <button class="btn btn-secondary" onclick="importPersonalCSV()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">📤 CSV Import</button>
         <button class="btn btn-secondary" onclick="druckePersonalListe()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px; cursor:pointer;">🖨️ Drucken / PDF</button>
     </div>
-                <div class="table-responsive" style="width:100%; overflow-x:auto;">
-                    <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse;">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Spind</th>
-                                <th>Name</th>
-                                <th>Funktion</th>
-                                <th>G26.3 Status</th>
-                                <th>Atemschutz</th>
-                                <th class="no-print">Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody id="personal-tabelle-body"></tbody>
-                    </table>
-                </div>
-            </section>
+    
+    <div class="table-responsive" style="width:100%; overflow-x:auto;">
+        <table class="table table-striped table-hover" style="width:100%; min-width: 650px; border-collapse: collapse;">
+            <thead class="table-dark">
+                <tr>
+                    <th>Spind</th>
+                    <th>Name</th>
+                    <th>Funktion</th>
+                    <th>G26.3 Status</th>
+                    <th>Qualifikation</th>
+                    <th class="no-print">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody id="personal-tabelle-body"></tbody>
+        </table>
+    </div>
+</section>
 
             <!-- 8. AUSWERTUNGEN -->
             <section id="seite-auswertungen" class="seite-ansicht" style="display: none;">
