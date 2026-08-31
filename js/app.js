@@ -418,7 +418,7 @@ function aktualisiereDashboard() {
 
         setTileValue('stat-modul-geraete', `${geraete.length} Geräte`);
         setTileValue('stat-modul-fahrzeuge', `${fahrzeuge.length} Fahrzeuge`);
-        setTileValue('stat-modul-psa', `${psa.length} Personen`);
+        setTileValue('stat-modul-psa', `${psa.length} Gegenstände`);
         setTileValue('stat-modul-pruefungen', `${faellig + ueberfaellig} fällig`);
         setTileValue('stat-modul-lager', `${lager.length} Artikel`);
         setTileValue('stat-modul-personal', `${mitglieder.length} Mitglieder`);
