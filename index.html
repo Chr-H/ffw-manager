@@ -129,95 +129,121 @@
 </main>
 
             <!-- 2. GERÄTE BEREICH -->
-            <section id="seite-geraete" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>🛠️ Geräteverwaltung</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <input type="file" id="csvGeraeteFileInput" accept=".csv" style="display: none;" onchange="importGeraeteCSV(this)">
-                        <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">📥 CSV Import</button>
-                        <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
-                    </div>
-                </div>
+<section id="seite-geraete" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🛠️ Geräteverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <input type="file" id="csvGeraeteFileInput" accept=".csv" style="display: none;" onchange="importGeraeteCSV(this)">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">📥 CSV Import</button>
+            <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+        </div>
+    </div>
 
-                <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <h3>➕ Gerät anlegen / bearbeiten</h3>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                        <input id="inventar" type="text" placeholder="Inventarnummer">
-                        <input id="bezeichnung" type="text" placeholder="Bezeichnung">
-                        <select id="kategorie"><option value="">Kategorie auswählen</option></select>
-                        <input id="hersteller" type="text" placeholder="Hersteller">
-                        <label for="geraet-standort">Standort / Geräteraum:</label>
-                        <select id="geraet-standort" class="form-control">
-                            <option value="">-- Standort wählen --</option>
-                            <option value="Lager">Lager</option>
-                            <option value="Gerätehaus">Gerätehaus</option>
-                            <optgroup label="Florian Albertsried 44/1">
-                                <option value="Florian Albertsried 44/1 GR1">Florian Albertsried 44/1 - GR1 (rechts)</option>
-                                <option value="Florian Albertsried 44/1 GR2">Florian Albertsried 44/1 - GR2 (links)</option>
-                                <option value="Florian Albertsried 44/1 GR3">Florian Albertsried 44/1 - GR3 (hinten)</option>
-                                <option value="Florian Albertsried 44/1 GR4">Florian Albertsried 44/1 - GR4 (Mitte)</option>
-                                <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option>
-                                <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Gruppenführer)</option>
-                                <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Maschinist)</option>
-                                <option value="Florian Albertsried 44/1 GR8">Florian Albertsried 44/1 - GR8 (Dach)</option>
-                            </optgroup>
-                        </select>
-                        <input id="erstinbetriebnahme" type="date" title="Erstinbetriebnahme">
-                        <input id="letztePruefung" type="date" title="Datum der letzten Prüfung">
-                        <select id="pruefintervall" title="Prüfintervall">
-                            <option value="12">12 Monate (Jährlich)</option>
-                            <option value="24">24 Monate (2 Jahre)</option>
-                            <option value="6">6 Monate (Halbjährlich)</option>
-                            <option value="1">1 Monat (Monatlich)</option>
-                        </select>
-                        <select id="status">
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                            <option value="Wartung">🟡 Wartung</option>
-                            <option value="Defekt">🔴 Defekt</option>
-                            <option value="Außer Dienst">⚫ Außer Dienst</option>
-                        </select>
-                        <button type="button" class="btn-speichern" onclick="neuesGeraet()">➕ Gerät speichern</button>
-                    </div>
-                </div>
+    <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>➕ Gerät anlegen / bearbeiten</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; align-items:flex-end;">
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Inventarnummer:</label>
+                <input id="inventar" type="text" class="form-control" placeholder="Inv.-Nr." style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+            <div style="flex:2; min-width:180px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Bezeichnung:</label>
+                <input id="bezeichnung" type="text" class="form-control" placeholder="Bezeichnung" style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:150px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Kategorie:</label>
+                <select id="kategorie" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;"><option value="">Kategorie wählen</option></select>
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Hersteller:</label>
+                <input id="hersteller" type="text" class="form-control" placeholder="Hersteller" style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+            <div style="flex:2; min-width:220px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Standort / Geräteraum:</label>
+                <select id="geraet-standort" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                    <option value="">-- Standort wählen --</option>
+                    <option value="Lager">Lager</option>
+                    <option value="Gerätehaus">Gerätehaus</option>
+                    <optgroup label="Florian Albertsried 44/1">
+                        <option value="Florian Albertsried 44/1 GR1">Florian Albertsried 44/1 - GR1 (rechts)</option>
+                        <option value="Florian Albertsried 44/1 GR2">Florian Albertsried 44/1 - GR2 (links)</option>
+                        <option value="Florian Albertsried 44/1 GR3">Florian Albertsried 44/1 - GR3 (hinten)</option>
+                        <option value="Florian Albertsried 44/1 GR4">Florian Albertsried 44/1 - GR4 (Mitte)</option>
+                        <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option>
+                        <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Gruppenführer)</option>
+                        <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Maschinist)</option>
+                        <option value="Florian Albertsried 44/1 GR8">Florian Albertsried 44/1 - GR8 (Dach)</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div style="flex:1; min-width:130px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Erstinbetriebnahme:</label>
+                <input id="erstinbetriebnahme" type="date" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:130px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Letzte Prüfung:</label>
+                <input id="letztePruefung" type="date" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:130px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Prüfintervall:</label>
+                <select id="pruefintervall" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                    <option value="12">12 Monate</option>
+                    <option value="24">24 Monate</option>
+                    <option value="6">6 Monate</option>
+                    <option value="1">1 Monat</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Status:</label>
+                <select id="status" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                    <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                    <option value="Wartung">🟡 Wartung</option>
+                    <option value="Defekt">🔴 Defekt</option>
+                    <option value="Außer Dienst">⚫ Außer Dienst</option>
+                </select>
+            </div>
+            <div style="min-width:140px; padding-top:20px;">
+                <button type="button" class="btn-speichern" onclick="neuesGeraet()" style="width:100%; padding:9px; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">➕ Speichern</button>
+            </div>
+        </div>
+    </div>
 
-                <hr style="margin:20px 0;">
+    <hr style="margin:20px 0;">
 
-                <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px; flex-wrap: wrap;">
-                    <input id="sucheGeraet" type="text" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()">
-                    <select id="filterKategorie" onchange="filterGeraete()"><option value="">Alle Kategorien</option></select>
-                    <select id="filterStatus" onchange="filterGeraete()">
-    <option value="">Alle Status</option>
-    <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-    <option value="ueberfaellig">🔴 Überfällig (Prüfung verpasst)</option>
-    <option value="faellig">🟡 Fällig (nächste 30 Tage)</option>
-    <option value="Defekt">🔴 Defekt</option>
-    <option value="Außer Dienst">⚫ Außer Dienst</option>
-</select>
-                </div>
+    <div class="geraete-filter" style="margin-bottom:15px; display:flex; gap:10px; flex-wrap: wrap;">
+        <input id="sucheGeraet" type="text" class="form-control" placeholder="🔍 Gerät suchen..." oninput="filterGeraete()" style="flex:2; min-width:200px; padding:8px;">
+        <select id="filterKategorie" class="form-control" onchange="filterGeraete()" style="flex:1; min-width:150px; padding:8px;"><option value="">Alle Kategorien</option></select>
+        <select id="filterStatus" class="form-control" onchange="filterGeraete()" style="flex:1; min-width:180px; padding:8px;">
+            <option value="">Alle Status</option>
+            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+            <option value="ueberfaellig">🔴 Überfällig (Prüfung verpasst)</option>
+            <option value="faellig">🟡 Fällig (nächste 30 Tage)</option>
+            <option value="Defekt">🔴 Defekt</option>
+            <option value="Außer Dienst">⚫ Außer Dienst</option>
+        </select>
+    </div>
 
-                <div>
-                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                        <div class="table-responsive">
-                            <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%;">
-                                <thead>
-                                    <tr>
-                                        <th class="no-print">Aktionen</th>
-                                        <th>Inv.-Nr.</th>
-                                        <th>Bezeichnung</th>
-                                        <th>Kategorie</th>
-                                        <th>Hersteller</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="geraeteListe"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    
-                </div>
-            </section>
+    <div>
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <div class="table-responsive">
+                <table id="geraete-tabelle" class="geraete-tabelle" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid #dee2e6; text-align:left;">
+                            <th class="no-print" style="padding:10px;">Aktionen</th>
+                            <th style="padding:10px;">Inv.-Nr.</th>
+                            <th style="padding:10px;">Bezeichnung</th>
+                            <th style="padding:10px;">Kategorie</th>
+                            <th style="padding:10px;">Hersteller</th>
+                            <th style="padding:10px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="geraeteListe"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
 
             <!-- 3. FAHRZEUGVERWALTUNG -->
             <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
