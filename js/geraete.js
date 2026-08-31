@@ -208,7 +208,6 @@ function filterGeraete() {
     const kategorie = elKat ? elKat.value : "";
     let status = elStat ? elStat.value : "";
 
-    // Dashboard-Filter aus dem localStorage holen
     const dashboardFilter = localStorage.getItem('aktiverDashboardFilter');
 
     const heute = new Date();
@@ -295,7 +294,7 @@ function zeigeGefilterteGeraete(liste) {
         html += `
         <tr>
             <td style="white-space: nowrap;">
-                <button class="btn btn-details" title="Details / Akte" onclick="zeigeGeraeteDetails('${safeId}')">👁️</button>
+                <button class="btn btn-details" title="Geräte-Akte öffnen" onclick="oeffneGeraeteAkteModal('${safeId}')">📄</button>
                 <button class="btn btn-bearbeiten" title="Bearbeiten" onclick="bearbeiteGeraet('${safeId}')">✏️</button>
                 <button class="btn btn-loeschen" title="Löschen" onclick="loescheGeraet('${safeId}')">🗑️</button>
             </td>
@@ -310,155 +309,183 @@ function zeigeGefilterteGeraete(liste) {
     ausgabe.innerHTML = html;
 }
 
-function zeigeGeraeteDetails(id) {
-    geraete = ladeDaten("geraete") || [];
-    const g = geraete.find(item => item.id === id);
-    const detailsContainer = document.getElementById("geraeteDetails");
-
-    if (!g || !detailsContainer) return;
+// ------------------------------------------
+// SCHRITT 3: MODAL-LOGIK FÜR DIE GERÄTE-AKTE
+// ------------------------------------------
+window.oeffneGeraeteAkteModal = function(id) {
+    const geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
+    const g = geraeteListe.find(item => String(item.id) === String(id));
+    if (!g) {
+        alert("⚠️ Gerät nicht gefunden.");
+        return;
+    }
 
     const naechstePruefFormatted = formatiereDatum(g.naechstePruefung);
     const inbetriebnahmeFormatted = formatiereDatum(g.erstinbetriebnahme);
 
-    const historie = g.historie || [];
-    let historieHtml = "";
-
-    if (historie.length === 0) {
-        historieHtml = `<li><small style="color:#777;">Bisher keine Prüfungen protokolliert.</small></li>`;
-    } else {
-        historie.slice().reverse().forEach(h => {
-            const hDatum = formatiereDatum(h.datum);
-            const ergColor = h.ergebnis === "Ohne Mängel" ? "#2e7d32" : (h.ergebnis === "Geringe Mängel" ? "#f57c00" : "#d32f2f");
-            
-            historieHtml += `
-                <li style="margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 6px;">
-                    <div><strong>📅 ${hDatum}</strong> – <span style="color:${ergColor}; font-weight:bold;">${escapeHtml(h.ergebnis || 'Geprüft')}</span></div>
-                    <div style="font-size: 0.85rem; color: #444;"><strong>Art:</strong> ${escapeHtml(h.pruefart || 'Regelprüfung')} | <strong>Prüfer:</strong> ${escapeHtml(h.pruefer || 'Unbekannt')}</div>
-                    ${h.bemerkung ? `<div style="font-size: 0.85rem; background:#fff8e1; padding:3px 6px; border-radius:3px; margin-top:2px;">📝 <em>${escapeHtml(h.bemerkung)}</em></div>` : ''}
-                </li>
-            `;
-        });
+    const stammdatenDiv = document.getElementById('geraete-akte-stammdaten');
+    if (stammdatenDiv) {
+        stammdatenDiv.innerHTML = `
+            <strong>Bezeichnung:</strong> ${escapeHtml(g.bezeichnung || g.name || '-')}<br>
+            <strong>Inventarnummer:</strong> ${escapeHtml(g.inventarnummer || g.seriennummer || '-')}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Kategorie:</strong> ${escapeHtml(g.kategorie || g.typ || '-')}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Hersteller:</strong> ${escapeHtml(g.hersteller || '-')}<br>
+            <strong>Standort:</strong> ${escapeHtml(g.standort || '-')}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Status:</strong> ${escapeHtml(g.status || 'Einsatzbereit')}&nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span>
+            <div style="font-size: 0.8rem; color: #555; background: #fff; border-left: 3px solid #007bff; padding: 6px 8px; margin-top: 8px;">
+                <div><strong>Erstellt von:</strong> ${escapeHtml(g.erstelltVon || 'Unbekannt')}</div>
+                <div><strong>Zuletzt bearbeitet:</strong> ${escapeHtml(g.bearbeitetVon || 'Keine Änderungen')}</div>
+            </div>
+        `;
     }
 
+    const titelEl = document.getElementById('geraete-akte-titel');
+    if (titelEl) {
+        titelEl.textContent = `🛠️ Geräte-Akte: ${escapeHtml(g.bezeichnung || g.name || 'Details')}`;
+    }
+
+    window.aktiveGeraeteAktenId = id;
+    rendereGeraeteHistorieModal(g);
+
     const heuteISO = new Date().toISOString().split('T')[0];
-    const safeId = escapeHtml(g.id);
+    const datumInput = document.getElementById('geraete-protokoll-datum');
+    if (datumInput) datumInput.value = heuteISO;
 
-    detailsContainer.innerHTML = `
-        <h2>📋 Geräteakte</h2>
-        <h3 style="color:#B71C1C; margin-top:5px;">${escapeHtml(g.bezeichnung)}</h3>
-        <hr style="margin:10px 0;">
-        <p><strong>Inventarnummer:</strong> ${escapeHtml(g.inventarnummer)}</p>
-        <p><strong>Kategorie:</strong> ${escapeHtml(g.kategorie)}</p>
-        <p><strong>Hersteller:</strong> ${escapeHtml(g.hersteller || "-")}</p>
-        <p><strong>Standort:</strong> ${escapeHtml(g.standort || "-")}</p>
-        <p><strong>Erstinbetriebnahme:</strong> ${inbetriebnahmeFormatted}</p>
-        <p><strong>Status:</strong> ${escapeHtml(g.status)}</p>
-        <p><strong>Nächste Prüfung:</strong> <span style="color:#B71C1C; font-weight:bold;">${naechstePruefFormatted}</span></p>
+    const modal = document.getElementById('geraete-akte-modal');
+    if (modal) modal.style.display = 'flex';
+};
+
+function rendereGeraeteHistorieModal(g) {
+    const listeDiv = document.getElementById('geraete-akte-historie-liste');
+    if (!listeDiv) return;
+
+    const historie = g.historie || g.protokolle || [];
+    if (historie.length === 0) {
+        listeDiv.innerHTML = `<p class="text-muted text-center m-0" style="font-size: 0.9em; padding: 10px;">Bisher keine Prüfungen protokolliert.</p>`;
+        return;
+    }
+
+    let html = '<div style="display: flex; flex-direction: column; gap: 6px;">';
+    historie.slice().reverse().forEach((h, index) => {
+        const echterIndex = historie.length - 1 - index;
+        const hDatum = formatiereDatum(h.datum);
+        const ergColor = h.ergebnis === "Ohne Mängel" ? "#2e7d32" : (h.ergebnis === "Geringe Mängel" ? "#f57c00" : "#d32f2f");
         
-        <div style="font-size: 0.8rem; color: #555; background: #f8f9fa; border-left: 3px solid #007bff; padding: 6px 8px; margin: 10px 0;">
-            <div><strong>Erstellt von:</strong> ${escapeHtml(g.erstelltVon || 'Unbekannt (Altbestand)')}</div>
-            <div><strong>Zuletzt bearbeitet:</strong> ${escapeHtml(g.bearbeitetVon || ' Keine Änderungen')}</div>
-        </div>
-
-        <hr style="margin:15px 0;">
-        <h4>📜 Prüfhistorie & Protokolle</h4>
-        <ul style="list-style:none; padding-left:0; margin:10px 0; max-height: 200px; overflow-y: auto;">
-            ${historieHtml}
-        </ul>
-
-        <div style="background:#f8f9fa; padding:12px; border:1px solid #ddd; border-radius:6px; margin-top:10px;">
-            <strong style="font-size:0.95rem; display:block; margin-bottom:8px;">📝 Neue Prüfung / Protokoll eintragen</strong>
-            
-            <label style="font-size:0.8rem;">Prüfdatum:</label>
-            <input type="date" id="neuesPruefDatum" value="${heuteISO}" style="width:100%; margin-bottom:6px; padding:4px;">
-            
-            <label style="font-size:0.8rem;">Prüfungsart (z. B. DGUV Leiterprüfung):</label>
-            <select id="neuesPruefArt" style="width:100%; margin-bottom:6px; padding:4px;">
-                <option value="Sicht- und Funktionsprüfung">Sicht- und Funktionsprüfung</option>
-                <option value="Sichtprüfung">Sichtprüfung</option>
-                <option value="Druckprüfung">Druckprüfung</option>
-                <option value="Jahresprüfung (DGUV / Leiter)">Jahresprüfung (DGUV / Leiter)</option>
-                <option value="Belastungsprüfung">Belastungsprüfung</option>
-                <option value="Elektrische Prüfung (DGUV V3)">Elektrische Prüfung (DGUV V3)</option>
-            </select>
-
-            <label style="font-size:0.8rem;">Ergebnis:</label>
-            <select id="neuesPruefErgebnis" style="width:100%; margin-bottom:6px; padding:4px;">
-                <option value="Ohne Mängel">🟢 Ohne Mängel (Einsatzbereit)</option>
-                <option value="Geringe Mängel">🟡 Geringe Mängel (Einsatzbereit)</option>
-                <option value="Schwere Mängel / Gesperrt">🔴 Schwere Mängel (Außer Dienst)</option>
-            </select>
-
-            <label style="font-size:0.8rem;">Prüfer Name:</label>
-            <input type="text" id="prueferName" placeholder="Name des Prüfers" style="width:100%; margin-bottom:6px; padding:4px;">
-
-            <label style="font-size:0.8rem;">Mängel & Anmerkungen:</label>
-            <textarea id="neuesPruefBemerkung" placeholder="z. B. Leichte Kratzer am Holm, Sichtprüfung i. O." style="width:100%; height:50px; margin-bottom:6px; padding:4px;"></textarea>
-
-            <button class="btn btn-primary" style="width:100%; margin-top:6px;" onclick="fuegePruefungHinzu('${safeId}')">💾 Prüfung speichern</button>
-        </div>
-    `;
+        html += `
+            <div style="background: #fff; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 0.9em;">
+                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px;">
+                    <span>📅 ${hDatum} (${escapeHtml(h.pruefart || 'Regelprüfung')})</span>
+                    <span style="color:${ergColor};">${escapeHtml(h.ergebnis || 'Geprüft')}</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #444;"><strong>Prüfer:</strong> ${escapeHtml(h.pruefer || 'Unbekannt')}</div>
+                ${h.bemerkung ? `<div style="font-size: 0.85rem; background:#fff8e1; padding:3px 6px; border-radius:3px; margin-top:2px;">📝 <em>${escapeHtml(h.bemerkung)}</em></div>` : ''}
+                <div style="text-align: right; margin-top: 4px;">
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.75em; padding: 1px 6px;" onclick="loescheGeraeteProtokollModal('${g.id}', ${echterIndex})">Löschen</button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    listeDiv.innerHTML = html;
 }
 
-function fuegePruefungHinzu(id) {
+function speichereGeraeteProtokollModal() {
+    const id = window.aktiveGeraeteAktenId;
+    if (!id) return;
+
     if (typeof istEditor === "function" && !istEditor()) {
         alert("🔒 Schreibschutz aktiv! Bitte melde dich an, um Prüfungen zu protokollieren.");
         return;
     }
 
-    const elDatum = document.getElementById("neuesPruefDatum");
-    const elArt = document.getElementById("neuesPruefArt");
-    const elErgebnis = document.getElementById("neuesPruefErgebnis");
-    const elPruefer = document.getElementById("prueferName");
-    const elBemerkung = document.getElementById("neuesPruefBemerkung");
-
-    const datum = elDatum ? elDatum.value : "";
-    const pruefart = elArt ? elArt.value : "Sichtprüfung";
-    const ergebnis = elErgebnis ? elErgebnis.value : "Ohne Mängel";
-    let pruefer = elPruefer ? elPruefer.value.trim() : "";
-    const bemerkung = elBemerkung ? elBemerkung.value.trim() : "";
-    
-    if (!pruefer) {
-        pruefer = hohleBenutzerProtokollText();
-    }
+    const datum = document.getElementById('geraete-protokoll-datum').value;
+    const pruefartEl = document.getElementById('geraete-protokoll-art');
+    const pruefart = pruefartEl ? pruefartEl.value : 'Regelprüfung';
+    const ergebnis = document.getElementById('geraete-protokoll-ergebnis').value;
+    const prueferInputEl = document.getElementById('geraete-protokoll-pruefer');
+    const prueferInput = prueferInputEl ? prueferInputEl.value.trim() : '';
+    const bemerkung = document.getElementById('geraete-protokoll-bemerkung').value.trim();
 
     if (!datum) {
         alert("Bitte ein Prüfdatum angeben.");
         return;
     }
 
-    geraete = ladeDaten("geraete") || [];
-    const index = geraete.findIndex(g => g.id === id);
+    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
+    const index = geraeteListe.findIndex(g => String(g.id) === String(id));
+    if (index === -1) return;
 
-    if (index !== -1) {
-        const g = geraete[index];
-        if (!g.historie) g.historie = [];
+    const g = geraeteListe[index];
+    if (!g.historie) g.historie = g.protokolle || [];
 
-        g.historie.push({
-            datum: datum,
-            pruefart: pruefart,
-            ergebnis: ergebnis,
-            pruefer: pruefer,
-            bemerkung: bemerkung
-        });
+    const pruefer = prueferInput || hohleBenutzerProtokollText();
 
-        const protokollUser = hohleBenutzerProtokollText();
-        const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
+    g.historie.push({
+        datum: datum,
+        pruefart: pruefart,
+        ergebnis: ergebnis,
+        pruefer: pruefer,
+        bemerkung: bemerkung
+    });
 
-        g.letztePruefung = datum;
-        g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
-        
-        if (ergebnis === "Schwere Mängel / Gesperrt") {
-            g.status = "Defekt";
+    const protokollUser = hohleBenutzerProtokollText();
+    const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
+
+    g.letztePruefung = datum;
+    g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
+    
+    if (ergebnis === "Schwere Mängel / Gesperrt") {
+        g.status = "Defekt";
+    }
+
+    g.bearbeitetVon = `${protokollUser} (Prüfung am ${jetztZeitstempel})`;
+
+    if (typeof window.speichereDaten === 'function') {
+        window.speichereDaten('geraete', geraeteListe);
+    } else {
+        localStorage.setItem('geraete', JSON.stringify(geraeteListe));
+        localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
+    }
+
+    if (document.getElementById('geraete-protokoll-bemerkung')) document.getElementById('geraete-protokoll-bemerkung').value = '';
+    if (document.getElementById('geraete-protokoll-pruefer')) document.getElementById('geraete-protokoll-pruefer').value = '';
+    
+    filterGeraete();
+    oeffneGeraeteAkteModal(id);
+}
+
+function loescheGeraeteProtokollModal(geraetId, protokollIndex) {
+    if (typeof istEditor === "function" && !istEditor()) {
+        alert("🔒 Schreibschutz aktiv!");
+        return;
+    }
+
+    if (!confirm("Diesen Protokolleintrag wirklich löschen?")) return;
+
+    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
+    const index = geraeteListe.findIndex(g => String(g.id) === String(geraetId));
+
+    if (index >= 0) {
+        const hist = geraeteListe[index].historie || geraeteListe[index].protokolle;
+        if (hist) {
+            hist.splice(protokollIndex, 1);
+            
+            if (typeof window.speichereDaten === 'function') {
+                window.speichereDaten('geraete', geraeteListe);
+            } else {
+                localStorage.setItem('geraete', JSON.stringify(geraeteListe));
+                localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
+            }
+
+            filterGeraete();
+            oeffneGeraeteAkteModal(geraetId);
         }
-
-        g.bearbeitetVon = `${protokollUser} (Prüfung am ${jetztZeitstempel})`;
-
-        speichereGeraete();
-        filterGeraete();
-        zeigeGeraeteDetails(id);
     }
 }
+
+window.speichereGeraeteProtokollModal = speichereGeraeteProtokollModal;
+window.loescheGeraeteProtokollModal = loescheGeraeteProtokollModal;
 
 function bearbeiteGeraet(id) {
     if (typeof istEditor === "function" && !istEditor()) {
@@ -471,9 +498,9 @@ function bearbeiteGeraet(id) {
 
     bearbeitungsId = id;
 
-    if (document.getElementById("inventar")) document.getElementById("inventar").value = g.inventarnummer || "";
-    if (document.getElementById("bezeichnung")) document.getElementById("bezeichnung").value = g.bezeichnung || "";
-    if (document.getElementById("kategorie")) document.getElementById("kategorie").value = g.kategorie || "";
+    if (document.getElementById("inventar")) document.getElementById("inventar").value = g.inventarnummer || g.seriennummer || "";
+    if (document.getElementById("bezeichnung")) document.getElementById("bezeichnung").value = g.bezeichnung || g.name || "";
+    if (document.getElementById("kategorie")) document.getElementById("kategorie").value = g.kategorie || g.typ || "";
     if (document.getElementById("hersteller")) document.getElementById("hersteller").value = g.hersteller || "";
     if (document.getElementById("status")) document.getElementById("status").value = g.status || "Einsatzbereit";
     
@@ -487,7 +514,6 @@ function bearbeiteGeraet(id) {
     const btn = document.querySelector(".geraete-form button") || document.querySelector("button[onclick='neuesGeraet()']");
     if (btn) btn.innerHTML = "💾 Änderungen speichern";
 
-    // Pragmatische Lösung: Sanftes Scrollen direkt zum Formular
     const zielFormular = document.querySelector(".geraete-form") || document.getElementById("inventar");
     if (zielFormular) {
         zielFormular.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -562,16 +588,12 @@ function exportGeraeteCSV() {
         csvLines.push(r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"));
     });
 
-    // Dateiname mit heutigem Datum im Format YYYY-MM-DD
     const heute = new Date().toISOString().split('T')[0];
     const dateiname = `Geraeteliste_FFW_${heute}.csv`;
 
-    // Blob explizit als text/csv mit UTF-8 BOM definieren
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: 'text/csv;charset=utf-8;' });
     
-    // Robuste Download-Ausführung
     if (navigator.msSaveBlob) { 
-        // Für ältere Edge/IE Browser
         navigator.msSaveBlob(blob, dateiname);
     } else {
         const link = document.createElement("a");
@@ -579,12 +601,11 @@ function exportGeraeteCSV() {
         
         link.href = url;
         link.style.display = "none";
-        link.download = dateiname; // Zwingt den Browser zur Namens- und Endungsvorgabe
+        link.download = dateiname;
         
         document.body.appendChild(link);
         link.click();
         
-        // Timeout stellt sicher, dass der Browser den Download abgeschlossen hat, bevor der Link entfernt wird
         setTimeout(() => {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
@@ -758,7 +779,9 @@ document.addEventListener("geraeteGeaendert", () => {
     filterGeraete();
 });
 
+// ------------------------------------------
 // Schnittstellen für Navigation & Dashboard
+// ------------------------------------------
 function renderGeraeteView() {
     filterGeraete();
 }
@@ -784,18 +807,19 @@ function filtereGeraeteNachDashboard(filterTyp) {
     filterGeraete();
 }
 
-// Globale Freigaben
+// Globale Freigaben (inklusive der neuen Modal-Funktionen)
 window.getGeraete = getGeraete;
 window.ladeGeraete = ladeGeraete;
 window.speichereGeraete = speichereGeraete;
 window.neuesGeraet = neuesGeraet;
 window.resetFormular = resetFormular;
 window.filterGeraete = filterGeraete;
-window.zeigeGeraeteDetails = zeigeGeraeteDetails;
-window.fuegePruefungHinzu = fuegePruefungHinzu;
 window.bearbeiteGeraet = bearbeiteGeraet;
 window.loescheGeraet = loescheGeraet;
 window.exportGeraeteCSV = exportGeraeteCSV;
 window.importGeraeteCSV = importGeraeteCSV;
 window.renderGeraeteView = renderGeraeteView;
 window.filtereGeraeteNachDashboard = filtereGeraeteNachDashboard;
+window.oeffneGeraeteAkteModal = oeffneGeraeteAkteModal;
+window.speichereGeraeteProtokollModal = speichereGeraeteProtokollModal;
+window.loescheGeraeteProtokollModal = loescheGeraeteProtokollModal;
