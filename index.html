@@ -713,27 +713,40 @@
         <div id="geraete-akte-historie-liste" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; border-radius: 4px; padding: 8px;"></div>
         <div style="background: #f1f3f5; padding: 12px; border-radius: 6px;">
             <h5 style="font-size: 14px; margin-top: 0; margin-bottom: 10px;">➕ Neues Prüfprotokoll hinzufügen</h5>
-            <form onsubmit="event.preventDefault(); speichereGeraeteProtokoll();">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+            <form onsubmit="event.preventDefault(); speichereGeraeteProtokollModal();">
+                <!-- Grid auf 3 Spalten angepasst, damit Prüfungsart, Datum und Ergebnis perfekt nebeneinander passen -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
                     <div>
-                        <label style="font-size: 12px;">Datum:</label>
+                        <label style="font-size: 12px; font-weight: bold;">Prüfungsart:</label>
+                        <select id="geraete-protokoll-art" style="width: 100%; padding: 5px; box-sizing: border-box;">
+                            <option value="Sichtprüfung">Sichtprüfung</option>
+                            <option value="Funktionsprüfung">Funktionsprüfung</option>
+                            <option value="Belastungsprüfung">Belastungsprüfung</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: bold;">Datum:</label>
                         <input type="date" id="geraete-protokoll-datum" style="width: 100%; padding: 5px; box-sizing: border-box;" required>
                     </div>
                     <div>
-                        <label style="font-size: 12px;">Ergebnis:</label>
+                        <label style="font-size: 12px; font-weight: bold;">Ergebnis:</label>
                         <select id="geraete-protokoll-ergebnis" style="width: 100%; padding: 5px; box-sizing: border-box;">
-                            <option value="Prüfung bestanden">🟢 Prüfung bestanden</option>
-                            <option value="Mängel festgestellt">🟡 Mängel festgestellt</option>
-                            <option value="Gesperrt / Defekt">🔴 Gesperrt / Defekt</option>
+                            <option value="Ohne Mängel">🟢 Ohne Mängel</option>
+                            <option value="Geringe Mängel">🟡 Geringe Mängel</option>
+                            <option value="Schwere Mängel / Gesperrt">🔴 Schwere Mängel / Gesperrt</option>
                         </select>
                     </div>
                 </div>
+                <!-- Optionales Prüfer-Feld falls von JS gesucht, ansonsten unauffällig integriert -->
+                <div style="margin-bottom: 8px; display: none;">
+                    <input type="text" id="geraete-protokoll-pruefer">
+                </div>
                 <div style="margin-bottom: 8px;">
-                    <label style="font-size: 12px;">Bemerkung:</label>
+                    <label style="font-size: 12px; font-weight: bold;">Bemerkung:</label>
                     <textarea id="geraete-protokoll-bemerkung" rows="2" style="width: 100%; padding: 5px; box-sizing: border-box;" placeholder="Prüfdetails eintragen..."></textarea>
                 </div>
                 <div style="text-align: right;">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="speichereGeraeteProtokoll()" style="padding: 6px 14px;">Protokoll speichern</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="speichereGeraeteProtokollModal()" style="padding: 6px 14px;">Protokoll speichern</button>
                 </div>
             </form>
         </div>
