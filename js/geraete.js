@@ -340,6 +340,35 @@ window.oeffneGeraeteAkteModal = function(id) {
         `;
     }
 
+    // Beschreibung und Ablaufdatum in der Akte anzeigen
+    const beschreibungEl = document.getElementById('geraete-akte-beschreibung');
+    if (beschreibungEl) {
+        beschreibungEl.textContent = g.beschreibung || 'Keine spezifische Beschreibung hinterlegt.';
+    }
+
+    const ablaufEl = document.getElementById('geraete-akte-ablauf');
+    if (ablaufEl) {
+        if (g.ablaufdatum) {
+            ablaufEl.textContent = formatiereDatum(g.ablaufdatum);
+            
+            const heute = new Date();
+            const ablauf = new Date(g.ablaufdatum);
+            const diffTage = (ablauf - heute) / (1000 * 60 * 60 * 24);
+            if (diffTage <= 30 && diffTage >= 0) {
+                ablaufEl.style.color = '#f57c00'; 
+                ablaufEl.textContent += ' ⚠️ (Läuft bald ab!)';
+            } else if (diffTage < 0) {
+                ablaufEl.style.color = '#d32f2f'; 
+                ablaufEl.textContent += ' ❌ (Abgelaufen!)';
+            } else {
+                ablaufEl.style.color = '#2e7d32'; 
+            }
+        } else {
+            ablaufEl.textContent = 'Kein Ablaufdatum definiert';
+            ablaufEl.style.color = '#555';
+        }
+    }
+
     const titelEl = document.getElementById('geraete-akte-titel');
     if (titelEl) {
         titelEl.textContent = `🛠️ Geräte-Akte: ${escapeHtml(g.bezeichnung || g.name || 'Details')}`;
@@ -357,7 +386,7 @@ window.oeffneGeraeteAkteModal = function(id) {
     if (artInput) artInput.value = 'Funktionsprüfung';
 
     const ergebnisInput = document.getElementById('geraete-protokoll-ergebnis');
-    if (ergebnisInput) ergebnisInput.value = 'bestanden';
+    if (ergebnisInput) ergebnisInput.value = 'Ohne Mängel';
 
     const bemerkungInput = document.getElementById('geraete-protokoll-bemerkung');
     if (bemerkungInput) bemerkungInput.value = '';
@@ -379,7 +408,7 @@ window.speichereGeraeteProtokoll = function() {
 
     const art = artEl ? artEl.value : 'Sichtprüfung';
     const datum = datumEl ? datumEl.value : new Date().toISOString().split('T')[0];
-    const ergebnis = ergebnisEl ? ergebnisEl.value : 'bestanden';
+    const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
     const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
 
     let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
@@ -397,8 +426,7 @@ window.speichereGeraeteProtokoll = function() {
             erstelltAm: new Date().toISOString()
         });
 
-        // Optional: Gerätestatus automatisch auf 'Defekt' setzen, falls Prüfung gescheitert
-        if (ergebnis === 'gesperrt') {
+        if (ergebnis === 'gesperrt' || ergebnis === 'Schwere Mängel / Gesperrt') {
             g.status = 'Gesperrt / Defekt';
         }
 
@@ -406,10 +434,8 @@ window.speichereGeraeteProtokoll = function() {
             speichereDaten('geraete', geraeteListe);
         }
 
-        // Formular nach dem Speichern leeren
         if (bemerkungEl) bemerkungEl.value = '';
 
-        // Ansicht der Gerätehistorie sofort aktualisieren
         if (typeof rendereGeraeteHistorieModal === 'function') {
             rendereGeraeteHistorieModal(g);
         }
@@ -497,7 +523,6 @@ function speichereGeraeteProtokollModal() {
         g.naechstePruefung = berechneNaechstePruefung(datum, g.pruefintervall || 12);
     }
     
-    // Status anpassen, wenn das Ergebnis auf Defekt/Gesperrt steht
     if (ergebnis === "Schwere Mängel / Gesperrt" || ergebnis === "gesperrt") {
         g.status = "Defekt";
     }
@@ -573,6 +598,14 @@ function bearbeiteGeraet(id) {
     if (document.getElementById("erstinbetriebnahme")) document.getElementById("erstinbetriebnahme").value = g.erstinbetriebnahme || "";
     if (document.getElementById("letztePruefung")) document.getElementById("letztePruefung").value = g.letztePruefung || "";
     if (document.getElementById("pruefintervall")) document.getElementById("pruefintervall").value = g.pruefintervall || "12";
+    
+    // NEU: Beschreibung und Ablaufdatum in Formularfeldern laden (falls im HTML vorhanden)
+    if (document.getElementById("geraete-beschreibung")) {
+        document.getElementById("geraete-beschreibung").value = g.beschreibung || "";
+    }
+    if (document.getElementById("geraete-ablaufdatum")) {
+        document.getElementById("geraete-ablaufdatum").value = g.ablaufdatum || "";
+    }
 
     const btn = document.querySelector(".geraete-form button") || document.querySelector("button[onclick='neuesGeraet()']");
     if (btn) btn.innerHTML = "💾 Änderungen speichern";
