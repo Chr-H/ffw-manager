@@ -2,7 +2,7 @@
 // FFW Manager - Geräteverwaltung (v0.6.7)
 // ==========================================
 
-let geraete = ladeDaten("geraete") || [];
+geraete = ladeDaten("geraete") || [];
 let bearbeitungsId = null;
 
 // Hilfsfunktion: Safe HTML Escaping gegen XSS-Lücken
