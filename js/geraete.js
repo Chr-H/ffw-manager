@@ -429,8 +429,9 @@ window.oeffneGeraeteAkteModal = function(id) {
     if (modal) modal.style.display = 'flex';
 };
 
-window.speichereGeraeteProtokoll = function() {
-    if (typeof window.aktiveGeraeteAktenId === 'undefined' || !window.aktiveGeraeteAktenId) {
+function speichereGeraeteProtokollModal() {
+    const id = window.aktiveGeraeteAktenId;
+    if (!id) {
         alert("⚠️ Kein Gerät ausgewählt.");
         return;
     }
@@ -445,22 +446,22 @@ window.speichereGeraeteProtokoll = function() {
     const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
     const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
 
-    // FIX 1: Hier von 'geraete' auf 'ffw_geraete' geändert, passend zu deinem LocalStorage
+    // Daten mit dem echten ffw_geraete Key laden
     let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('ffw_geraete') : [];
     if (!geraeteListe || geraeteListe.length === 0) {
         const raw = localStorage.getItem('ffw_geraete');
         geraeteListe = raw ? JSON.parse(raw) : [];
     }
 
-    // FIX 2: Flexiblere Suche (.id oder .inventarnummer), damit das Gerät garantiert gefunden wird
+    // Gerät flexibel finden (.id oder .inventarnummer)
     let g = geraeteListe.find(item => 
-        String(item.id) === String(window.aktiveGeraeteAktenId) || 
-        String(item.inventarnummer) === String(window.aktiveGeraeteAktenId)
+        String(item.id) === String(id) || 
+        String(item.inventarnummer) === String(id)
     );
 
     if (g) {
         if (!g.pruefprotokolle) g.pruefprotokolle = [];
-        if (!g.historie) g.historie = []; // Sicherheitshalber beide Arrays unterstützen
+        if (!g.historie) g.historie = [];
 
         const neuesProtokoll = {
             datum: datum,
@@ -471,30 +472,30 @@ window.speichereGeraeteProtokoll = function() {
         };
 
         g.pruefprotokolle.push(neuesProtokoll);
-        g.historie.push(neuesProtokoll); // Falls die Historie woanders ausgelesen wird
+        g.historie.push(neuesProtokoll);
 
-        // FIX 3: Auch beim Speichern konsequent 'ffw_geraete' nutzen
+        // Speichern unter ffw_geraete
         if (typeof window.speichereDaten === 'function') {
             window.speichereDaten('ffw_geraete', geraeteListe);
         } else {
             localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
         }
 
-        // Eingabefelder leeren
+        // Felder leeren
         if (bemerkungEl) bemerkungEl.value = '';
         if (datumEl) datumEl.value = '';
 
         // Ansicht aktualisieren
         if (typeof filterGeraete === 'function') filterGeraete();
         if (typeof oeffneGeraeteAkteModal === 'function') {
-            oeffneGeraeteAkteModal(window.aktiveGeraeteAktenId);
+            oeffneGeraeteAkteModal(id);
         }
 
         alert("✅ Prüfprotokoll erfolgreich gespeichert!");
     } else {
         alert("❌ Fehler: Gerät konnte im Speicher nicht gefunden werden.");
     }
-};
+}
 
 function rendereGeraeteHistorieModal(g) {
     const listeDiv = document.getElementById('geraete-akte-historie-liste');
@@ -552,7 +553,11 @@ function speichereGeraeteProtokollModal() {
         return;
     }
 
-    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
+    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('ffw_geraete') : [];
+if (!geraeteListe || geraeteListe.length === 0) {
+    const raw = localStorage.getItem('ffw_geraete');
+    geraeteListe = raw ? JSON.parse(raw) : [];
+}
     
     // FIX: Flexiblere Suche, damit kein Gerät mehr "verloren" geht
     const index = geraeteListe.findIndex(g => 
