@@ -222,7 +222,7 @@ function neuesGeraet() {
                 naechstePruefung: naechstePruefung,
                 bearbeitetVon: `${protokollUser} (am ${jetztZeitstempel})`
             };
-        }
+        
     } else {
         const neuesG = {
             id: "GER-" + Date.now(),
