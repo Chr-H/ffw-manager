@@ -128,7 +128,7 @@
     </section>
 </main>
 
-            <!-- 2. GERÄTE BEREICH -->
+   <!-- 2. GERÄTE BEREICH -->
 <section id="seite-geraete" class="seite-ansicht" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h2>🛠️ Geräteverwaltung</h2>
@@ -203,6 +203,17 @@
                     <option value="Außer Dienst">⚫ Außer Dienst</option>
                 </select>
             </div>
+
+            <!-- NEU: Beschreibung & Ablaufdatum in der Erfassungsmaske -->
+            <div style="flex:2; min-width:220px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Beschreibung / Technische Details:</label>
+                <input id="geraete-beschreibung" type="text" class="form-control" placeholder="Zusatzinfos..." style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Ablaufdatum / Verfallsfrist:</label>
+                <input id="geraete-ablaufdatum" type="date" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+            </div>
+
             <div style="min-width:140px; padding-top:20px;">
                 <button type="button" class="btn-speichern" onclick="neuesGeraet()" style="width:100%; padding:9px; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">➕ Speichern</button>
             </div>
