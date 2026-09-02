@@ -445,34 +445,54 @@ window.speichereGeraeteProtokoll = function() {
     const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
     const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
 
-    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
-    let g = geraeteListe.find(item => String(item.id) === String(window.aktiveGeraeteAktenId));
+    // FIX 1: Hier von 'geraete' auf 'ffw_geraete' geändert, passend zu deinem LocalStorage
+    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('ffw_geraete') : [];
+    if (!geraeteListe || geraeteListe.length === 0) {
+        const raw = localStorage.getItem('ffw_geraete');
+        geraeteListe = raw ? JSON.parse(raw) : [];
+    }
+
+    // FIX 2: Flexiblere Suche (.id oder .inventarnummer), damit das Gerät garantiert gefunden wird
+    let g = geraeteListe.find(item => 
+        String(item.id) === String(window.aktiveGeraeteAktenId) || 
+        String(item.inventarnummer) === String(window.aktiveGeraeteAktenId)
+    );
 
     if (g) {
         if (!g.pruefprotokolle) g.pruefprotokolle = [];
+        if (!g.historie) g.historie = []; // Sicherheitshalber beide Arrays unterstützen
 
-        g.pruefprotokolle.push({
-            id: 'PP_' + Date.now(),
-            art: art,
+        const neuesProtokoll = {
             datum: datum,
+            art: art,
             ergebnis: ergebnis,
             bemerkung: bemerkung,
             erstelltAm: new Date().toISOString()
-        });
+        };
 
-        if (ergebnis === 'gesperrt' || ergebnis === 'Schwere Mängel / Gesperrt') {
-            g.status = 'Gesperrt / Defekt';
+        g.pruefprotokolle.push(neuesProtokoll);
+        g.historie.push(neuesProtokoll); // Falls die Historie woanders ausgelesen wird
+
+        // FIX 3: Auch beim Speichern konsequent 'ffw_geraete' nutzen
+        if (typeof window.speichereDaten === 'function') {
+            window.speichereDaten('ffw_geraete', geraeteListe);
+        } else {
+            localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
         }
 
-        if (typeof speichereDaten === 'function') {
-            speichereDaten('geraete', geraeteListe);
-        }
-
+        // Eingabefelder leeren
         if (bemerkungEl) bemerkungEl.value = '';
+        if (datumEl) datumEl.value = '';
 
-        if (typeof rendereGeraeteHistorieModal === 'function') {
-            rendereGeraeteHistorieModal(g);
+        // Ansicht aktualisieren
+        if (typeof filterGeraete === 'function') filterGeraete();
+        if (typeof oeffneGeraeteAkteModal === 'function') {
+            oeffneGeraeteAkteModal(window.aktiveGeraeteAktenId);
         }
+
+        alert("✅ Prüfprotokoll erfolgreich gespeichert!");
+    } else {
+        alert("❌ Fehler: Gerät konnte im Speicher nicht gefunden werden.");
     }
 };
 
