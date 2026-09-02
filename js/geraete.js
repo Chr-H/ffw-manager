@@ -206,7 +206,19 @@ function neuesGeraet() {
 
 function resetFormular() {
     bearbeitungsId = null;
-    const felder = ["inventar", "bezeichnung", "hersteller", "kategorie", "standort", "geraet-standort", "erstinbetriebnahme", "letztePruefung"];
+    const felder = [
+        "inventar", 
+        "bezeichnung", 
+        "hersteller", 
+        "kategorie", 
+        "standort", 
+        "geraet-standort", 
+        "erstinbetriebnahme", 
+        "letztePruefung", 
+        "geraete-beschreibung", 
+        "geraete-ablaufdatum"
+    ];
+    
     felder.forEach(f => {
         const el = document.getElementById(f);
         if (el) el.value = "";
