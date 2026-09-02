@@ -126,70 +126,7 @@ function neuesGeraet() {
         return;
     }
 
-    // Prüfen, ob wir bearbeiten oder neu anlegen
-    if (typeof bearbeitungsId !== 'undefined' && bearbeitungsId) {
-        let g = geraete.find(item => item.id === bearbeitungsId);
-        if (g) {
-            g.inventarnummer = inventar;
-            g.bezeichnung = bezeichnung;
-            g.kategorie = kategorie;
-            g.hersteller = hersteller;
-            g.status = status;
-            g.standort = standort;
-            g.erstinbetriebnahme = erstinbetriebnahme;
-            g.letztePruefung = letztePruefung;
-            g.pruefintervall = pruefintervall;
-            g.beschreibung = beschreibung;
-            g.ablaufdatum = ablaufdatum;
-            
-            if (typeof berechneNaechstePruefung === 'function' && letztePruefung) {
-                g.naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
-            }
-        }
-        bearbeitungsId = null;
-    } else {
-        // Neues Gerät erstellen
-        let naechstePruefung = "";
-        if (typeof berechneNaechstePruefung === 'function' && letztePruefung) {
-            naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
-        }
-
-        const neuesObj = {
-            id: 'G_' + Date.now(),
-            inventarnummer: inventar,
-            bezeichnung: bezeichnung,
-            kategorie: kategorie,
-            hersteller: hersteller,
-            status: status,
-            standort: standort,
-            erstinbetriebnahme: erstinbetriebnahme,
-            letztePruefung: letztePruefung,
-            pruefintervall: pruefintervall,
-            naechstePruefung: naechstePruefung,
-            beschreibung: beschreibung,
-            ablaufdatum: ablaufdatum,
-            historie: []
-        };
-        geraete.push(neuesObj);
-    }
-
-    // Speichern & Formular leeren
-    if (typeof speichereGeraete === 'function') speichereGeraete();
-    if (typeof filterGeraete === 'function') filterGeraete();
-
-    if (elInv) elInv.value = "";
-    if (elBez) elBez.value = "";
-    if (elHer) elHer.value = "";
-    if (elErst) elErst.value = "";
-    if (elLpz) elLpz.value = "";
-    if (elBeschr) elBeschr.value = "";
-    if (elAblauf) elAblauf.value = "";
-
-    const btn = document.querySelector(".geraete-form button") || document.querySelector("button[onclick='neuesGeraet()']");
-    if (btn) btn.innerHTML = "➕ Speichern";
-}
-
-    geraete = ladeDaten("geraete") || [];
+    let geraete = ladeDaten("geraete") || [];
 
     const vorhanden = geraete.find(g => 
         (g.inventarnummer || "").trim().toLowerCase() === inventar.toLowerCase() && 
@@ -201,11 +138,11 @@ function neuesGeraet() {
         return;
     }
 
-    const naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
-    const protokollUser = hohleBenutzerProtokollText();
+    const naechstePruefung = typeof berechneNaechstePruefung === 'function' && letztePruefung ? berechneNaechstePruefung(letztePruefung, pruefintervall) : "";
+    const protokollUser = typeof hohleBenutzerProtokollText === 'function' ? hohleBenutzerProtokollText() : "System";
     const jetztZeitstempel = `${new Date().toLocaleDateString("de-DE")} um ${new Date().toLocaleTimeString("de-DE", {hour: '2-digit', minute:'2-digit'})}`;
 
-    if (bearbeitungsId !== null) {
+    if (typeof bearbeitungsId !== 'undefined' && bearbeitungsId !== null) {
         const index = geraete.findIndex(g => g.id === bearbeitungsId);
         if (index !== -1) {
             geraete[index] = {
@@ -218,11 +155,14 @@ function neuesGeraet() {
                 standort: standort,
                 erstinbetriebnahme: erstinbetriebnahme,
                 letztePruefung: letztePruefung,
-                pruefintervall: parseInt(pruefintervall),
+                pruefintervall: parseInt(pruefintervall) || 12,
                 naechstePruefung: naechstePruefung,
+                beschreibung: beschreibung,
+                ablaufdatum: ablaufdatum,
                 bearbeitetVon: `${protokollUser} (am ${jetztZeitstempel})`
             };
-        
+        }
+        bearbeitungsId = null;
     } else {
         const neuesG = {
             id: "GER-" + Date.now(),
@@ -234,8 +174,10 @@ function neuesGeraet() {
             standort: standort,
             erstinbetriebnahme: erstinbetriebnahme,
             letztePruefung: letztePruefung,
-            pruefintervall: parseInt(pruefintervall),
+            pruefintervall: parseInt(pruefintervall) || 12,
             naechstePruefung: naechstePruefung,
+            beschreibung: beschreibung,
+            ablaufdatum: ablaufdatum,
             historie: letztePruefung ? [{ datum: letztePruefung, ergebnis: "Ohne Mängel", pruefart: "Initialprüfung", pruefer: protokollUser }] : [],
             erstellt: jetztZeitstempel,
             erstelltVon: `${protokollUser} (am ${jetztZeitstempel})`,
@@ -244,9 +186,22 @@ function neuesGeraet() {
         geraete.push(neuesG);
     }
 
-    speichereGeraete();
-    resetFormular();
-    filterGeraete();
+    if (typeof speichereGeraete === 'function') speichereGeraete();
+    if (typeof resetFormular === 'function') {
+        resetFormular();
+    } else {
+        if (elInv) elInv.value = "";
+        if (elBez) elBez.value = "";
+        if (elHer) elHer.value = "";
+        if (elErst) elErst.value = "";
+        if (elLpz) elLpz.value = "";
+        if (elBeschr) elBeschr.value = "";
+        if (elAblauf) elAblauf.value = "";
+    }
+    if (typeof filterGeraete === 'function') filterGeraete();
+
+    const btn = document.querySelector(".geraete-form button") || document.querySelector("button[onclick='neuesGeraet()']");
+    if (btn) btn.innerHTML = "➕ Speichern";
 }
 
 function resetFormular() {
