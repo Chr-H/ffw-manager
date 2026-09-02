@@ -533,8 +533,19 @@ function speichereGeraeteProtokollModal() {
     }
 
     let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
-    const index = geraeteListe.findIndex(g => String(g.id) === String(id));
-    if (index === -1) return;
+    
+    // FIX: Flexiblere Suche, damit kein Gerät mehr "verloren" geht
+    const index = geraeteListe.findIndex(g => 
+        String(g.id) === String(id) || 
+        String(g.inventarnummer) === String(id) ||
+        String(g.geraeteId) === String(id)
+    );
+    
+    if (index === -1) {
+        console.error("Gerät mit ID/Inventarnummer nicht gefunden:", id);
+        alert("Fehler: Gerät konnte nicht in der Datenbank gefunden werden.");
+        return;
+    }
 
     const g = geraeteListe[index];
     if (!g.historie) g.historie = g.protokolle || [];
@@ -586,7 +597,13 @@ function loescheGeraeteProtokollModal(geraetId, protokollIndex) {
     if (!confirm("Diesen Protokolleintrag wirklich löschen?")) return;
 
     let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('geraete') : [];
-    const index = geraeteListe.findIndex(g => String(g.id) === String(geraetId));
+    
+    // Auch hier die flexible Suche anwenden
+    const index = geraeteListe.findIndex(g => 
+        String(g.id) === String(geraetId) || 
+        String(g.inventarnummer) === String(geraetId) ||
+        String(g.geraeteId) === String(geraetId)
+    );
 
     if (index >= 0) {
         const hist = geraeteListe[index].historie || geraeteListe[index].protokolle;
@@ -605,7 +622,6 @@ function loescheGeraeteProtokollModal(geraetId, protokollIndex) {
         }
     }
 }
-
 window.speichereGeraeteProtokollModal = speichereGeraeteProtokollModal;
 window.loescheGeraeteProtokollModal = loescheGeraeteProtokollModal;
 
