@@ -446,14 +446,11 @@ function speichereGeraeteProtokollModal() {
     const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
     const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
 
-    // Daten mit dem echten ffw_geraete Key laden
-    let geraeteListe = (typeof ladeDaten === 'function') ? ladeDaten('ffw_geraete') : [];
-    if (!geraeteListe || geraeteListe.length === 0) {
-        const raw = localStorage.getItem('ffw_geraete');
-        geraeteListe = raw ? JSON.parse(raw) : [];
-    }
+    // Direkter Zugriff auf den LocalStorage, um Umwege über fehlerhafte Wrapper zu verhindern
+    let rawData = localStorage.getItem('ffw_geraete');
+    let geraeteListe = rawData ? JSON.parse(rawData) : [];
 
-    // Gerät flexibel finden (.id oder .inventarnummer)
+    // Gerät anhand von id oder inventarnummer finden
     let g = geraeteListe.find(item => 
         String(item.id) === String(id) || 
         String(item.inventarnummer) === String(id)
@@ -465,21 +462,18 @@ function speichereGeraeteProtokollModal() {
 
         const neuesProtokoll = {
             datum: datum,
-            art: art,
+            pruefart: art, // Angepasst an deine bestehende Struktur (pruefart statt art)
             ergebnis: ergebnis,
-            bemerkung: bemerkung,
-            erstelltAm: new Date().toISOString()
+            pruefer: "CH (EDITOR)", // Oder dynamisch auslesen, falls vorhanden
+            bemerkung: bemerkung
         };
 
         g.pruefprotokolle.push(neuesProtokoll);
         g.historie.push(neuesProtokoll);
+        g.letztePruefung = datum;
 
-        // Speichern unter ffw_geraete
-        if (typeof window.speichereDaten === 'function') {
-            window.speichereDaten('ffw_geraete', geraeteListe);
-        } else {
-            localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
-        }
+        // Direkt in den LocalStorage zurückschreiben
+        localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
 
         // Felder leeren
         if (bemerkungEl) bemerkungEl.value = '';
@@ -493,7 +487,7 @@ function speichereGeraeteProtokollModal() {
 
         alert("✅ Prüfprotokoll erfolgreich gespeichert!");
     } else {
-        alert("❌ Fehler: Gerät konnte im Speicher nicht gefunden werden.");
+        alert("❌ Fehler: Gerät mit der ID " + id + " konnte im LocalStorage nicht gefunden werden.");
     }
 }
 
