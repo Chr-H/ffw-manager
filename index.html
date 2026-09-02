@@ -700,21 +700,30 @@
 
     <!-- JavaScript-Dateien (Beispiel) -->
     <!-- ... -->
-     <!-- 10. Geräteakte -->
+   <!-- 10. Geräteakte -->
 <div id="geraete-akte-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center;">
     <div style="background: #fff; border-radius: 8px; max-width: 800px; width: 95%; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b30000; padding-bottom: 10px; margin-bottom: 15px;">
             <h3 id="geraete-akte-titel" style="margin: 0; color: #b30000;">🛠️ Geräte-Akte</h3>
             <button type="button" onclick="document.getElementById('geraete-akte-modal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
         </div>
-        <div id="geraete-akte-stammdaten" style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; line-height: 1.5;"></div>
+        
+        <!-- Stammdaten -->
+        <div id="geraete-akte-stammdaten" style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;"></div>
+        
+        <!-- NEU: Beschreibung & Ablaufdatum (Sichtbar in der Akte) -->
+        <div style="background: #e9ecef; padding: 10px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; border-left: 3px solid #17a2b8;">
+            <div style="margin-bottom: 4px;"><strong>Beschreibung:</strong> <span id="geraete-akte-beschreibung" style="color: #333;">-</span></div>
+            <div><strong>Ablaufdatum / Verfallsfrist:</strong> <span id="geraete-akte-ablauf" style="font-weight: bold;">-</span></div>
+        </div>
+
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
         <h4 style="font-size: 16px; margin-bottom: 10px;">📋 Prüfhistorie & Protokolle</h4>
         <div id="geraete-akte-historie-liste" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; border-radius: 4px; padding: 8px;"></div>
+        
         <div style="background: #f1f3f5; padding: 12px; border-radius: 6px;">
             <h5 style="font-size: 14px; margin-top: 0; margin-bottom: 10px;">➕ Neues Prüfprotokoll hinzufügen</h5>
             <form onsubmit="event.preventDefault(); speichereGeraeteProtokollModal();">
-                <!-- Grid auf 3 Spalten angepasst, damit Prüfungsart, Datum und Ergebnis perfekt nebeneinander passen -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
                     <div>
                         <label style="font-size: 12px; font-weight: bold;">Prüfungsart:</label>
@@ -737,7 +746,6 @@
                         </select>
                     </div>
                 </div>
-                <!-- Optionales Prüfer-Feld falls von JS gesucht, ansonsten unauffällig integriert -->
                 <div style="margin-bottom: 8px; display: none;">
                     <input type="text" id="geraete-protokoll-pruefer">
                 </div>
