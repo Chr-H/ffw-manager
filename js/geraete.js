@@ -106,6 +106,8 @@ function neuesGeraet() {
     const elErst = document.getElementById("erstinbetriebnahme");
     const elLpz = document.getElementById("letztePruefung");
     const elInt = document.getElementById("pruefintervall");
+    const elBeschr = document.getElementById("geraete-beschreibung");
+    const elAblauf = document.getElementById("geraete-ablaufdatum");
 
     const inventar = elInv ? elInv.value.trim() : "";
     const bezeichnung = elBez ? elBez.value.trim() : "";
@@ -116,11 +118,76 @@ function neuesGeraet() {
     const erstinbetriebnahme = elErst ? elErst.value : "";
     const letztePruefung = elLpz ? elLpz.value : "";
     const pruefintervall = elInt ? elInt.value : "12";
+    const beschreibung = elBeschr ? elBeschr.value.trim() : "";
+    const ablaufdatum = elAblauf ? elAblauf.value : "";
 
     if (!inventar || !bezeichnung || !kategorie) {
         alert("Bitte mindestens Inventarnummer, Bezeichnung und Kategorie ausfüllen.");
         return;
     }
+
+    // Prüfen, ob wir bearbeiten oder neu anlegen
+    if (typeof bearbeitungsId !== 'undefined' && bearbeitungsId) {
+        let g = geraete.find(item => item.id === bearbeitungsId);
+        if (g) {
+            g.inventarnummer = inventar;
+            g.bezeichnung = bezeichnung;
+            g.kategorie = kategorie;
+            g.hersteller = hersteller;
+            g.status = status;
+            g.standort = standort;
+            g.erstinbetriebnahme = erstinbetriebnahme;
+            g.letztePruefung = letztePruefung;
+            g.pruefintervall = pruefintervall;
+            g.beschreibung = beschreibung;
+            g.ablaufdatum = ablaufdatum;
+            
+            if (typeof berechneNaechstePruefung === 'function' && letztePruefung) {
+                g.naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
+            }
+        }
+        bearbeitungsId = null;
+    } else {
+        // Neues Gerät erstellen
+        let naechstePruefung = "";
+        if (typeof berechneNaechstePruefung === 'function' && letztePruefung) {
+            naechstePruefung = berechneNaechstePruefung(letztePruefung, pruefintervall);
+        }
+
+        const neuesObj = {
+            id: 'G_' + Date.now(),
+            inventarnummer: inventar,
+            bezeichnung: bezeichnung,
+            kategorie: kategorie,
+            hersteller: hersteller,
+            status: status,
+            standort: standort,
+            erstinbetriebnahme: erstinbetriebnahme,
+            letztePruefung: letztePruefung,
+            pruefintervall: pruefintervall,
+            naechstePruefung: naechstePruefung,
+            beschreibung: beschreibung,
+            ablaufdatum: ablaufdatum,
+            historie: []
+        };
+        geraete.push(neuesObj);
+    }
+
+    // Speichern & Formular leeren
+    if (typeof speichereGeraete === 'function') speichereGeraete();
+    if (typeof filterGeraete === 'function') filterGeraete();
+
+    if (elInv) elInv.value = "";
+    if (elBez) elBez.value = "";
+    if (elHer) elHer.value = "";
+    if (elErst) elErst.value = "";
+    if (elLpz) elLpz.value = "";
+    if (elBeschr) elBeschr.value = "";
+    if (elAblauf) elAblauf.value = "";
+
+    const btn = document.querySelector(".geraete-form button") || document.querySelector("button[onclick='neuesGeraet()']");
+    if (btn) btn.innerHTML = "➕ Speichern";
+}
 
     geraete = ladeDaten("geraete") || [];
 
@@ -599,7 +666,7 @@ function bearbeiteGeraet(id) {
     if (document.getElementById("letztePruefung")) document.getElementById("letztePruefung").value = g.letztePruefung || "";
     if (document.getElementById("pruefintervall")) document.getElementById("pruefintervall").value = g.pruefintervall || "12";
     
-    // NEU: Beschreibung und Ablaufdatum in Formularfeldern laden (falls im HTML vorhanden)
+    // NEU: Beschreibung und Ablaufdatum in Formularfeldern laden
     if (document.getElementById("geraete-beschreibung")) {
         document.getElementById("geraete-beschreibung").value = g.beschreibung || "";
     }
