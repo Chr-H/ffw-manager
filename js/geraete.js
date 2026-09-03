@@ -446,11 +446,11 @@ function speichereGeraeteProtokollModal() {
     const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
     const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
 
-    // Direkter Zugriff auf den LocalStorage, um Umwege über fehlerhafte Wrapper zu verhindern
+    // Direkter, ausfallsicherer Zugriff auf den LocalStorage
     let rawData = localStorage.getItem('ffw_geraete');
     let geraeteListe = rawData ? JSON.parse(rawData) : [];
 
-    // Gerät anhand von id oder inventarnummer finden
+    // Gerät flexibel über ID oder Inventarnummer finden
     let g = geraeteListe.find(item => 
         String(item.id) === String(id) || 
         String(item.inventarnummer) === String(id)
@@ -462,24 +462,24 @@ function speichereGeraeteProtokollModal() {
 
         const neuesProtokoll = {
             datum: datum,
-            pruefart: art, // Angepasst an deine bestehende Struktur (pruefart statt art)
+            pruefart: art,
             ergebnis: ergebnis,
-            pruefer: "CH (EDITOR)", // Oder dynamisch auslesen, falls vorhanden
+            pruefer: "CH (EDITOR)",
             bemerkung: bemerkung
         };
 
+        // Protokoll hinzufügen (Stammdaten & Fälligkeiten bleiben unberührt!)
         g.pruefprotokolle.push(neuesProtokoll);
         g.historie.push(neuesProtokoll);
-        g.letztePruefung = datum;
 
-        // Direkt in den LocalStorage zurückschreiben
+        // Daten persistent speichern
         localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
 
-        // Felder leeren
+        // Eingabefelder leeren
         if (bemerkungEl) bemerkungEl.value = '';
         if (datumEl) datumEl.value = '';
 
-        // Ansicht aktualisieren
+        // UI aktualisieren
         if (typeof filterGeraete === 'function') filterGeraete();
         if (typeof oeffneGeraeteAkteModal === 'function') {
             oeffneGeraeteAkteModal(id);
@@ -487,10 +487,9 @@ function speichereGeraeteProtokollModal() {
 
         alert("✅ Prüfprotokoll erfolgreich gespeichert!");
     } else {
-        alert("❌ Fehler: Gerät mit der ID " + id + " konnte im LocalStorage nicht gefunden werden.");
+        alert("❌ Fehler: Gerät konnte im Speicher nicht gefunden werden.");
     }
 }
-
 function rendereGeraeteHistorieModal(g) {
     const listeDiv = document.getElementById('geraete-akte-historie-liste');
     if (!listeDiv) return;
