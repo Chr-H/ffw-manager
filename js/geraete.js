@@ -430,9 +430,13 @@ window.oeffneGeraeteAkteModal = function(id) {
 };
 
 function speichereGeraeteProtokollModal() {
+    console.log(">>> 1. Klick registriert: Funktion gestartet!");
+
     const id = window.aktiveGeraeteAktenId;
+    console.log(">>> 2. Aktive Geräte-ID:", id);
+
     if (!id) {
-        alert("⚠️ Kein Gerät ausgewählt.");
+        alert("⚠️ Abbruch: Kein Gerät ausgewählt.");
         return;
     }
 
@@ -446,17 +450,18 @@ function speichereGeraeteProtokollModal() {
     const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
     const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
 
-    // Direkter, ausfallsicherer Zugriff auf den LocalStorage
     let rawData = localStorage.getItem('ffw_geraete');
     let geraeteListe = rawData ? JSON.parse(rawData) : [];
+    console.log(">>> 3. Geladene Geräte im Speicher:", geraeteListe.length);
 
-    // Gerät flexibel über ID oder Inventarnummer finden
     let g = geraeteListe.find(item => 
         String(item.id) === String(id) || 
         String(item.inventarnummer) === String(id)
     );
 
     if (g) {
+        console.log(">>> 4. Gerät gefunden:", g.bezeichnung || g.inventarnummer);
+
         if (!g.pruefprotokolle) g.pruefprotokolle = [];
         if (!g.historie) g.historie = [];
 
@@ -468,18 +473,15 @@ function speichereGeraeteProtokollModal() {
             bemerkung: bemerkung
         };
 
-        // Protokoll hinzufügen (Stammdaten & Fälligkeiten bleiben unberührt!)
         g.pruefprotokolle.push(neuesProtokoll);
         g.historie.push(neuesProtokoll);
 
-        // Daten persistent speichern
         localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
+        console.log(">>> 5. Erfolgreich in LocalStorage geschrieben!");
 
-        // Eingabefelder leeren
         if (bemerkungEl) bemerkungEl.value = '';
         if (datumEl) datumEl.value = '';
 
-        // UI aktualisieren
         if (typeof filterGeraete === 'function') filterGeraete();
         if (typeof oeffneGeraeteAkteModal === 'function') {
             oeffneGeraeteAkteModal(id);
@@ -487,6 +489,7 @@ function speichereGeraeteProtokollModal() {
 
         alert("✅ Prüfprotokoll erfolgreich gespeichert!");
     } else {
+        console.error(">>> FEHLER: Gerät mit ID", id, "wurde in der Liste nicht gefunden!");
         alert("❌ Fehler: Gerät konnte im Speicher nicht gefunden werden.");
     }
 }
