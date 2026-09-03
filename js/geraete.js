@@ -1,5 +1,5 @@
 // ==========================================
-// FFW Manager - Geräteverwaltung (v0.6.7)
+// FFW Manager - Geräteverwaltung (v0.6.7 )
 // ==========================================
 
 let geraete = ladeDaten("geraete") || [];
