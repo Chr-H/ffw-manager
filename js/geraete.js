@@ -916,7 +916,23 @@ function filtereGeraeteNachDashboard(filterTyp) {
     
     filterGeraete();
 }
+function rendereGeraeteHistorieModal(historie) {
+    const container = document.getElementById('geraete-akte-historie-liste');
+    if (!container) return;
+    
+    if (!historie || historie.length === 0) {
+        container.innerHTML = '<p style="font-size: 13px; color: #6c757d; margin: 0;">Keine Prüfprotokolle vorhanden.</p>';
+        return;
+    }
 
+    container.innerHTML = historie.map(h => `
+        <div style="background: #fff; border: 1px solid #ddd; padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 13px;">
+            <strong>📅 ${h.datum || '-'}</strong> (${h.pruefart || 'Prüfung'}) - <span style="font-weight: bold;">${h.ergebnis || '-'}</span><br>
+            <small>Prüfer: ${h.pruefer || 'Unbekannt'}</small>
+            ${h.bemerkung ? `<br><em>Bemerkung: ${h.bemerkung}</em>` : ''}
+        </div>
+    `).join('');
+}
 // Globale Freigaben (inklusive der neuen Modal-Funktionen)
 window.getGeraete = getGeraete;
 window.ladeGeraete = ladeGeraete;
