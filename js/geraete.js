@@ -430,38 +430,21 @@ window.oeffneGeraeteAkteModal = function(id) {
 };
 
 function speichereGeraeteProtokollModal() {
-    console.log(">>> 1. Klick registriert: Funktion gestartet!");
-
     const id = window.aktiveGeraeteAktenId;
-    console.log(">>> 2. Aktive Geräte-ID:", id);
+    if (!id) return;
 
-    if (!id) {
-        alert("⚠️ Abbruch: Kein Gerät ausgewählt.");
-        return;
-    }
-
-    const artEl = document.getElementById('geraete-protokoll-art');
-    const datumEl = document.getElementById('geraete-protokoll-datum');
-    const ergebnisEl = document.getElementById('geraete-protokoll-ergebnis');
-    const bemerkungEl = document.getElementById('geraete-protokoll-bemerkung');
-
-    const art = artEl ? artEl.value : 'Sichtprüfung';
-    const datum = datumEl ? datumEl.value : new Date().toISOString().split('T')[0];
-    const ergebnis = ergebnisEl ? ergebnisEl.value : 'Ohne Mängel';
-    const bemerkung = bemerkungEl ? bemerkungEl.value.trim() : '';
+    const art = document.getElementById('geraete-protokoll-art')?.value || 'Sichtprüfung';
+    const datum = document.getElementById('geraete-protokoll-datum')?.value || new Date().toISOString().split('T')[0];
+    const ergebnis = document.getElementById('geraete-protokoll-ergebnis')?.value || 'Ohne Mängel';
+    const bemerkung = document.getElementById('geraete-protokoll-bemerkung')?.value.trim() || '';
 
     let rawData = localStorage.getItem('ffw_geraete');
-    let geraeteListe = rawData ? JSON.parse(rawData) : [];
-    console.log(">>> 3. Geladene Geräte im Speicher:", geraeteListe.length);
-
-    let g = geraeteListe.find(item => 
-        String(item.id) === String(id) || 
-        String(item.inventarnummer) === String(id)
-    );
+    if (!rawData) return;
+    
+    let geraeteListe = JSON.parse(rawData);
+    let g = geraeteListe.find(item => String(item.id) === String(id) || String(item.inventarnummer) === String(id));
 
     if (g) {
-        console.log(">>> 4. Gerät gefunden:", g.bezeichnung || g.inventarnummer);
-
         if (!g.pruefprotokolle) g.pruefprotokolle = [];
         if (!g.historie) g.historie = [];
 
@@ -477,54 +460,14 @@ function speichereGeraeteProtokollModal() {
         g.historie.push(neuesProtokoll);
 
         localStorage.setItem('ffw_geraete', JSON.stringify(geraeteListe));
-        console.log(">>> 5. Erfolgreich in LocalStorage geschrieben!");
 
-        if (bemerkungEl) bemerkungEl.value = '';
-        if (datumEl) datumEl.value = '';
-
+        // Felder leeren & Ansicht refreshen
+        document.getElementById('geraete-protokoll-bemerkung').value = '';
         if (typeof filterGeraete === 'function') filterGeraete();
-        if (typeof oeffneGeraeteAkteModal === 'function') {
-            oeffneGeraeteAkteModal(id);
-        }
+        if (typeof oeffneGeraeteAkteModal === 'function') oeffneGeraeteAkteModal(id);
 
         alert("✅ Prüfprotokoll erfolgreich gespeichert!");
-    } else {
-        console.error(">>> FEHLER: Gerät mit ID", id, "wurde in der Liste nicht gefunden!");
-        alert("❌ Fehler: Gerät konnte im Speicher nicht gefunden werden.");
     }
-}
-function rendereGeraeteHistorieModal(g) {
-    const listeDiv = document.getElementById('geraete-akte-historie-liste');
-    if (!listeDiv) return;
-
-    const historie = g.historie || g.protokolle || [];
-    if (historie.length === 0) {
-        listeDiv.innerHTML = `<p class="text-muted text-center m-0" style="font-size: 0.9em; padding: 10px;">Bisher keine Prüfungen protokolliert.</p>`;
-        return;
-    }
-
-    let html = '<div style="display: flex; flex-direction: column; gap: 6px;">';
-    historie.slice().reverse().forEach((h, index) => {
-        const echterIndex = historie.length - 1 - index;
-        const hDatum = formatiereDatum(h.datum);
-        const ergColor = h.ergebnis === "Ohne Mängel" ? "#2e7d32" : (h.ergebnis === "Geringe Mängel" ? "#f57c00" : "#d32f2f");
-        
-        html += `
-            <div style="background: #fff; border: 1px solid #ddd; padding: 8px; border-radius: 4px; font-size: 0.9em;">
-                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 2px;">
-                    <span>📅 ${hDatum} (${escapeHtml(h.pruefart || 'Regelprüfung')})</span>
-                    <span style="color:${ergColor};">${escapeHtml(h.ergebnis || 'Geprüft')}</span>
-                </div>
-                <div style="font-size: 0.85rem; color: #444;"><strong>Prüfer:</strong> ${escapeHtml(h.pruefer || 'Unbekannt')}</div>
-                ${h.bemerkung ? `<div style="font-size: 0.85rem; background:#fff8e1; padding:3px 6px; border-radius:3px; margin-top:2px;">📝 <em>${escapeHtml(h.bemerkung)}</em></div>` : ''}
-                <div style="text-align: right; margin-top: 4px;">
-                    <button type="button" class="btn btn-sm btn-outline-danger" style="font-size: 0.75em; padding: 1px 6px;" onclick="loescheGeraeteProtokollModal('${g.id}', ${echterIndex})">Löschen</button>
-                </div>
-            </div>
-        `;
-    });
-    html += '</div>';
-    listeDiv.innerHTML = html;
 }
 
 function speichereGeraeteProtokollModal() {
