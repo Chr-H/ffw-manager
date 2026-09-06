@@ -20,6 +20,7 @@ const ASSETS_TO_CACHE = [
   './js/pruefungen.js',
   './js/personal.js',
   './js/benutzer.js',
+  './js/backup.js',
   './js/einstellungen.js',
   './js/app.js',
   './emblem-192.png',

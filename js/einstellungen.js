@@ -89,16 +89,21 @@ function speichereEinstellungen(e) {
 
 function exportGesamtBackup() {
     const backupData = {
-        version: "1.0",
+        version: "6.2.9-stabil",
         exportDatum: new Date().toISOString(),
         config: JSON.parse(localStorage.getItem('ffw_config')) || {},
-        mitglieder: JSON.parse(localStorage.getItem('ffw_mitglieder')) || [],
-        geraete: JSON.parse(localStorage.getItem('ffw_geraete')) || [],
-        fahrzeuge: JSON.parse(localStorage.getItem('ffw_fahrzeuge')) || [],
-        psa: JSON.parse(localStorage.getItem('ffw_psa')) || [],
-        lager: JSON.parse(localStorage.getItem('ffw_lager')) || [],
-        pruefungen: JSON.parse(localStorage.getItem('ffw_pruefungen')) || []
+        daten: {}
     };
+
+    const schluesselListe = ['geraete', 'fahrzeuge', 'kategorien', 'psa', 'lager', 'pruefungen', 'personal', 'mitglieder'];
+    schluesselListe.forEach(schluessel => {
+        if (typeof window.ladeDaten === 'function') {
+            backupData.daten[schluessel] = window.ladeDaten(schluessel);
+        } else {
+            const roh = localStorage.getItem('ffw_' + schluessel);
+            backupData.daten[schluessel] = roh ? JSON.parse(roh) : [];
+        }
+    });
 
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
@@ -116,16 +121,31 @@ function importGesamtBackup(event) {
         try {
             const data = JSON.parse(e.target.result);
             
-            if (confirm("⚠️ ACHTUNG: Möchtest du das Gesamtbackup einspielen? Alle aktuellen Daten werden überschrieben!")) {
-                if (data.config) localStorage.setItem('ffw_config', JSON.stringify(data.config));
-                if (data.mitglieder) localStorage.setItem('ffw_mitglieder', JSON.stringify(data.mitglieder));
-                if (data.geraete) localStorage.setItem('ffw_geraete', JSON.stringify(data.geraete));
-                if (data.fahrzeuge) localStorage.setItem('ffw_fahrzeuge', JSON.stringify(data.fahrzeuge));
-                if (data.psa) localStorage.setItem('ffw_psa', JSON.stringify(data.psa));
-                if (data.lager) localStorage.setItem('ffw_lager', JSON.stringify(data.lager));
-                if (data.pruefungen) localStorage.setItem('ffw_pruefungen', JSON.stringify(data.pruefungen));
+            if (confirm("⚠️ ACHTUNG: Möchtest du das Gesamtbackup einspielen? Alle aktuellen lokalen und Cloud-Daten werden überschrieben!")) {
+                if (data.config) {
+                    localStorage.setItem('ffw_config', JSON.stringify(data.config));
+                }
 
-                alert("✅ Wiederherstellung erfolgreich abgeschlossen!");
+                const sammlungen = data.daten || data;
+                const alleSchluessel = ['geraete', 'fahrzeuge', 'kategorien', 'psa', 'lager', 'pruefungen', 'personal', 'mitglieder'];
+
+                alleSchluessel.forEach(schluessel => {
+                    const inhalt = sammlungen[schluessel];
+                    if (Array.isArray(inhalt)) {
+                        // Lokal hart überschreiben
+                        localStorage.setItem('ffw_' + schluessel, JSON.stringify(inhalt));
+                        
+                        // Direkt in Firebase schreiben, um gelöschte Elemente (z.B. Tauchpumpe) in der Cloud zu erzwingen
+                        if (typeof window.db !== 'undefined' && window.db !== null) {
+                            window.db.collection('ffw_data').doc(schluessel).set({
+                                eintraege: inhalt,
+                                aktualisiertAm: new Date().toISOString()
+                            }).catch(err => console.error(`Fehler beim Firebase-Restore für ${schluessel}:`, err));
+                        }
+                    }
+                });
+
+                alert("✅ Wiederherstellung & Cloud-Erzwingung erfolgreich abgeschlossen!");
                 location.reload();
             }
         } catch (err) {

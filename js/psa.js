@@ -668,6 +668,21 @@ function druckePSAListe() {
     }
     window.print();
 }
+function druckePSABericht() {
+    // Datum setzen
+    const datumEl = document.getElementById('psaAktuellesDatum');
+    if (datumEl) datumEl.textContent = new Date().toLocaleDateString('de-DE');
+
+    // Aktiven Filter-Namen für den Bericht übernehmen
+    const traegerFilter = document.getElementById('psa-traeger-filter');
+    const filterAnzeige = document.getElementById('psaAktiverFilter');
+    if (traegerFilter && filterAnzeige) {
+        filterAnzeige.textContent = traegerFilter.value === 'alle' ? 'Alle Träger / Gesamtbestand' : 'Träger: ' + traegerFilter.value;
+    }
+
+    // Drucken / PDF generieren
+    window.print();
+}
 
 // Globale Freigaben für das HTML
 window.exportPSA = exportPSA;

@@ -204,6 +204,9 @@ function oeffneFahrzeugAkte(id) {
     if (akteSubtitel) akteSubtitel.textContent = `${f.typ || ''} | Kennzeichen: ${f.kennzeichen || f.licensePlate || '-'} | Status: ${f.status || 'Einsatzbereit'}`;
 
     renderHistorieListe(f);
+    
+    // NEU: Dokumentenliste für dieses Fahrzeug laden und anzeigen
+    renderFahrzeugDokumenteListe(f);
 }
 
 // 4. Geräteraum-Ausrüstung filtern
@@ -313,8 +316,117 @@ function loescheHistorieEintrag(index) {
         renderHistorieListe(f);
     }
 }
+// 6. Dokumente und Cloud-Links für Fahrzeuge verwalten
+function speichereFahrzeugDokument() {
+    if (!aktuellesFahrzeugId) return;
 
-// 6. Löschen & CSV
+    const titelInput = document.getElementById('fzg-dok-titel');
+    const linkInput = document.getElementById('fzg-dok-link');
+    const fileInput = document.getElementById('fzg-dok-file');
+
+    const titel = titelInput ? titelInput.value.trim() : '';
+    const link = linkInput ? linkInput.value.trim() : '';
+    const file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+    if (!titel) {
+        alert('Bitte gib einen Titel für das Dokument an.');
+        return;
+    }
+
+    if (!link && !file) {
+        alert('Bitte gib entweder einen Cloud-Link ein oder wähle eine Datei zum Hochladen aus.');
+        return;
+    }
+
+    let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const fIndex = fahrzeuge.findIndex(x => String(x.id) === String(aktuellesFahrzeugId));
+    if (fIndex === -1) return;
+
+    if (!fahrzeuge[fIndex].dokumente) {
+        fahrzeuge[fIndex].dokumente = [];
+    }
+
+    const speichereEintrag = (datenUrl = '') => {
+        fahrzeuge[fIndex].dokumente.push({
+            id: 'DOK-' + Date.now(),
+            titel: titel,
+            link: link || '',
+            dateiDaten: datenUrl,
+            dateiName: file ? file.name : ''
+        });
+
+        // Nutzt deinen vorhandenen Speicher- und Synchronisationsmechanismus
+        if (typeof speichereUndSynchronisiere === 'function') {
+            speichereUndSynchronisiere(fahrzeuge);
+        }
+
+        if (titelInput) titelInput.value = '';
+        if (linkInput) linkInput.value = '';
+        if (fileInput) fileInput.value = '';
+
+        renderFahrzeugDokumenteListe(fahrzeuge[fIndex]);
+    };
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            speichereEintrag(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        speichereEintrag('');
+    }
+}
+
+function renderFahrzeugDokumenteListe(fahrzeug) {
+    const listeContainer = document.getElementById('fzgDokumenteListe');
+    if (!listeContainer) return;
+
+    if (!fahrzeug.dokumente || fahrzeug.dokumente.length === 0) {
+        listeContainer.innerHTML = `<span style="color:#777; font-style:italic;">Keine Dokumente hinterlegt.</span>`;
+        return;
+    }
+
+    let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+    fahrzeug.dokumente.forEach(dok => {
+        html += `<li style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px;">
+            <div>
+                <strong>${dok.titel}</strong> `;
+                
+        if (dok.link) {
+            html += `<a href="${dok.link}" target="_blank" class="btn btn-sm btn-link" style="margin-left: 5px;">🔗 Cloud-Link öffnen</a>`;
+        }
+        if (dok.dateiDaten) {
+            html += `<a href="${dok.dateiDaten}" download="${dok.dateiName || 'dokument'}" class="btn btn-sm btn-link" style="margin-left: 5px;">📥 Datei herunterladen (${dok.dateiName || 'Anhang'})</a>`;
+        }
+
+        html += `</div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="loescheFahrzeugDokument('${dok.id}')" style="background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer;">Löschen</button>
+        </li>`;
+    });
+    html += '</ul>';
+
+    listeContainer.innerHTML = html;
+}
+
+function loescheFahrzeugDokument(dokId) {
+    if (!aktuellesFahrzeugId) return;
+    if (!confirm('Möchtest du diesen Eintrag wirklich löschen?')) return;
+
+    let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
+    const fIndex = fahrzeuge.findIndex(x => String(x.id) === String(aktuellesFahrzeugId));
+    if (fIndex === -1) return;
+
+    fahrzeuge[fIndex].dokumente = fahrzeuge[fIndex].dokumente.filter(d => String(d.id) !== String(dokId));
+
+    if (typeof speichereUndSynchronisiere === 'function') {
+        speichereUndSynchronisiere(fahrzeuge);
+    }
+
+    renderFahrzeugDokumenteListe(fahrzeuge[fIndex]);
+}
+
+// 7. Löschen & CSV
 function loescheFahrzeug(id) {
     if (confirm('Möchtest du dieses Fahrzeug wirklich löschen?')) {
         let fahrzeuge = typeof ladeDaten === 'function' ? ladeDaten('fahrzeuge') : [];
@@ -476,18 +588,36 @@ function exportFahrzeugHistorieCSV(fahrzeugId) {
     }, 100);
 }
 
-function druckeEinzelFahrzeugAkte(fahrzeugId) {
+function druckeEinzelFahrzeugAkte() {
+    let idDrucken = window.aktuellesFahrzeugId;
+
+    if (!idDrucken) {
+        const titelElement = document.getElementById('akte-titel');
+        const daten = typeof ladeDaten === 'function' ? ladeDaten("fahrzeuge") : [];
+        if (titelElement && titelElement.innerText && titelElement.innerText !== '-') {
+            const fzg = daten.find(item => titelElement.innerText.includes(item.funkruf || item.callSign || item.name));
+            if (fzg) idDrucken = fzg.id;
+        }
+    }
+
+    if (!idDrucken) {
+        alert("⚠️ Bitte wähle zuerst links in der Tabelle ein Fahrzeug über das Auge (👁️) aus.");
+        return;
+    }
+
     const daten = typeof ladeDaten === 'function' ? ladeDaten("fahrzeuge") : [];
-    const f = daten.find(item => String(item.id) === String(fahrzeugId));
+    const f = daten.find(item => String(item.id) === String(idDrucken));
 
     if (!f) {
-        alert("⚠️ Fahrzeugakte nicht gefunden.");
+        alert("⚠️ Fahrzeugakte in den Daten nicht gefunden.");
         return;
     }
 
     const historie = f.historie || [];
     const heute = new Date().toLocaleDateString('de-DE');
+    const fzgName = f ? (f.callSign || f.name || f.funkruf || "") : "";
 
+    // 1. Reparatur-Historie aufbauen
     let historieHtml = '';
     if (historie.length === 0) {
         historieHtml = `<tr><td colspan="4" style="text-align:center; color:#777;">Keine Reparaturen oder Wartungen eingetragen.</td></tr>`;
@@ -503,29 +633,78 @@ function druckeEinzelFahrzeugAkte(fahrzeugId) {
         });
     }
 
+    // 2. Geräteräume GR1 bis GR8 über den Standort-Filter auslesen
+    const raeumeListe = ['GR1', 'GR2', 'GR3', 'GR4', 'GR5', 'GR6', 'GR7', 'GR8'];
+    let gRaumHtml = '';
+    let orteGefunden = 0;
+    const alleGeraete = typeof ladeDaten === 'function' ? ladeDaten('geraete') : [];
+
+    raeumeListe.forEach(raum => {
+        const gefundeneGeraete = alleGeraete.filter(g => {
+            const st = (g.standort || "").toUpperCase();
+            return (fzgName === "" || st.includes(fzgName.toUpperCase())) && st.includes(raum.toUpperCase());
+        });
+
+        if (gefundeneGeraete.length > 0) {
+            orteGefunden++;
+            let inhaltText = gefundeneGeraete.map(g => {
+                const bez = g.bezeichnung || g.name || 'Gerät';
+                const inv = g.inventarnummer ? `(Inv-Nr: ${g.inventarnummer})` : 'keine';
+                return `• ${bez} ${inv}`;
+            }).join('<br>');
+
+            gRaumHtml += `
+            <tr>
+                <td style="width: 18%; font-weight: bold; background: #eee; text-align: center; vertical-align: top;">${raum}</td>
+                <td style="vertical-align: top;">${inhaltText}</td>
+            </tr>`;
+        }
+    });
+
+    if (orteGefunden === 0) {
+        gRaumHtml = `<tr><td colspan="2" style="text-align:center; color:#777;">Keine spezifische Geräteraum-Beladung für ${fzgName} gefunden.</td></tr>`;
+    }
+
     const html = `
     <!DOCTYPE html>
     <html lang="de">
     <head>
         <meta charset="UTF-8">
-        <title>Fahrzeugakte - ${f.callSign || f.name}</title>
+        <title>Fahrzeugakte - ${fzgName}</title>
         <style>
             body { font-family: Arial, sans-serif; padding: 25px; color: #222; }
-            .header { border-bottom: 3px solid #b22222; padding-bottom: 10px; margin-bottom: 20px; }
-            h1 { margin: 0; color: #b22222; font-size: 1.8em; }
-            .subtitle { font-size: 1.1em; color: #555; margin-top: 5px; }
-            .grid { display: flex; gap: 20px; margin-bottom: 25px; }
+            .top-bar { display: flex; align-items: center; gap: 15px; border-bottom: 2px solid #b22222; padding-bottom: 10px; margin-bottom: 15px; }
+            .logo { width: 45px; height: auto; }
+            .brand-title { font-size: 1.4em; font-weight: bold; color: #111; }
+            .header { margin-bottom: 20px; }
+            h1 { margin: 0; color: #b22222; font-size: 1.5em; }
+            .subtitle { font-size: 0.95em; color: #555; margin-top: 3px; }
+            .grid { display: flex; gap: 20px; margin-bottom: 20px; }
             .box { flex: 1; border: 1px solid #ddd; padding: 12px; background: #f9f9f9; border-radius: 4px; }
-            .box h3 { margin-top: 0; font-size: 1em; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #333; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 0.85em; }
+            .box h3 { margin-top: 0; font-size: 0.95em; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 0.85em; }
             th { background-color: #eee; }
+            .section-title { font-size: 1.1em; color: #b22222; border-bottom: 1px solid #b22222; padding-bottom: 4px; margin-top: 25px; margin-bottom: 10px; font-weight: bold; }
+            
+            /* Schema Box Styles */
+            .schema-container { border: 1px solid #ccc; padding: 15px; background: #fff; border-radius: 4px; margin-bottom: 25px; }
+            .schema-grid { display: grid; grid-template-columns: 1fr 40px 2fr 1fr; grid-template-rows: repeat(3, auto); gap: 6px; text-align: center; font-size: 0.8em; }
+            .s-box { border: 1px solid #444; padding: 8px; background: #fdfdfd; border-radius: 3px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+            .s-dach { border: 1px solid #444; padding: 8px; background: #fdfdfd; border-radius: 3px; text-align: center; margin-top: 6px; font-weight: bold; }
+            
             .footer { margin-top: 30px; font-size: 0.8em; color: #777; text-align: right; }
         </style>
     </head>
     <body>
+        <div class="top-bar">
+            <!-- Logo (Falls Pfad greift oder Platzhalter) -->
+            <img src="logo.png" onerror="this.style.display='none'" class="logo" alt="Logo">
+            <div class="brand-title">Freiwillige Feuerwehr Albertsried</div>
+        </div>
+
         <div class="header">
-            <h1>🚒 Fahrzeugakte: ${f.callSign || f.name || 'Unbekannt'}</h1>
+            <h1>🚒 Fahrzeugakte: ${fzgName}</h1>
             <div class="subtitle">FFW Albertsried | Stand: ${heute}</div>
         </div>
 
@@ -533,18 +712,48 @@ function druckeEinzelFahrzeugAkte(fahrzeugId) {
             <div class="box">
                 <h3>Stammdaten</h3>
                 <strong>Typ:</strong> ${f.typ || '-'}<br>
-                <strong>Kennzeichen:</strong> ${f.licensePlate || f.kennzeichen || '-'}<br>
+                <strong>Kennzeichen:</strong> ${f.kennzeichen || f.licensePlate || '-'}<br>
                 <strong>Baujahr:</strong> ${f.baujahr || '-'}
             </div>
             <div class="box">
                 <h3>Prüftermine & Status</h3>
-                <strong>Nächste HU / TÜV:</strong> ${f.nextHU || f.tuev || '-'}<br>
-                <strong>Nächste SP:</strong> ${f.nextSP || f.sp || '-'}<br>
+                <strong>Nächste HU / TÜV:</strong> ${f.tuev || f.nextHU || '-'}<br>
+                <strong>Nächste SP:</strong> ${f.sp || f.nextSP || '-'}<br>
                 <strong>Status:</strong> ${f.status || 'Einsatzbereit'}
             </div>
         </div>
 
-        <h3>Reparatur- & Wartungshistorie</h3>
+        <!-- Geräteraum-Schema Grafische Ansicht -->
+        <div class="schema-container">
+            <h3 style="margin-top:0; font-size:0.95em; color:#333; border-bottom:1px solid #ccc; padding-bottom:5px;">Geräteraum-Belegungsplan</h3>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                <div style="display: flex; gap: 6px;">
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                        <div class="s-box" style="min-height: 50px;"><strong>GR7</strong><br><small>Gruppenführer</small></div>
+                        <div class="s-box" style="min-height: 50px;"><strong>GR6</strong><br><small>Maschinist</small></div>
+                    </div>
+                    <div class="s-box" style="width: 40px; writing-mode: vertical-rl; text-orientation: sideways; font-size: 0.75em;">GR5 Kabine</div>
+                    <div style="flex: 2; display: flex; flex-direction: column; gap: 6px;">
+                        <div class="s-box"><strong>GR1</strong><br><small>rechts</small></div>
+                        <div style="display: flex; gap: 6px;">
+                            <div class="s-box" style="flex: 2;"><strong>GR4</strong><br><small>Mitte</small></div>
+                            <div class="s-box" style="flex: 1;"><strong>GR3</strong><br><small>hinten</small></div>
+                        </div>
+                        <div class="s-box"><strong>GR2</strong><br><small>links</small></div>
+                    </div>
+                </div>
+                <div class="s-dach">GR8 Aussen/DACH</div>
+            </div>
+        </div>
+
+        <div class="section-title">Geräteräume & Beladungsübersicht (GR1 - GR8)</div>
+        <table>
+            <tbody>
+                ${gRaumHtml}
+            </tbody>
+        </table>
+
+        <div class="section-title">Reparatur- & Wartungshistorie</div>
         <table>
             <thead>
                 <tr>

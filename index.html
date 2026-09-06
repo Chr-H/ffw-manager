@@ -128,7 +128,7 @@
     </section>
 </main>
 
-            <!-- 2. GERÄTE BEREICH -->
+<!-- 2. GERÄTE BEREICH -->
 <section id="seite-geraete" class="seite-ansicht" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h2>🛠️ Geräteverwaltung</h2>
@@ -136,76 +136,132 @@
             <input type="file" id="csvGeraeteFileInput" accept=".csv" style="display: none;" onchange="importGeraeteCSV(this)">
             <button type="button" class="btn btn-primary" onclick="document.getElementById('csvGeraeteFileInput').click()">📥 CSV Import</button>
             <button type="button" class="btn btn-secondary" onclick="exportGeraeteCSV()">📊 CSV Export</button>
-            <button type="button" class="btn btn-secondary" onclick="druckeListe('Geräteliste', 'geraete-tabelle')">🖨️ Geräteliste drucken / PDF</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeGeräteBericht()">🖨️ Geräteliste drucken / PDF</button>
         </div>
     </div>
-
+    
     <div class="geraete-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-        <h3>➕ Gerät anlegen / bearbeiten</h3>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; align-items:flex-end;">
-            <div style="flex:1; min-width:140px;">
+        <h3 style="margin-top:0; margin-bottom:12px; font-size:1.1rem;">➕ Gerät anlegen / bearbeiten</h3>
+        
+        <!-- Zeile 1: Hauptelemente -->
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+            <div style="flex: 1 1 130px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Inventarnummer:</label>
-                <input id="inventar" type="text" class="form-control" placeholder="Inv.-Nr." style="width:100%; padding:8px; box-sizing:border-box;">
+                <input id="inventar" type="text" class="form-control" placeholder="Inv.-Nr." style="width:100%; padding:6px; box-sizing:border-box;">
             </div>
-            <div style="flex:2; min-width:180px;">
+            <div style="flex: 2 1 180px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Bezeichnung:</label>
-                <input id="bezeichnung" type="text" class="form-control" placeholder="Bezeichnung" style="width:100%; padding:8px; box-sizing:border-box;">
+                <input id="bezeichnung" type="text" class="form-control" placeholder="Bezeichnung" style="width:100%; padding:6px; box-sizing:border-box;">
             </div>
-            <div style="flex:1; min-width:150px;">
+            <div style="flex: 1 1 140px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Kategorie:</label>
-                <select id="kategorie" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;"><option value="">Kategorie wählen</option></select>
+                <select id="kategorie" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;"><option value="">Kategorie wählen</option></select>
             </div>
-            <div style="flex:1; min-width:140px;">
+            <div style="flex: 1 1 130px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Hersteller:</label>
-                <input id="hersteller" type="text" class="form-control" placeholder="Hersteller" style="width:100%; padding:8px; box-sizing:border-box;">
+                <input id="hersteller" type="text" class="form-control" placeholder="Hersteller" style="width:100%; padding:6px; box-sizing:border-box;">
             </div>
-            <div style="flex:2; min-width:220px;">
-                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Standort / Geräteraum:</label>
-                <select id="geraet-standort" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+            <div style="flex: 2 1 180px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Standort:</label>
+                <select id="geraet-standort" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
                     <option value="">-- Standort wählen --</option>
                     <option value="Lager">Lager</option>
                     <option value="Gerätehaus">Gerätehaus</option>
                     <optgroup label="Florian Albertsried 44/1">
-                        <option value="Florian Albertsried 44/1 GR1">Florian Albertsried 44/1 - GR1 (rechts)</option>
-                        <option value="Florian Albertsried 44/1 GR2">Florian Albertsried 44/1 - GR2 (links)</option>
-                        <option value="Florian Albertsried 44/1 GR3">Florian Albertsried 44/1 - GR3 (hinten)</option>
-                        <option value="Florian Albertsried 44/1 GR4">Florian Albertsried 44/1 - GR4 (Mitte)</option>
-                        <option value="Florian Albertsried 44/1 GR5">Florian Albertsried 44/1 - GR5 (Kabine)</option>
-                        <option value="Florian Albertsried 44/1 GR7">Florian Albertsried 44/1 - GR7 (Gruppenführer)</option>
-                        <option value="Florian Albertsried 44/1 GR6">Florian Albertsried 44/1 - GR6 (Maschinist)</option>
-                        <option value="Florian Albertsried 44/1 GR8">Florian Albertsried 44/1 - GR8 (Dach)</option>
+                        <option value="Florian Albertsried 44/1 GR1">GR1 (rechts)</option>
+                        <option value="Florian Albertsried 44/1 GR2">GR2 (links)</option>
+                        <option value="Florian Albertsried 44/1 GR3">GR3 (hinten)</option>
+                        <option value="Florian Albertsried 44/1 GR4">GR4 (Mitte)</option>
+                        <option value="Florian Albertsried 44/1 GR5">GR5 (Kabine)</option>
+                        <option value="Florian Albertsried 44/1 GR7">GR7 (Gruppenführer)</option>
+                        <option value="Florian Albertsried 44/1 GR6">GR6 (Maschinist)</option>
+                        <option value="Florian Albertsried 44/1 GR8">GR8 (Dach)</option>
                     </optgroup>
                 </select>
             </div>
-            <div style="flex:1; min-width:130px;">
+        </div>
+
+        <!-- Zeile 2: Prüfdaten, Ablaufdatum & Status -->
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+            <div style="flex: 1 1 130px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Erstinbetriebnahme:</label>
-                <input id="erstinbetriebnahme" type="date" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                <input id="erstinbetriebnahme" type="date" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
             </div>
-            <div style="flex:1; min-width:130px;">
+            <div style="flex: 1 1 130px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Letzte Prüfung:</label>
-                <input id="letztePruefung" type="date" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                <input id="letztePruefung" type="date" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
             </div>
-            <div style="flex:1; min-width:130px;">
+            <div style="flex: 1 1 110px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Prüfintervall:</label>
-                <select id="pruefintervall" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                <select id="pruefintervall" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
                     <option value="12">12 Monate</option>
                     <option value="24">24 Monate</option>
                     <option value="6">6 Monate</option>
                     <option value="1">1 Monat</option>
                 </select>
             </div>
-            <div style="flex:1; min-width:140px;">
+            <div style="flex: 1 1 130px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Ablaufdatum:</label>
+                <input id="ablaufdatum" type="date" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex: 1 1 140px;">
                 <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Status:</label>
-                <select id="status" class="form-control" style="width:100%; padding:8px; box-sizing:border-box;">
+                <select id="status" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
                     <option value="Einsatzbereit">🟢 Einsatzbereit</option>
                     <option value="Wartung">🟡 Wartung</option>
                     <option value="Defekt">🔴 Defekt</option>
                     <option value="Außer Dienst">⚫ Außer Dienst</option>
                 </select>
             </div>
-            <div style="min-width:140px; padding-top:20px;">
-                <button type="button" class="btn-speichern" onclick="neuesGeraet()" style="width:100%; padding:9px; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">➕ Speichern</button>
+        </div>
+
+        <!-- Zeile 3: Details -->
+        <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Details (Typ, Leistung, Sonstiges):</label>
+            <textarea id="geraet-details" class="form-control" rows="2" placeholder="z. B. 6kg ABC-Pulver, Leistung X..." style="width:100%; padding:6px; box-sizing:border-box;"></textarea>
+        </div>
+
+        <!-- Dokumente, Bilder & Cloud-Anbindung (im Look der Fahrzeugakte) -->
+        <div style="background: #ffffff; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 10px; font-size: 0.95rem; color: #333;">
+                📁 Dokumente, Bilder & Cloud-Anbindung
             </div>
+            
+            <!-- Eingabe-Zeile (3 Spalten) -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px;">
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="display:block; font-size:0.75rem; font-weight:bold; margin-bottom:3px;">Link-Titel / Name:</label>
+                    <input id="geraet-linktitel" type="text" class="form-control" placeholder="z. B. Prüfbericht" style="width:100%; padding:6px; box-sizing:border-box;">
+                </div>
+                <div style="flex: 2; min-width: 200px;">
+                    <label style="display:block; font-size:0.75rem; font-weight:bold; margin-bottom:3px;">Cloud-Link (URL):</label>
+                    <input id="geraet-cloudlink" type="url" class="form-control" placeholder="https://..." style="width:100%; padding:6px; box-sizing:border-box;">
+                </div>
+                <div style="flex: 1.5; min-width: 180px;">
+                    <label style="display:block; font-size:0.75rem; font-weight:bold; margin-bottom:3px;">Oder Datei hochladen:</label>
+                    <input id="geraet-datei" type="file" class="form-control" style="width:100%; padding:4px; font-size: 0.8rem; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <!-- Hinzufügen-Button -->
+            <div style="margin-bottom: 12px;">
+                <button type="button" class="btn btn-success" onclick="fuegeGerateLinkHinzu()" style="padding: 5px 15px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Hinzufügen</button>
+            </div>
+
+            <!-- Vorschau-Container für den gespeicherten Link -->
+            <div id="geraet-link-anzeige-container" style="border: 1px solid #dcdcdc; border-radius: 4px; padding: 8px 12px; background: #fff; justify-content: space-between; align-items: center; display: none;">
+                <div>
+                    <span id="anzeige-linktitel" style="font-weight: bold; color: #222; margin-right: 15px;"></span>
+                    <a id="anzeige-linkurl" href="#" target="_blank" style="color: #4b0082; text-decoration: underline; font-size: 0.9rem;">🔗 Cloud-Link öffnen</a>
+                </div>
+                <button type="button" onclick="loescheGerateLink()" style="background: #dc3545; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">Löschen</button>
+            </div>
+        </div>
+
+        <!-- Speichern / Abbrechen Buttons -->
+        <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn-speichern" onclick="neuesGeraet()" style="flex: 2; padding: 9px; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">➕ Gerät speichern</button>
+            <button type="button" class="btn-abbrechen" onclick="abbrechenGeraetBearbeitung()" style="flex: 1; padding: 9px; background:#6c757d; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">✖️ Abbrechen</button>
         </div>
     </div>
 
@@ -245,120 +301,186 @@
     </div>
 </section>
 
-            <!-- 3. FAHRZEUGVERWALTUNG -->
-            <section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2>🚒 Fahrzeugverwaltung</h2>
-                    <div style="display: flex; gap: 10px;" class="no-print">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button>
-                        <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)">
-                        <button type="button" class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
-                        <button type="button" class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+<!-- 3. FAHRZEUGVERWALTUNG -->
+<section id="seite-fahrzeuge" class="seite-ansicht" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2>🚒 Fahrzeugverwaltung</h2>
+        <div style="display: flex; gap: 10px;" class="no-print">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('importFzInput').click()">📥 CSV Import</button>
+            <input type="file" id="importFzInput" style="display:none;" accept=".csv" onchange="importFahrzeugeCSV(this)">
+            <button type="button" class="btn btn-secondary" onclick="exportFahrzeugeCSV()">📊 CSV Export</button>
+            <button type="button" class="btn btn-secondary" onclick="druckeListe('Fahrzeugliste', 'fahrzeuge-tabelle')">🖨️ Liste drucken / PDF</button>
+        </div>
+    </div>
+
+    <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>➕ Neues Fahrzeug anlegen</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; align-items:flex-end;">
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Funkrufname:</label>
+                <input id="fz-funkruf" type="text" class="form-control" placeholder="Funkrufname" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Kennzeichen:</label>
+                <input id="fz-kennzeichen" type="text" class="form-control" placeholder="Kennzeichen" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Fahrzeugtyp:</label>
+                <input id="fz-typ" type="text" class="form-control" placeholder="Fahrzeugtyp" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:0 0 100px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Baujahr:</label>
+                <input id="fz-baujahr" type="number" class="form-control" placeholder="Baujahr" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:130px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Nächster TÜV:</label>
+                <input id="fz-tuev" type="date" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:130px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Nächste SP:</label>
+                <input id="fz-sp" type="date" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+            <div style="flex:1; min-width:150px;">
+                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Status:</label>
+                <select id="fz-status" class="form-control" style="width:100%; padding:6px; box-sizing:border-box;">
+                    <option value="Einsatzbereit">🟢 Einsatzbereit</option>
+                    <option value="Wartung">🟡 In Werkstatt / Wartung</option>
+                    <option value="Defekt">🔴 Außer Dienst / Defekt</option>
+                </select>
+            </div>
+            <div style="min-width:150px;">
+                <button type="button" class="btn btn-primary" onclick="neuesFahrzeugSpeichern()" style="width:100%; background-color: #28a745; color: white; border: none; padding: 7px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">➕ Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; align-items:start;">
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <div class="table-responsive">
+                <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th class="no-print">Aktionen</th>
+                            <th>Funkrufname</th>
+                            <th>Typ</th>
+                            <th>Kennzeichen</th>
+                            <th>TÜV/HU</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fahrzeugeListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
+            <h2>📋 Fahrzeugakte</h2>
+            <div id="fahrzeugAkteInhalt">
+                <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
+            </div>
+
+            <!-- KOMPLETTES TEMPLATE INKL. BELEGUNGSPLAN, DOKUMENTEN UND HISTORIE -->
+            <template id="fahrzeugAkteTemplate">
+                <div class="bericht-kopf" style="display: none;">
+                    <div>
+                        <h2>Freiwillige Feuerwehr - Fahrzeugakte</h2>
+                        <span id="bericht-titel" style="font-size: 11pt; font-weight: bold;">-</span>
+                    </div>
+                    <div class="meta-info">
+                        <span>Erstellt am: <span id="aktuellesDatum"></span></span>
                     </div>
                 </div>
 
-                <div class="fahrzeug-form" style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <h3>➕ Neues Fahrzeug anlegen</h3>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                        <input id="fz-funkruf" type="text" placeholder="Funkrufname">
-                        <input id="fz-kennzeichen" type="text" placeholder="Amtl. Kennzeichen">
-                        <input id="fz-typ" type="text" placeholder="Fahrzeugtyp">
-                        <input id="fz-baujahr" type="number" placeholder="Baujahr" style="width:100px;">
-                        <input id="fz-tuev" type="date" title="Nächster TÜV / HU">
-                        <input id="fz-sp" type="date" title="Nächste SP">
-                        <select id="fz-status">
-                            <option value="Einsatzbereit">🟢 Einsatzbereit</option>
-                            <option value="Wartung">🟡 In Werkstatt / Wartung</option>
-                            <option value="Defekt">🔴 Außer Dienst / Defekt</option>
-                        </select>
-                        <button type="button" class="btn btn-primary" onclick="neuesFahrzeugSpeichern()" style="background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">➕ Fahrzeug speichern</button>
+                <div class="bericht-stammdaten" style="display: none;">
+                    <div><strong>Kennzeichen / ID</strong><span id="print-id">-</span></div>
+                    <div><strong>Typ / Funkruf</strong><span id="print-typ">-</span></div>
+                    <div><strong>Status / TÜV</strong><span id="print-status">-</span></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h3 id="akte-titel" style="margin:0;">-</h3>
+                        <small id="akte-subtitel" style="color:#666;">-</small>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" class="no-print">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="exportFahrzeugEinzelnCSV()">CSV Export</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="druckeEinzelFahrzeugAkte()">🖨️ Fahrzeugakte drucken / PDF</button>
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; align-items:start;">
-                    <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                        <div class="table-responsive">
-                            <table id="fahrzeuge-tabelle" class="geraete-tabelle" style="width:100%;">
-                                <thead>
-                                    <tr>
-                                        <th class="no-print">Aktionen</th>
-                                        <th>Funkrufname</th>
-                                        <th>Typ</th>
-                                        <th>Kennzeichen</th>
-                                        <th>TÜV/HU</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="fahrzeugeListe"></tbody>
-                            </table>
+                <div style="margin-top: 15px;">
+                    <div style="margin-bottom: 25px;">
+                        <h4>🚒 Geräteraum-Belegungsplan</h4>
+                        <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p>
+                        <div class="fahrzeug-layout-container" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                            <div class="fzg-schema">
+                                <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')"><span>GR6</span><small>Maschinist</small></div>
+                                <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')"><span>GR7</span><small>Gruppenführer</small></div>
+                                <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')"><span class="text-vertikal">GR5 Kabine</span></div>
+                                <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')"><span>GR1</span><small>rechts</small></div>
+                                <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')"><span>GR4</span><small>Mitte</small></div>
+                                <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')"><span>GR3</span><small>hinten</small></div>
+                                <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')"><span>GR2</span><small>links</small></div>
+                            </div>
+                            <div class="gr-box gr8-dach-box" onclick="zeigeGeraeteAusRaum('GR8')"><strong>GR8 Aussen/DACH</strong></div>
                         </div>
                     </div>
 
-                    <div id="fahrzeugAkteContainer" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); min-height:350px;">
-                        <h2>📋 Fahrzeugakte</h2>
-                        <div id="fahrzeugAkteInhalt">
-                            <p style="color:#777;">Bitte links ein Fahrzeug auswählen (👁️ klicken).</p>
-                        </div>
-
-                        <template id="fahrzeugAkteTemplate">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                                <div>
-                                    <h3 id="akte-titel" style="margin:0;">-</h3>
-                                    <small id="akte-subtitel" style="color:#666;">-</small>
-                                </div>
-                                <div style="display: flex; gap: 8px; flex-wrap: wrap;" class="no-print">
-                                    <button type="button" class="btn btn-sm btn-secondary" onclick="exportFahrzeugEinzelnCSV()">CSV Export</button>
-                                    <button type="button" class="btn btn-sm btn-secondary" onclick="druckeFahrzeugAkte()">🖨️ Fahrzeugakte drucken / PDF</button>
-                                </div>
+                    <div style="margin-bottom: 25px; background: #fdfdfd; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px;" class="no-print">
+                        <h4 style="margin-top:0; margin-bottom:8px;">📁 Dokumente, Bilder & Cloud-Anbindung</h4>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 8px;">
+                            <div style="flex: 2; min-width: 180px;">
+                                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Link-Titel / Name:</label>
+                                <input type="text" id="fzg-dok-titel" class="form-control" placeholder="z. B. TÜV-Bericht" style="width:100%; padding:6px; box-sizing:border-box;">
                             </div>
-
-                            <div style="margin-bottom: 25px;">
-                                <h4>🚒 Geräteraum-Belegungsplan</h4>
-                                <p style="font-size:0.85em; color:#666; margin-bottom:8px;">Klicke auf einen Raum, um die dort befindliche Ausrüstung anzuzeigen:</p>
-                                <div class="fahrzeug-layout-container" style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                                    <div class="fzg-schema">
-                                        <div class="gr-box gr6" onclick="zeigeGeraeteAusRaum('GR6')"><span>GR6</span><small>Maschinist</small></div>
-                                        <div class="gr-box gr7" onclick="zeigeGeraeteAusRaum('GR7')"><span>GR7</span><small>Gruppenführer</small></div>
-                                        <div class="gr-box gr5" onclick="zeigeGeraeteAusRaum('GR5')"><span class="text-vertikal">GR5 Kabine</span></div>
-                                        <div class="gr-box gr1" onclick="zeigeGeraeteAusRaum('GR1')"><span>GR1</span><small>rechts</small></div>
-                                        <div class="gr-box gr4" onclick="zeigeGeraeteAusRaum('GR4')"><span>GR4</span><small>Mitte</small></div>
-                                        <div class="gr-box gr3" onclick="zeigeGeraeteAusRaum('GR3')"><span>GR3</span><small>hinten</small></div>
-                                        <div class="gr-box gr2" onclick="zeigeGeraeteAusRaum('GR2')"><span>GR2</span><small>links</small></div>
-                                    </div>
-                                    <div class="gr-box gr8-dach-box" onclick="zeigeGeraeteAusRaum('GR8')"><strong>GR8 Aussen/DACH</strong></div>
-                                </div>
+                            <div style="flex: 3; min-width: 200px;">
+                                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Cloud-Link (URL):</label>
+                                <input type="url" id="fzg-dok-link" class="form-control" placeholder="https://..." style="width:100%; padding:6px; box-sizing:border-box;">
                             </div>
-
+                            <div style="flex: 2; min-width: 180px;">
+                                <label style="display:block; font-size:0.85rem; font-weight:bold; margin-bottom:3px;">Oder Datei hochladen:</label>
+                                <input type="file" id="fzg-dok-file" class="form-control" accept=".pdf,image/*" style="width:100%; padding:4px; box-sizing:border-box;">
+                            </div>
                             <div>
-                                <h4>📜 Historie & Reparaturen</h4>
-                                <div style="background:#f8f9fa; padding:12px; border-radius:6px; border:1px solid #e0e0e0; margin-bottom:15px;">
-                                    <h5 style="margin-top:0; margin-bottom:8px;">➕ Eintrag hinzufügen</h5>
-                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
-                                        <select id="hist-typ">
-                                            <option value="Reparatur">🛠️ Reparatur</option>
-                                            <option value="Instandsetzung">🔧 Instandsetzung / Wartung</option>
-                                            <option value="Ausfall">🚨 Ausfall</option>
-                                            <option value="Sonstiges">📝 Sonstiges</option>
-                                        </select>
-                                        <input type="date" id="hist-datum">
-                                    </div>
-                                    <input type="text" id="hist-titel" placeholder="Titel (z. B. TÜV bestanden)" style="width:100%; margin-bottom:8px; box-sizing:border-box;">
-                                    <textarea id="hist-beschreibung" placeholder="Beschreibung / Werkstatt..." style="width:100%; height:50px; margin-bottom:8px; box-sizing:border-box;"></textarea>
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <input type="number" id="hist-kosten" step="0.01" placeholder="Kosten in €" style="width:120px;">
-                                        <button type="button" class="btn btn-sm btn-primary btn-speichern" onclick="speichereHistorieEintrag()">Eintrag speichern</button>
-                                    </div>
-                                </div>
-                                <div id="historieListe" style="max-height: 250px; overflow-y: auto;">
-                                    <p style="color:#777; font-style:italic;">Keine Einträge vorhanden.</p>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="speichereFahrzeugDokument()" style="padding: 7px 12px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Hinzufügen</button>
                             </div>
-                        </template>
+                        </div>
+                        <div id="fzgDokumenteListe" style="margin-top: 10px; font-size: 0.9rem;">
+                            <span style="color:#777; font-style:italic;">Keine Dokumente hinterlegt.</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4>📜 Historie & Reparaturen</h4>
+                        <div style="background:#f8f9fa; padding:12px; border-radius:6px; border:1px solid #e0e0e0; margin-bottom:15px;">
+                            <h5 style="margin-top:0; margin-bottom:8px;">➕ Eintrag hinzufügen</h5>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                                <select id="hist-typ" class="form-control" style="padding:6px;">
+                                    <option value="Reparatur">🛠️ Reparatur</option>
+                                    <option value="Instandsetzung">🔧 Instandsetzung / Wartung</option>
+                                    <option value="Ausfall">🚨 Ausfall</option>
+                                    <option value="Sonstiges">📝 Sonstiges</option>
+                                </select>
+                                <input type="date" id="hist-datum" class="form-control" style="padding:6px;">
+                            </div>
+                            <input type="text" id="hist-titel" class="form-control" placeholder="Titel (z. B. TÜV bestanden)" style="width:100%; margin-bottom:8px; padding:6px; box-sizing:border-box;">
+                            <textarea id="hist-beschreibung" class="form-control" placeholder="Beschreibung / Werkstatt..." style="width:100%; height:50px; margin-bottom:8px; padding:6px; box-sizing:border-box;"></textarea>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <input type="number" id="hist-kosten" class="form-control" step="0.01" placeholder="Kosten in €" style="width:120px; padding:6px;">
+                                <button type="button" class="btn btn-sm btn-primary btn-speichern" onclick="speichereHistorieEintrag()" style="padding:6px 12px;">Eintrag speichern</button>
+                            </div>
+                        </div>
+                        <div id="historieListe" style="max-height: 250px; overflow-y: auto;">
+                            <p style="color:#777; font-style:italic;">Keine Einträge vorhanden.</p>
+                        </div>
                     </div>
                 </div>
-            </section>
+            </template>
+        </div>
+    </div>
+</section>
 
-           <!-- 4. PSA BEREICH -->
+          <!-- 4. PSA BEREICH -->
 <section id="seite-psa" class="seite-ansicht" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h2>🧯 Persönliche Schutzausrüstung (PSA)</h2>
@@ -372,26 +494,24 @@
     </div>
     
     <!-- Filter- & Suchleiste -->
-<div class="filter-bar" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-    <input type="text" id="psa-suche" placeholder="🔍 Suche nach Träger, Spind, Gerät..." style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; flex-grow: 1; min-width: 200px;">
-    
-    <!-- NEU: Träger-Filter -->
-    <select id="psa-traeger-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="alle">Alle Träger / Personen</option>
-    </select>
+    <div class="filter-bar no-print" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="psa-suche" placeholder="🔍 Suche nach Träger, Spind, Gerät..." style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; flex-grow: 1; min-width: 200px;">
+        
+        <select id="psa-traeger-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="alle">Alle Träger / Personen</option>
+        </select>
 
-    <!-- NEU: Spind-Filter -->
-    <select id="psa-spind-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="alle">Alle Spinde</option>
-    </select>
+        <select id="psa-spind-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="alle">Alle Spinde</option>
+        </select>
 
-    <select id="psa-status-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <option value="alle">Alle Status</option>
-        <option value="Aktiv">🟢 Aktiv / Einsatzbereit</option>
-        <option value="Wartung">🟡 In Prüfung / Wartung</option>
-        <option value="Defekt">🔴 Ausgemustert / Defekt</option>
-    </select>
-</div>
+        <select id="psa-status-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="alle">Alle Status</option>
+            <option value="Aktiv">🟢 Aktiv / Einsatzbereit</option>
+            <option value="Wartung">🟡 In Prüfung / Wartung</option>
+            <option value="Defekt">🔴 Ausgemustert / Defekt</option>
+        </select>
+    </div>
 
     <!-- Umschließender Container für Rechtesteuerung & Tabelle -->
     <div id="psa-container">
@@ -540,6 +660,7 @@
 
     <!-- 2. Speicher-Basisdaten (MUSS vor app.js stehen!) -->
     <script src="js/storage.js"></script>
+    <script src="js/backup.js"></script>
     <script src="js/kategorien.js"></script>
 
     <!-- 3. Haupt-App -->
@@ -700,12 +821,17 @@
 
     <!-- JavaScript-Dateien (Beispiel) -->
     <!-- ... -->
-     <!-- 10. Geräteakte -->
+    <!-- 10. Geräteakte -->
 <div id="geraete-akte-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; justify-content: center; align-items: center;">
     <div style="background: #fff; border-radius: 8px; max-width: 800px; width: 95%; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b30000; padding-bottom: 10px; margin-bottom: 15px;">
             <h3 id="geraete-akte-titel" style="margin: 0; color: #b30000;">🛠️ Geräte-Akte</h3>
-            <button type="button" onclick="document.getElementById('geraete-akte-modal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" onclick="exportiereGerateAkteAlsPDF(aktiveGeraeteAktenId)" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                📄 Akte als PDF
+                </button>
+                <button type="button" onclick="document.getElementById('geraete-akte-modal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+            </div>
         </div>
         <div id="geraete-akte-stammdaten" style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; line-height: 1.5;"></div>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">

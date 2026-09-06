@@ -224,15 +224,30 @@ function rechteBeantragen() {
     const name = aktuellerBenutzer.name || prompt("Wie ist dein Name?");
     if (!name) return;
 
+    const email = prompt("Wie lautet deine E-Mail-Adresse? (Wichtig für die Zuordnung):");
+    if (!email || !email.includes("@")) {
+        alert("⚠️ Eine gültige E-Mail-Adresse ist erforderlich!");
+        return;
+    }
+
     const wunschRolle = prompt("Welche Rolle benötigst du? (editor / admin)", "editor");
     if (!wunschRolle) return;
+
+    // NEU: Wunsch-PIN direkt beim Antrag abfragen
+    const wunschPin = prompt("Lege deine gewünschte PIN fest (z. B. 4-stellige Zahl):");
+    if (!wunschPin) {
+        alert("⚠️ Eine PIN ist erforderlich!");
+        return;
+    }
 
     const begründung = prompt("Kurze Begründung für den Administrator:");
 
     if (window.db) {
         window.db.collection('rechte_anfragen').add({
             name: name,
-            wunschRolle: wunschRolle,
+            email: email.trim().toLowerCase(),
+            wunschRolle: wunschRolle.toLowerCase(),
+            pin: wunschPin.trim(), // PIN wird direkt im Antrag gespeichert
             begruendung: begründung || '',
             datum: new Date().toISOString(),
             status: 'offen'
@@ -245,7 +260,6 @@ function rechteBeantragen() {
         alert("Keine Datenbankverbindung möglich.");
     }
 }
-
 // --- BENUTZERVERWALTUNG (ADMIN) ---
 
 function renderBenutzerVerwaltung() {
@@ -291,7 +305,7 @@ function ladeZugangsanfragen() {
     const ziel = document.getElementById("zugangsanfragen-bereich");
     if (!ziel || !window.db) return;
 
-    window.db.collection('zugangsanfragen').where('status', '==', 'ausstehend').get()
+    window.db.collection('rechte_anfragen').where('status', '==', 'offen').get()
         .then(snapshot => {
             let html = `<h3>Offene Zugangsanträge (${snapshot.size})</h3>`;
             
@@ -312,13 +326,16 @@ function ladeZugangsanfragen() {
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    // Holt die Wunsch-PIN aus dem Antrag (falls vorhanden, sonst leerer String)
+                    const pinWert = d.pin || '';
+                    
                     html += `
                     <tr style="border-bottom: 1px solid #ddd;">
                         <td style="padding:8px;"><strong>${d.name || '-'}</strong></td>
                         <td style="padding:8px;">${d.email || '-'}</td>
                         <td style="padding:8px;">${(d.wunschRolle || 'viewer').toUpperCase()}</td>
                         <td style="padding:8px;">
-                            <button style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="genehmigeAntrag('${doc.id}', '${d.name}', '${d.email}', '${d.pin}', '${d.wunschRolle}')">✅ Freischalten</button>
+                            <button style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="genehmigeAntrag('${doc.id}', '${d.name}', '${d.email}', '${pinWert}', '${d.wunschRolle}')">✅ Freischalten</button>
                             <button style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" onclick="lehneAntragAb('${doc.id}')">❌ Ablehnen</button>
                         </td>
                     </tr>`;
@@ -331,6 +348,17 @@ function ladeZugangsanfragen() {
         .catch(err => {
             if (ziel) ziel.innerHTML = `<p style="color:red;">Fehler beim Laden der Anträge: ${err.message}</p>`;
         });
+}
+
+// Hilfsfunktion, damit der Admin beim Klick auf Freischalten kurz die PIN vergeben kann, falls keine da war:
+function genehmigeAntragAusTabelle(requestId, name, email, rolle) {
+    const pin = prompt(`Bitte eine PIN (z.B. 4-stellhaft) für ${name} vergeben:`, "1234");
+    if (!pin) {
+        alert("Freischaltung abgebrochen: Es wurde keine PIN vergeben.");
+        return;
+    }
+    // Ruft deine bestehende Hauptfunktion auf
+    genehmigeAntrag(requestId, name, email, pin, rolle);
 }
 
 function genehmigeAntrag(requestId, name, email, pin, rolle) {
@@ -366,7 +394,7 @@ function genehmigeAntrag(requestId, name, email, pin, rolle) {
             }
         })
         .then(() => {
-            return window.db.collection('zugangsanfragen').doc(requestId).update({ status: 'genehmigt' });
+            return window.db.collection('rechte_anfragen').doc(requestId).update({ status: 'genehmigt' });
         })
         .then(() => {
             alert(`Zugang für ${name} wurde erfolgreich aktiviert!`);
@@ -380,7 +408,8 @@ function lehneAntragAb(requestId) {
     if (!confirm("Soll dieser Antrag wirklich abgelehnt werden?")) return;
 
     if (window.db) {
-        window.db.collection('zugangsanfragen').doc(requestId).update({ status: 'abgelehnt' })
+        // Hier ebenfalls 'zugangsanfragen' zu 'rechte_anfragen' ändern:
+        window.db.collection('rechte_anfragen').doc(requestId).update({ status: 'abgelehnt' })
             .then(() => {
                 alert("Antrag wurde abgelehnt.");
                 ladeAdminAnsicht();
